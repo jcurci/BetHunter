@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Navbar from "../components/Navbar";
-
 const Home = () => {
   return (
     <View style={styles.container}>
@@ -13,7 +12,6 @@ const Home = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
