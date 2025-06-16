@@ -10,9 +10,11 @@ import {
   Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import { useNavigation } from '@react-navigation/native';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const navigation = useNavigation();
 
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
@@ -20,7 +22,7 @@ const Login = () => {
 
   return (
     <ImageBackground
-      source={require("../assets/login_background.png")}
+      source={require("../../assets/login_background.png")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -55,11 +57,11 @@ const Login = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.loginButton}>
+            <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Home')}>
               <Text style={styles.buttonText}>Logar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.registerButton}>
+            <TouchableOpacity style={styles.registerButton} onPress={() => navigation.navigate('SiginUp')}>
               <Text style={styles.buttonText}>Cadastrar</Text>
             </TouchableOpacity>
 
@@ -70,12 +72,12 @@ const Login = () => {
         </View>
         <View style={styles.logoContainer}>
           <Image
-            source={require("../assets/logo-img/logo_white.svg")}
+            source={require("../../assets/logo-img/logo_white.svg")}
             style={styles.bethunterLogoImage}
             resizeMode="contain"
           />
           <Image
-            source={require("../assets/logo-img/text_white.svg")}
+            source={require("../../assets/logo-img/text_white.svg")}
             style={styles.bethunterTextLogoImage}
             resizeMode="contain"
           />

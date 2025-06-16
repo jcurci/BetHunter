@@ -1,37 +1,178 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import Navbar from "../components/Navbar";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import Icon from "react-native-vector-icons/Entypo";
+import Footer from "../components/Footer";
+import { useNavigation } from '@react-navigation/native';
+
 const Home = () => {
+  const navigation = useNavigation();
   return (
-    <View style={styles.container}>
-      <Navbar />
-      <View style={styles.content}>
-        <Text style={styles.welcomeText}>Bem-vindo ao BetHunter</Text>
-        <Text style={styles.subtitle}>Sua plataforma de apostas</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.greetingText}>Bom dia, John</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Config')}>
+            <Icon name="dots-three-horizontal" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Points Card */}
+        <View style={styles.pointsCard}>
+          <View>
+            <Text style={styles.pointsText}>Você tem 47 pontos</Text>
+            <Text style={styles.pointsSubtitle}>Pode girar a roleta 4 vezes</Text>
+          </View>
+          <TouchableOpacity>
+            <Icon name="controller-record" size={30} color="#FFFFFF" />
+            <Icon name="chevron-right" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Initiative Section */}
+        <View style={styles.initiativeSection}>
+          <Text style={styles.initiativeTitle}>Sua iniciativa já te gerou</Text>
+          <Text style={styles.initiativeAmount}>R$14.884,20</Text>
+          <TouchableOpacity>
+            <Text style={styles.historyText}>Conferir histórico</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* For You Section (Carousel Placeholder) */}
+        <Text style={styles.sectionTitle}>Para você</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carouselContainer}>
+          {[1, 2, 3, 4].map((item) => (
+            <View key={item} style={styles.articleCard}>
+              <View style={styles.articleImagePlaceholder} />
+              <Text style={styles.articleTitle}>Título do Artigo {item}</Text>
+              <Text style={styles.articleDescription}>Breve descrição do artigo ou notícia.</Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Continue Section */}
+        <Text style={styles.sectionTitle}>Continue de onde parou</Text>
+        <TouchableOpacity style={styles.continueCard}>
+          <Text style={styles.continueText}>Fundamentos: 1/4</Text>
+          <Icon name="chevron-right" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Footer Placeholder */}
+        <Footer />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#000", // Overall background color
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f5f6fa",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     padding: 20,
   },
-  welcomeText: {
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  greetingText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  pointsCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#7456C8", // Solid color instead of gradient
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  pointsText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  pointsSubtitle: {
+    fontSize: 14,
+    color: "#D0D0D0",
+  },
+  initiativeSection: {
+    marginBottom: 20,
+  },
+  initiativeTitle: {
+    fontSize: 18,
+    color: "#FFFFFF",
+    marginBottom: 5,
+  },
+  initiativeAmount: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#2c3e50",
+    color: "#FFA500", // A color similar to the gradient's end color
+    marginBottom: 5,
+  },
+  historyText: {
+    fontSize: 14,
+    color: "#A09CAB",
+    textDecorationLine: "underline",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 15,
+  },
+  carouselContainer: {
+    marginBottom: 20,
+  },
+  articleCard: {
+    backgroundColor: "#1C1C1C",
+    padding: 10,
+    borderRadius: 10,
+    marginRight: 10,
+    width: 150,
+  },
+  articleImagePlaceholder: {
+    width: "100%",
+    height: 90,
+    backgroundColor: "#333",
+    borderRadius: 8,
     marginBottom: 10,
   },
-  subtitle: {
+  articleTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 5,
+  },
+  articleDescription: {
+    fontSize: 12,
+    color: "#A0A0A0",
+  },
+  continueCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#1C1C1C",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  continueText: {
     fontSize: 16,
-    color: "#7f8c8d",
+    color: "#FFFFFF",
   },
 });
 
