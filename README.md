@@ -1,6 +1,6 @@
 # BetHunter
 
-Aplicativo mobile para fazer as pessoas pararem de apostar e comecar a investirem e aprender sobre investimentos.
+Aplicativo mobile para fazer as pessoas pararem de apostar e aprenderem sobre investimentos.
 
 ## Funcionalidades
 
