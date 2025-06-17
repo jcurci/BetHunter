@@ -1,14 +1,12 @@
-# Aplicativo de Registro de Falta de Energia
+# BetHunter
 
-Este aplicativo React Native permite o registro e visualização local de eventos de falta de energia causados por desastres naturais.
+Aplicativo mobile para fazer as pessoas pararem de apostar e comecar a investirem e aprender sobre investimentos.
 
 ## Funcionalidades
 
-- Registro de eventos de falta de energia
-- Visualização de eventos registrados
-- Detalhes completos de cada evento
-- Recomendações preventivas
-- Armazenamento local dos dados
+- Tela de login e cadastro
+- Tela principal com roleta de pontos
+- Sistema de navegação entre telas
 
 ## Requisitos
 
@@ -20,50 +18,47 @@ Este aplicativo React Native permite o registro e visualização local de evento
 ## Instalação
 
 1. Clone o repositório:
-
-```bash
-git clone [URL_DO_REPOSITÓRIO]
-```
-
+   ```bash
+   git clone https://github.com/jcurci/BetHunter
+   cd betHunter
+   ```
 2. Instale as dependências:
-
-```bash
-npm install
-# ou
-yarn install
-```
-
-3. Inicie o aplicativo:
-
-```bash
-npm start
-# ou
-yarn start
-```
+   ```bash
+   npm install
+   ```
+3. Execute o projeto:
+   ```bash
+   npx expo start
+   ```
 
 ## Estrutura do Projeto
 
 ```
-src/
-  ├── components/     # Componentes reutilizáveis
-  ├── screens/        # Telas do aplicativo
-  ├── navigation/     # Configuração de navegação
-  ├── storage/        # Funções de armazenamento
-  └── types/          # Definições de tipos TypeScript
+├── App.jsx
+├── src
+│   ├── components
+│   │   └── Footer.jsx
+│   ├── screens
+│   │   ├── Home.jsx
+│   │   ├── Roulette.jsx
+│   │   └── Login-screens
+│   │       ├── Login.jsx
+│   │       └── SiginUp.jsx
+│   └── navigation
+│       └── AppNavigator.tsx
+├── assets
+│   └── ...
+├── package.json
+└── README.md
 ```
 
 ## Tecnologias Utilizadas
 
 - React Native
-- TypeScript
-- React Navigation
-- AsyncStorage
 - Expo
+- React Navigation
+- JavaScript/TypeScript
 
-## Contribuição
+## Licença
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+MIT
