@@ -3,10 +3,12 @@ import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useRoute } from "@react-navigation/native";
 import IconHome from "../assets/icon-home.svg";
+import { useNavigation } from "@react-navigation/native";
 
 const Footer = () => {
   const route = useRoute();
   const currentRouteName = route.name;
+  const navigation = useNavigation();
 
   const isActive = (tabName) => currentRouteName === tabName;
 
@@ -89,9 +91,7 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Jogar */
-        }}
+        onPress={() => navigation.navigate("Roulette")}
       >
         <View
           style={
