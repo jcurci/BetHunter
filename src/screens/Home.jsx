@@ -9,7 +9,34 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Entypo";
 import Footer from "../components/Footer";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from "@react-navigation/native";
+import ImageBitcoin from "../assets/image-bitcoin.svg";
+import ImageMoeda from "../assets/image-moeda.svg";
+import ImageGrafico from "../assets/image-grafico.svg";
+
+const ARTICLES = [
+  {
+    id: 1,
+    title:
+      "Preço do bitcoin hoje: cai para US$ 107,8 mil com anúncios de tarifas de Trump",
+    description:
+      "Preço do bitcoin hoje: cai para US$ 107,8 mil com anúncios de tarifas de Trump",
+  },
+  {
+    id: 2,
+    title:
+      "Risco fiscal, queda da Selic: o que vai determinar o spread no mercado de crédito",
+    description:
+      "Risco fiscal, queda da Selic: o que vai determinar o spread no mercado de crédito",
+  },
+  {
+    id: 3,
+    title:
+      "Gestores estão otimistas, projetam Ibovespa acima de 140 mil pontos",
+    description:
+      "Gestores estão otimistas, projetam Ibovespa acima de 140 mil pontos",
+  },
+];
 
 const Home = () => {
   const navigation = useNavigation();
@@ -19,7 +46,7 @@ const Home = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greetingText}>Bom dia, John</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Config')}>
+          <TouchableOpacity onPress={() => navigation.navigate("Config")}>
             <Icon name="dots-three-horizontal" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -28,7 +55,9 @@ const Home = () => {
         <View style={styles.pointsCard}>
           <View>
             <Text style={styles.pointsText}>Você tem 47 pontos</Text>
-            <Text style={styles.pointsSubtitle}>Pode girar a roleta 4 vezes</Text>
+            <Text style={styles.pointsSubtitle}>
+              Pode girar a roleta 4 vezes
+            </Text>
           </View>
           <TouchableOpacity>
             <Icon name="controller-record" size={30} color="#FFFFFF" />
@@ -47,12 +76,22 @@ const Home = () => {
 
         {/* For You Section (Carousel Placeholder) */}
         <Text style={styles.sectionTitle}>Para você</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carouselContainer}>
-          {[1, 2, 3, 4].map((item) => (
-            <View key={item} style={styles.articleCard}>
-              <View style={styles.articleImagePlaceholder} />
-              <Text style={styles.articleTitle}>Título do Artigo {item}</Text>
-              <Text style={styles.articleDescription}>Breve descrição do artigo ou notícia.</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.carouselContainer}
+        >
+          {ARTICLES.map((article) => (
+            <View key={article.id} style={styles.articleCard}>
+              <View style={styles.articleImageContainer}>
+                {article.id === 1 && <ImageBitcoin width="100%" height={90} />}
+                {article.id === 2 && <ImageMoeda width="100%" height={90} />}
+                {article.id === 3 && <ImageGrafico width="100%" height={90} />}
+              </View>
+              <Text style={styles.articleTitle}>{article.title}</Text>
+              <Text style={styles.articleDescription}>
+                {article.description}
+              </Text>
             </View>
           ))}
         </ScrollView>
@@ -74,7 +113,7 @@ const Home = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#000", // Overall background color
+    backgroundColor: "#000",
   },
   container: {
     flex: 1,
@@ -120,7 +159,7 @@ const styles = StyleSheet.create({
   initiativeAmount: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#FFA500", // A color similar to the gradient's end color
+    color: "#FFA500",
     marginBottom: 5,
   },
   historyText: {
@@ -150,6 +189,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#333",
     borderRadius: 8,
     marginBottom: 10,
+  },
+  articleImageContainer: {
+    width: "100%",
+    height: 90,
+    borderRadius: 8,
+    marginBottom: 10,
+    overflow: "hidden",
   },
   articleTitle: {
     fontSize: 14,
