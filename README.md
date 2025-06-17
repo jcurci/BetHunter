@@ -1,3 +1,10 @@
+#Nomes
+Felipe Hideki RM98323
+Guilherme Milheiro RM550295
+Jhonatan Curci RM94188
+Enzo Vasconcelos RM550702
+Ricardo Queiroz RM94241
+
 # BetHunter
 
 Aplicativo mobile para fazer as pessoas pararem de apostar e aprenderem sobre investimentos.
