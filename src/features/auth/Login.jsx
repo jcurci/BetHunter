@@ -10,11 +10,13 @@ import {
   Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../../shared/hooks";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigation = useNavigation();
+  const { login } = useAuth();
 
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
@@ -48,7 +50,10 @@ const Login = () => {
                 secureTextEntry={!showPassword}
                 placeholderTextColor="#A0A0A0"
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={toggleShowPassword}>
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={toggleShowPassword}
+              >
                 <Icon
                   name={showPassword ? "eye" : "eye-off"}
                   size={20}
@@ -57,11 +62,22 @@ const Login = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Home')}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                // Aqui você pode adicionar lógica de validação de credenciais
+                // Por enquanto, vamos apenas simular o login
+                console.log("Login realizado com sucesso");
+                login(); // Isso irá navegar automaticamente para as telas principais
+              }}
+            >
               <Text style={styles.buttonText}>Logar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.registerButton} onPress={() => navigation.navigate('SiginUp')}>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => navigation.navigate("SiginUp")}
+            >
               <Text style={styles.buttonText}>Cadastrar</Text>
             </TouchableOpacity>
 
@@ -103,7 +119,7 @@ const styles = StyleSheet.create({
   },
   gradientTitleContainer: {
     marginBottom: 10,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     width: "100%",
     height: 40,
   },

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Icon from "react-native-vector-icons/Entypo";
-import Footer from "../components/Footer";
+import { Footer } from "../../shared/components";
 import { useNavigation } from "@react-navigation/native";
 import ImageBitcoin from "../assets/image-bitcoin.svg";
 import ImageMoeda from "../assets/image-moeda.svg";
@@ -103,8 +103,7 @@ const Home = () => {
           <Icon name="chevron-right" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Footer Placeholder */}
-        <Footer />
+        {/* Footer removido - agora gerenciado pelo Tab Navigator */}
       </View>
     </SafeAreaView>
   );

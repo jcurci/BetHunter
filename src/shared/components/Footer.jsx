@@ -5,10 +5,8 @@ import { useRoute } from "@react-navigation/native";
 import IconHome from "../assets/icon-home.svg";
 import { useNavigation } from "@react-navigation/native";
 
-const Footer = () => {
-  const route = useRoute();
-  const currentRouteName = route.name;
-  const navigation = useNavigation();
+const Footer = ({ navigation, state }) => {
+  const currentRouteName = state?.routes[state.index]?.name;
 
   const isActive = (tabName) => currentRouteName === tabName;
 
@@ -16,9 +14,7 @@ const Footer = () => {
     <View style={styles.footerContainer}>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Home */
-        }}
+        onPress={() => navigation.navigate("Home")}
       >
         <View
           style={
@@ -41,9 +37,7 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Aprender */
-        }}
+        onPress={() => navigation.navigate("Aprender")}
       >
         <View
           style={
@@ -66,9 +60,7 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Graficos */
-        }}
+        onPress={() => navigation.navigate("Gráficos")}
       >
         <View
           style={
@@ -91,7 +83,7 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Roulette")}
+        onPress={() => navigation.navigate("Jogar")}
       >
         <View
           style={
