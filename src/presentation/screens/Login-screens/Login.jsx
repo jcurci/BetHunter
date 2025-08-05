@@ -8,21 +8,63 @@ import {
   SafeAreaView,
   ImageBackground,
   Image,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from '@react-navigation/native';
+import { Container } from '../../../infrastructure/di/Container';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const container = Container.getInstance();
+  
+  console.log('Container initialized:', container);
 
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
   };
 
+  const handleLogin = async () => {
+    console.log('Login button pressed');
+    console.log('Email:', email);
+    console.log('Password:', password);
+    
+    if (!email || !password) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log('Getting user use case...');
+      const userUseCase = container.getUserUseCase();
+      console.log('User use case obtained');
+      
+      console.log('Attempting login...');
+      const result = await userUseCase.login({ email, password });
+      console.log('Login successful:', result);
+      console.log('Navigating to Home');
+      
+      // Teste simples - navegar direto sem depender do AsyncStorage
+      setTimeout(() => {
+        navigation.navigate('Home');
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('Erro', 'Email ou senha incorretos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ImageBackground
-      source={require("../../assets/login_background.png")}
+      source={require("../../../assets/login_background.png")}
       style={styles.background}
       resizeMode="cover"
     >
@@ -38,6 +80,8 @@ const Login = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholderTextColor="#A0A0A0"
+                value={email}
+                onChangeText={setEmail}
               />
             </View>
 
@@ -47,6 +91,8 @@ const Login = () => {
                 placeholder="Senha"
                 secureTextEntry={!showPassword}
                 placeholderTextColor="#A0A0A0"
+                value={password}
+                onChangeText={setPassword}
               />
               <TouchableOpacity style={styles.eyeIcon} onPress={toggleShowPassword}>
                 <Icon
@@ -57,8 +103,26 @@ const Login = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Home')}>
-              <Text style={styles.buttonText}>Logar</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, loading && styles.disabledButton]} 
+              onPress={() => {
+                console.log('Button pressed!');
+                if (email && password) {
+                  setLoading(true);
+                  setTimeout(() => {
+                    console.log('Login successful - navigating to Home');
+                    navigation.navigate('Home');
+                    setLoading(false);
+                  }, 1000);
+                } else {
+                  Alert.alert('Erro', 'Por favor, preencha todos os campos');
+                }
+              }}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Entrando...' : 'Logar'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.registerButton} onPress={() => navigation.navigate('SiginUp')}>
@@ -72,12 +136,12 @@ const Login = () => {
         </View>
         <View style={styles.logoContainer}>
           <Image
-            source={require("../../assets/logo-img/logo_white.svg")}
+            source={require("../../../assets/logo-img/logo_white.svg")}
             style={styles.bethunterLogoImage}
             resizeMode="contain"
           />
           <Image
-            source={require("../../assets/logo-img/text_white.svg")}
+            source={require("../../../assets/logo-img/text_white.svg")}
             style={styles.bethunterTextLogoImage}
             resizeMode="contain"
           />
@@ -186,6 +250,10 @@ const styles = StyleSheet.create({
   bethunterTextLogoImage: {
     width: 100,
     height: 50,
+  },
+  disabledButton: {
+    backgroundColor: "#A0A0A0",
+    opacity: 0.7,
   },
 });
 

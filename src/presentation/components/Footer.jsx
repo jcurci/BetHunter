@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useRoute } from "@react-navigation/native";
-import IconHome from "../assets/icon-home.svg";
+import IconHome from "../../assets/icon-home.svg";
 import { useNavigation } from "@react-navigation/native";
 
 const Footer = () => {
@@ -16,9 +16,7 @@ const Footer = () => {
     <View style={styles.footerContainer}>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Home */
-        }}
+        onPress={() => navigation.navigate("Home")}
       >
         <View
           style={
@@ -41,9 +39,7 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Aprender */
-        }}
+        onPress={() => navigation.navigate("Aprender")}
       >
         <View
           style={
@@ -66,25 +62,23 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => {
-          /* navigate to Graficos */
-        }}
+        onPress={() => navigation.navigate("Graficos")}
       >
         <View
           style={
-            isActive("Gráficos")
+            isActive("Graficos")
               ? styles.activeIconWrapper
               : styles.inactiveIconWrapper
           }
         >
           <Icon
-            name={isActive("Gráficos") ? "stats-chart" : "stats-chart-outline"}
+            name={isActive("Graficos") ? "stats-chart" : "stats-chart-outline"}
             size={24}
-            color={isActive("Gráficos") ? "#FFFFFF" : "#A09CAB"}
+            color={isActive("Graficos") ? "#FFFFFF" : "#A09CAB"}
           />
         </View>
         <Text
-          style={isActive("Gráficos") ? styles.activeIconText : styles.iconText}
+          style={isActive("Graficos") ? styles.activeIconText : styles.iconText}
         >
           Gráficos
         </Text>
@@ -95,21 +89,21 @@ const Footer = () => {
       >
         <View
           style={
-            isActive("Jogar")
+            isActive("Roulette")
               ? styles.activeIconWrapper
               : styles.inactiveIconWrapper
           }
         >
           <Icon
             name={
-              isActive("Jogar") ? "game-controller" : "game-controller-outline"
+              isActive("Roulette") ? "game-controller" : "game-controller-outline"
             }
             size={24}
-            color={isActive("Jogar") ? "#FFFFFF" : "#A09CAB"}
+            color={isActive("Roulette") ? "#FFFFFF" : "#A09CAB"}
           />
         </View>
         <Text
-          style={isActive("Jogar") ? styles.activeIconText : styles.iconText}
+          style={isActive("Roulette") ? styles.activeIconText : styles.iconText}
         >
           Jogar
         </Text>

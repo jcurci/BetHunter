@@ -2,14 +2,16 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import Login from "./src/screens/Login-screens/Login";
-import SiginUp from "./src/screens/Login-screens/SiginUp";
-import Home from "./src/screens/Home";
-import Config from "./src/screens/Config-screens/Config";
-import Profile from "./src/screens/Config-screens/Profile-configs/Profile";
-import ChangePassword from "./src/screens/Config-screens/Profile-configs/ChangePassword";
-import Notifications from "./src/screens/Config-screens/Notifications";
-import Roulette from "./src/screens/Roulette";
+import Login from "./src/presentation/screens/Login-screens/Login";
+import SiginUp from "./src/presentation/screens/Login-screens/SiginUp";
+import Home from "./src/presentation/screens/Home";
+import Config from "./src/presentation/screens/Config";
+import Profile from "./src/presentation/screens/Profile-configs/Profile";
+import ChangePassword from "./src/presentation/screens/Profile-configs/ChangePassword";
+import Notifications from "./src/presentation/screens/Notifications";
+import Roulette from "./src/presentation/screens/Roulette";
+import Aprender from "./src/presentation/screens/Aprender";
+import Graficos from "./src/presentation/screens/Graficos";
 
 const Stack = createNativeStackNavigator();
 
@@ -56,6 +58,16 @@ const App = () => {
         <Stack.Screen
           name="Roulette"
           component={Roulette}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Aprender"
+          component={Aprender}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Graficos"
+          component={Graficos}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

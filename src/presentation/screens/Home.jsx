@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,42 +10,60 @@ import {
 import Icon from "react-native-vector-icons/Entypo";
 import Footer from "../components/Footer";
 import { useNavigation } from "@react-navigation/native";
-import ImageBitcoin from "../assets/image-bitcoin.svg";
-import ImageMoeda from "../assets/image-moeda.svg";
-import ImageGrafico from "../assets/image-grafico.svg";
-
-const ARTICLES = [
-  {
-    id: 1,
-    title:
-      "Preço do bitcoin hoje: cai para US$ 107,8 mil com anúncios de tarifas de Trump",
-    description:
-      "Preço do bitcoin hoje: cai para US$ 107,8 mil com anúncios de tarifas de Trump",
-  },
-  {
-    id: 2,
-    title:
-      "Risco fiscal, queda da Selic: o que vai determinar o spread no mercado de crédito",
-    description:
-      "Risco fiscal, queda da Selic: o que vai determinar o spread no mercado de crédito",
-  },
-  {
-    id: 3,
-    title:
-      "Gestores estão otimistas, projetam Ibovespa acima de 140 mil pontos",
-    description:
-      "Gestores estão otimistas, projetam Ibovespa acima de 140 mil pontos",
-  },
-];
+import ImageBitcoin from "../../assets/image-bitcoin.svg";
+import ImageMoeda from "../../assets/image-moeda.svg";
+import ImageGrafico from "../../assets/image-grafico.svg";
+import { Container } from "../../infrastructure/di/Container";
+import { Article } from "../../domain/entities/Article";
 
 const Home = () => {
   const navigation = useNavigation();
+  const [articles, setArticles] = useState([]);
+  const [user, setUser] = useState(null);
+  const container = Container.getInstance();
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const articleUseCase = container.getArticleUseCase();
+      const userUseCase = container.getUserUseCase();
+      
+      const [articlesData, currentUser] = await Promise.all([
+        articleUseCase.getArticles(),
+        userUseCase.getCurrentUser(),
+      ]);
+      
+      setArticles(articlesData);
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  };
+
+  const getArticleImage = (article) => {
+    switch (article.imageUrl) {
+      case 'bitcoin':
+        return <ImageBitcoin width="100%" height={90} />;
+      case 'moeda':
+        return <ImageMoeda width="100%" height={90} />;
+      case 'grafico':
+        return <ImageGrafico width="100%" height={90} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greetingText}>Bom dia, John</Text>
+          <Text style={styles.greetingText}>
+            Bom dia, {user?.name || 'Usuário'}
+          </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Config")}>
             <Icon name="dots-three-horizontal" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -54,12 +72,14 @@ const Home = () => {
         {/* Points Card */}
         <View style={styles.pointsCard}>
           <View>
-            <Text style={styles.pointsText}>Você tem 47 pontos</Text>
+            <Text style={styles.pointsText}>
+              Você tem {user?.points || 0} pontos
+            </Text>
             <Text style={styles.pointsSubtitle}>
-              Pode girar a roleta 4 vezes
+              Pode girar a roleta {Math.floor((user?.points || 0) / 10)} vezes
             </Text>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Roulette")}>
             <Icon name="controller-record" size={30} color="#FFFFFF" />
             <Icon name="chevron-right" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -74,19 +94,17 @@ const Home = () => {
           </TouchableOpacity>
         </View>
 
-        {/* For You Section (Carousel Placeholder) */}
+        {/* For You Section */}
         <Text style={styles.sectionTitle}>Para você</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.carouselContainer}
         >
-          {ARTICLES.map((article) => (
+          {articles.map((article) => (
             <View key={article.id} style={styles.articleCard}>
               <View style={styles.articleImageContainer}>
-                {article.id === 1 && <ImageBitcoin width="100%" height={90} />}
-                {article.id === 2 && <ImageMoeda width="100%" height={90} />}
-                {article.id === 3 && <ImageGrafico width="100%" height={90} />}
+                {getArticleImage(article)}
               </View>
               <Text style={styles.articleTitle}>{article.title}</Text>
               <Text style={styles.articleDescription}>
@@ -103,7 +121,7 @@ const Home = () => {
           <Icon name="chevron-right" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Footer Placeholder */}
+        {/* Footer */}
         <Footer />
       </View>
     </SafeAreaView>
