@@ -11,52 +11,53 @@ import {
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
-import { useNavigation } from '@react-navigation/native';
-import { Container } from '../../../infrastructure/di/Container';
+import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../../../shared/contexts/AuthContext";
+import { Container } from "../../../infrastructure/di/Container";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const { login } = useAuth();
   const container = Container.getInstance();
-  
-  console.log('Container initialized:', container);
+
+  console.log("Container initialized:", container);
 
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
   };
 
   const handleLogin = async () => {
-    console.log('Login button pressed');
-    console.log('Email:', email);
-    console.log('Password:', password);
-    
+    console.log("Login button pressed");
+    console.log("Email:", email);
+    console.log("Password:", password);
+
     if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      Alert.alert("Erro", "Por favor, preencha todos os campos");
       return;
     }
 
     setLoading(true);
     try {
-      console.log('Getting user use case...');
+      console.log("Getting user use case...");
       const userUseCase = container.getUserUseCase();
-      console.log('User use case obtained');
-      
-      console.log('Attempting login...');
+      console.log("User use case obtained");
+
+      console.log("Attempting login...");
       const result = await userUseCase.login({ email, password });
-      console.log('Login successful:', result);
-      console.log('Navigating to Home');
-      
+      console.log("Login successful:", result);
+      console.log("Navigating to Home");
+
       // Teste simples - navegar direto sem depender do AsyncStorage
       setTimeout(() => {
-        navigation.navigate('Home');
+        navigation.navigate("Home");
       }, 1000);
-      
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Erro', 'Email ou senha incorretos');
+      console.error("Login error:", error);
+      Alert.alert("Erro", "Email ou senha incorretos");
     } finally {
       setLoading(false);
     }
@@ -94,7 +95,10 @@ const Login = () => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={toggleShowPassword}>
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={toggleShowPassword}
+              >
                 <Icon
                   name={showPassword ? "eye" : "eye-off"}
                   size={20}
@@ -103,29 +107,40 @@ const Login = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, loading && styles.disabledButton]} 
-              onPress={() => {
-                console.log('Button pressed!');
+            <TouchableOpacity
+              style={[styles.loginButton, loading && styles.disabledButton]}
+              onPress={async () => {
+                console.log("Button pressed!");
                 if (email && password) {
                   setLoading(true);
-                  setTimeout(() => {
-                    console.log('Login successful - navigating to Home');
-                    navigation.navigate('Home');
+                  try {
+                    const success = await login(email, password);
+                    if (success) {
+                      console.log("Login successful - navigating to MainTabs");
+                      navigation.navigate("MainTabs");
+                    } else {
+                      Alert.alert("Erro", "Credenciais inválidas");
+                    }
+                  } catch (error) {
+                    Alert.alert("Erro", "Erro ao fazer login");
+                  } finally {
                     setLoading(false);
-                  }, 1000);
+                  }
                 } else {
-                  Alert.alert('Erro', 'Por favor, preencha todos os campos');
+                  Alert.alert("Erro", "Por favor, preencha todos os campos");
                 }
               }}
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Entrando...' : 'Logar'}
+                {loading ? "Entrando..." : "Logar"}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.registerButton} onPress={() => navigation.navigate('SiginUp')}>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => navigation.navigate("SiginUp")}
+            >
               <Text style={styles.buttonText}>Cadastrar</Text>
             </TouchableOpacity>
 
@@ -167,7 +182,7 @@ const styles = StyleSheet.create({
   },
   gradientTitleContainer: {
     marginBottom: 10,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     width: "100%",
     height: 40,
   },

@@ -1,22 +1,26 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useRoute } from "@react-navigation/native";
-import IconHome from "../../assets/icon-home.svg";
-import { useNavigation } from "@react-navigation/native";
 
-const Footer = () => {
-  const route = useRoute();
-  const currentRouteName = route.name;
-  const navigation = useNavigation();
+const Footer = ({ state, navigation }) => {
+  const currentRouteName = state.routeNames[state.index];
 
   const isActive = (tabName) => currentRouteName === tabName;
+
+  const handleTabPress = (tabName) => {
+    // Se já estamos na tela atual, não faz nada
+    if (currentRouteName === tabName) {
+      return;
+    }
+    // Navega para a tela dentro do Tab Navigator
+    navigation.navigate(tabName);
+  };
 
   return (
     <View style={styles.footerContainer}>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Home")}
+        onPress={() => handleTabPress("Home")}
       >
         <View
           style={
@@ -39,7 +43,7 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Aprender")}
+        onPress={() => handleTabPress("Aprender")}
       >
         <View
           style={
@@ -62,48 +66,48 @@ const Footer = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Graficos")}
+        onPress={() => handleTabPress("Gráficos")}
       >
         <View
           style={
-            isActive("Graficos")
+            isActive("Gráficos")
               ? styles.activeIconWrapper
               : styles.inactiveIconWrapper
           }
         >
           <Icon
-            name={isActive("Graficos") ? "stats-chart" : "stats-chart-outline"}
+            name={isActive("Gráficos") ? "stats-chart" : "stats-chart-outline"}
             size={24}
-            color={isActive("Graficos") ? "#FFFFFF" : "#A09CAB"}
+            color={isActive("Gráficos") ? "#FFFFFF" : "#A09CAB"}
           />
         </View>
         <Text
-          style={isActive("Graficos") ? styles.activeIconText : styles.iconText}
+          style={isActive("Gráficos") ? styles.activeIconText : styles.iconText}
         >
           Gráficos
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Roulette")}
+        onPress={() => handleTabPress("Jogar")}
       >
         <View
           style={
-            isActive("Roulette")
+            isActive("Jogar")
               ? styles.activeIconWrapper
               : styles.inactiveIconWrapper
           }
         >
           <Icon
             name={
-              isActive("Roulette") ? "game-controller" : "game-controller-outline"
+              isActive("Jogar") ? "game-controller" : "game-controller-outline"
             }
             size={24}
-            color={isActive("Roulette") ? "#FFFFFF" : "#A09CAB"}
+            color={isActive("Jogar") ? "#FFFFFF" : "#A09CAB"}
           />
         </View>
         <Text
-          style={isActive("Roulette") ? styles.activeIconText : styles.iconText}
+          style={isActive("Jogar") ? styles.activeIconText : styles.iconText}
         >
           Jogar
         </Text>

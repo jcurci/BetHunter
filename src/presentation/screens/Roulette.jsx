@@ -11,7 +11,7 @@ import {
 import Icon from "react-native-vector-icons/Entypo";
 import { useNavigation } from "@react-navigation/native";
 import Svg, { Path, Text as SvgText, G, Circle } from "react-native-svg";
-import Footer from "../components/Footer";
+
 import { Container } from "../../infrastructure/di/Container";
 import { RouletteSector } from "../../domain/entities/Roulette";
 
@@ -42,41 +42,45 @@ const Roulette = () => {
     try {
       const rouletteUseCase = container.getRouletteUseCase();
       const userUseCase = container.getUserUseCase();
-      
+
       const [sectorsData, currentUser] = await Promise.all([
         rouletteUseCase.getSectors(),
         userUseCase.getCurrentUser(),
       ]);
-      
+
       setSectors(sectorsData);
       setUser(currentUser);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
     }
   };
 
   const spinWheel = async () => {
     if (spinning || !user || user.points < SPIN_COST) return;
-    
+
     setSpinning(true);
-    
+
     try {
       const rouletteUseCase = container.getRouletteUseCase();
       const userUseCase = container.getUserUseCase();
-      
+
       const game = await rouletteUseCase.playGame(user.id, SPIN_COST);
-      const updatedUser = await userUseCase.updateUserPoints(user.id, user.points - SPIN_COST + game.result.pointsWon);
-      
+      const updatedUser = await userUseCase.updateUserPoints(
+        user.id,
+        user.points - SPIN_COST + game.result.pointsWon
+      );
+
       setUser(updatedUser);
       setResult(game.result.sector.label);
-      
+
       // Animate the wheel
       const randomSector = game.result.sector;
-      const sectorIndex = sectors.findIndex(s => s.id === randomSector.id);
+      const sectorIndex = sectors.findIndex((s) => s.id === randomSector.id);
       const SECTOR_ANGLE = 360 / sectors.length;
       const turns = 5;
-      const finalAngle = 360 * turns + (360 - sectorIndex * SECTOR_ANGLE - SECTOR_ANGLE / 2);
-      
+      const finalAngle =
+        360 * turns + (360 - sectorIndex * SECTOR_ANGLE - SECTOR_ANGLE / 2);
+
       Animated.timing(spinAnim, {
         toValue: spinValue + finalAngle,
         duration: 2500,
@@ -87,7 +91,7 @@ const Roulette = () => {
         setSpinning(false);
       });
     } catch (error) {
-      console.error('Error spinning wheel:', error);
+      console.error("Error spinning wheel:", error);
       setSpinning(false);
     }
   };
@@ -95,14 +99,14 @@ const Roulette = () => {
   const createSectorPath = (startAngle, endAngle) => {
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = (endAngle * Math.PI) / 180;
-    
+
     const x1 = CENTER_X + RADIUS * Math.cos(startRad);
     const y1 = CENTER_Y + RADIUS * Math.sin(startRad);
     const x2 = CENTER_X + RADIUS * Math.cos(endRad);
     const y2 = CENTER_Y + RADIUS * Math.sin(endRad);
-    
+
     const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-    
+
     return `M ${CENTER_X} ${CENTER_Y} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
   };
 
@@ -111,7 +115,7 @@ const Roulette = () => {
     const angle = sectorIndex * SECTOR_ANGLE + SECTOR_ANGLE / 2;
     const rad = (angle * Math.PI) / 180;
     const textRadius = RADIUS * 0.7;
-    
+
     return {
       x: CENTER_X + textRadius * Math.cos(rad),
       y: CENTER_Y + textRadius * Math.sin(rad),
@@ -120,14 +124,14 @@ const Roulette = () => {
 
   const renderSectors = () => {
     if (!sectors.length) return null;
-    
+
     const SECTOR_ANGLE = 360 / sectors.length;
-    
+
     return sectors.map((sector, index) => {
       const startAngle = index * SECTOR_ANGLE;
       const endAngle = (index + 1) * SECTOR_ANGLE;
       const textPos = getSectorTextPosition(index);
-      
+
       return (
         <G key={sector.id}>
           <Path
@@ -152,7 +156,9 @@ const Roulette = () => {
     });
   };
 
-  const pointsInfo = user ? `Você possui ${user.points} pontos. Você pode gastar ${SPIN_COST} pontos para girar a roleta.` : "Carregando...";
+  const pointsInfo = user
+    ? `Você possui ${user.points} pontos. Você pode gastar ${SPIN_COST} pontos para girar a roleta.`
+    : "Carregando...";
   const spinButtonDisabled = spinning || !user || user.points < SPIN_COST;
 
   // Animated rotation for the wheel
@@ -177,12 +183,15 @@ const Roulette = () => {
       {/* Spin Button */}
       <View style={styles.spinButtonContainer}>
         <TouchableOpacity
-          style={[styles.spinButton, spinButtonDisabled && styles.disabledButton]}
+          style={[
+            styles.spinButton,
+            spinButtonDisabled && styles.disabledButton,
+          ]}
           onPress={spinWheel}
           disabled={spinButtonDisabled}
         >
           <Text style={styles.spinButtonText}>
-            {spinning ? 'Girando...' : 'Girar!'}
+            {spinning ? "Girando..." : "Girar!"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -209,16 +218,15 @@ const Roulette = () => {
           </AnimatedG>
           {/* Pointer */}
           <Path
-            d={`M ${CENTER_X} ${CENTER_Y - RADIUS - 10} L ${CENTER_X - 10} ${CENTER_Y - RADIUS + 10} L ${CENTER_X + 10} ${CENTER_Y - RADIUS + 10} Z`}
+            d={`M ${CENTER_X} ${CENTER_Y - RADIUS - 10} L ${CENTER_X - 10} ${
+              CENTER_Y - RADIUS + 10
+            } L ${CENTER_X + 10} ${CENTER_Y - RADIUS + 10} Z`}
             fill="#FF8C43"
             stroke="#000"
             strokeWidth="1"
           />
         </Svg>
       </View>
-
-      {/* Footer */}
-      <Footer />
     </SafeAreaView>
   );
 };

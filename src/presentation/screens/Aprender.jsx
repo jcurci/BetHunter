@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import Footer from "../components/Footer";
+
 import { Container } from "../../infrastructure/di/Container";
 
 const Aprender = () => {
@@ -27,7 +27,7 @@ const Aprender = () => {
       const currentUser = await userUseCase.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error("Error loading user data:", error);
     }
   };
 
@@ -84,16 +84,11 @@ const Aprender = () => {
 
   const renderProgressBar = (percentage, hasProgress) => {
     if (!hasProgress) return null;
-    
+
     return (
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBar}>
-          <View 
-            style={[
-              styles.progressFill, 
-              { width: `${percentage}%` }
-            ]} 
-          />
+          <View style={[styles.progressFill, { width: `${percentage}%` }]} />
         </View>
         <Text style={styles.percentageText}>{percentage}%</Text>
       </View>
@@ -101,7 +96,15 @@ const Aprender = () => {
   };
 
   const renderModuleCard = (module) => (
-    <TouchableOpacity key={module.id} style={styles.moduleCard}>
+    <TouchableOpacity
+      key={module.id}
+      style={styles.moduleCard}
+      onPress={() => {
+        if (module.title === "Fundamentos") {
+          navigation.navigate("QuizScreen");
+        }
+      }}
+    >
       <Text style={[styles.moduleTitle, { color: module.color }]}>
         {module.title}
       </Text>
@@ -131,9 +134,7 @@ const Aprender = () => {
               <Icon name="user" size={24} color="#A0A0A0" />
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>
-                {user?.name || "John Doe"}
-              </Text>
+              <Text style={styles.userName}>{user?.name || "John Doe"}</Text>
               <Text style={styles.userRank}>Prata - #7</Text>
             </View>
           </View>
@@ -155,9 +156,6 @@ const Aprender = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Footer */}
-      <Footer />
     </SafeAreaView>
   );
 };
@@ -296,4 +294,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Aprender; 
+export default Aprender;

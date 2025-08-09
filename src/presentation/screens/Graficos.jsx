@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import Footer from "../components/Footer";
+
 import { Container } from "../../infrastructure/di/Container";
 import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
@@ -37,13 +37,10 @@ const Graficos = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      await Promise.all([
-        loadChartData(),
-        loadInvestmentsData(),
-      ]);
+      await Promise.all([loadChartData(), loadInvestmentsData()]);
     } catch (error) {
-      console.error('Error loading data:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os dados');
+      console.error("Error loading data:", error);
+      Alert.alert("Erro", "Não foi possível carregar os dados");
     } finally {
       setLoading(false);
     }
@@ -137,7 +134,7 @@ const Graficos = () => {
       ];
       setInvestments(mockInvestments);
     } catch (error) {
-      console.error('Error loading investments:', error);
+      console.error("Error loading investments:", error);
     }
   };
 
@@ -145,12 +142,14 @@ const Graficos = () => {
     const max = Math.max(...data);
     const min = Math.min(...data);
     const range = max - min || 1; // Evita divisão por zero
-    
-    const points = data.map((value, index) => {
-      const x = (index / (data.length - 1)) * 40;
-      const y = 20 - ((value - min) / range) * 20;
-      return `${x},${y}`;
-    }).join(' ');
+
+    const points = data
+      .map((value, index) => {
+        const x = (index / (data.length - 1)) * 40;
+        const y = 20 - ((value - min) / range) * 20;
+        return `${x},${y}`;
+      })
+      .join(" ");
 
     return (
       <View style={styles.miniChartContainer}>
@@ -177,22 +176,25 @@ const Graficos = () => {
           <Text style={styles.companyText}>{investment.company}</Text>
         </View>
       </View>
-      
+
       <View style={styles.investmentRight}>
         {renderMiniChart(investment.miniChartData, investment.isPositive)}
         <View style={styles.valueContainer}>
           <Text style={styles.currentValue}>{investment.currentValue}</Text>
           <View style={styles.percentageContainer}>
-            <Icon 
-              name={investment.isPositive ? "trending-up" : "trending-down"} 
-              size={12} 
-              color={investment.isPositive ? "#4CAF50" : "#F44336"} 
+            <Icon
+              name={investment.isPositive ? "trending-up" : "trending-down"}
+              size={12}
+              color={investment.isPositive ? "#4CAF50" : "#F44336"}
             />
-            <Text style={[
-              styles.percentageText,
-              { color: investment.isPositive ? "#4CAF50" : "#F44336" }
-            ]}>
-              {investment.isPositive ? "+" : ""}{investment.percentageChange}%
+            <Text
+              style={[
+                styles.percentageText,
+                { color: investment.isPositive ? "#4CAF50" : "#F44336" },
+              ]}
+            >
+              {investment.isPositive ? "+" : ""}
+              {investment.percentageChange}%
             </Text>
           </View>
         </View>
@@ -215,7 +217,7 @@ const Graficos = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl
@@ -283,15 +285,12 @@ const Graficos = () => {
               <Icon name="chevron-right" size={20} color="#7456C8" />
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.investmentsList}>
             {investments.map(renderInvestmentItem)}
           </View>
         </View>
       </ScrollView>
-
-      {/* Footer */}
-      <Footer />
     </SafeAreaView>
   );
 };
@@ -457,4 +456,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Graficos; 
+export default Graficos;

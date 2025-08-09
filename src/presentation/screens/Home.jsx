@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Icon from "react-native-vector-icons/Entypo";
-import Footer from "../components/Footer";
+
 import { useNavigation } from "@react-navigation/native";
 import ImageBitcoin from "../../assets/image-bitcoin.svg";
 import ImageMoeda from "../../assets/image-moeda.svg";
@@ -30,26 +30,26 @@ const Home = () => {
     try {
       const articleUseCase = container.getArticleUseCase();
       const userUseCase = container.getUserUseCase();
-      
+
       const [articlesData, currentUser] = await Promise.all([
         articleUseCase.getArticles(),
         userUseCase.getCurrentUser(),
       ]);
-      
+
       setArticles(articlesData);
       setUser(currentUser);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
     }
   };
 
   const getArticleImage = (article) => {
     switch (article.imageUrl) {
-      case 'bitcoin':
+      case "bitcoin":
         return <ImageBitcoin width="100%" height={90} />;
-      case 'moeda':
+      case "moeda":
         return <ImageMoeda width="100%" height={90} />;
-      case 'grafico':
+      case "grafico":
         return <ImageGrafico width="100%" height={90} />;
       default:
         return null;
@@ -62,7 +62,7 @@ const Home = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greetingText}>
-            Bom dia, {user?.name || 'Usuário'}
+            Bom dia, {user?.name || "Usuário"}
           </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Config")}>
             <Icon name="dots-three-horizontal" size={24} color="#FFFFFF" />
@@ -120,9 +120,6 @@ const Home = () => {
           <Text style={styles.continueText}>Fundamentos: 1/4</Text>
           <Icon name="chevron-right" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-
-        {/* Footer */}
-        <Footer />
       </View>
     </SafeAreaView>
   );
