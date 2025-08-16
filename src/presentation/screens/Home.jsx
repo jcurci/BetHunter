@@ -15,6 +15,7 @@ import ImageMoeda from "../../assets/image-moeda.svg";
 import ImageGrafico from "../../assets/image-grafico.svg";
 import { Container } from "../../infrastructure/di/Container";
 import { Article } from "../../domain/entities/Article";
+import HomeAccountButton from "../components/HomeAccountButton";
 
 const Home = () => {
   const navigation = useNavigation();
@@ -58,68 +59,73 @@ const Home = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.greetingText}>
-            Bom dia, {user?.name || 'Usuário'}
-          </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Config")}>
-            <Icon name="dots-three-horizontal" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Points Card */}
-        <View style={styles.pointsCard}>
-          <View>
-            <Text style={styles.pointsText}>
-              Você tem {user?.points || 0} pontos
+      <View style={styles.mainContainer}>
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.greetingText}>
+              Bom dia, {user?.name || 'Usuário'}
             </Text>
-            <Text style={styles.pointsSubtitle}>
-              Pode girar a roleta {Math.floor((user?.points || 0) / 10)} vezes
-            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Config")}>
+              <Icon name="dots-three-horizontal" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate("Roulette")}>
-            <Icon name="controller-record" size={30} color="#FFFFFF" />
-            <Icon name="chevron-right" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
 
-        {/* Initiative Section */}
-        <View style={styles.initiativeSection}>
-          <Text style={styles.initiativeTitle}>Sua iniciativa já te gerou</Text>
-          <Text style={styles.initiativeAmount}>R$14.884,20</Text>
-          <TouchableOpacity>
-            <Text style={styles.historyText}>Conferir histórico</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* For You Section */}
-        <Text style={styles.sectionTitle}>Para você</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.carouselContainer}
-        >
-          {articles.map((article) => (
-            <View key={article.id} style={styles.articleCard}>
-              <View style={styles.articleImageContainer}>
-                {getArticleImage(article)}
-              </View>
-              <Text style={styles.articleTitle}>{article.title}</Text>
-              <Text style={styles.articleDescription}>
-                {article.description}
+          {/* Points Card */}
+          <View style={styles.pointsCard}>
+            <View>
+              <Text style={styles.pointsText}>
+                Você tem {user?.points || 0} pontos
+              </Text>
+              <Text style={styles.pointsSubtitle}>
+                Pode girar a roleta {Math.floor((user?.points || 0) / 10)} vezes
               </Text>
             </View>
-          ))}
-        </ScrollView>
+            <TouchableOpacity onPress={() => navigation.navigate("Roulette")}>
+              <Icon name="controller-record" size={30} color="#FFFFFF" />
+              <Icon name="chevron-right" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
-        {/* Continue Section */}
-        <Text style={styles.sectionTitle}>Continue de onde parou</Text>
-        <TouchableOpacity style={styles.continueCard}>
-          <Text style={styles.continueText}>Fundamentos: 1/4</Text>
-          <Icon name="chevron-right" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+          {/* Initiative Section */}
+          <View style={styles.initiativeSection}>
+            <Text style={styles.initiativeTitle}>Sua iniciativa já te gerou</Text>
+            <Text style={styles.initiativeAmount}>R$14.884,20</Text>
+            <TouchableOpacity>
+              <Text style={styles.historyText}>Conferir histórico</Text>
+            </TouchableOpacity>
+            
+            {/* Account Button */}
+            <HomeAccountButton />
+          </View>
+
+          {/* For You Section */}
+          <Text style={styles.sectionTitle}>Para você</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.carouselContainer}
+          >
+            {articles.map((article) => (
+              <View key={article.id} style={styles.articleCard}>
+                <View style={styles.articleImageContainer}>
+                  {getArticleImage(article)}
+                </View>
+                <Text style={styles.articleTitle}>{article.title}</Text>
+                <Text style={styles.articleDescription}>
+                  {article.description}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Continue Section */}
+          <Text style={styles.sectionTitle}>Continue de onde parou</Text>
+          <TouchableOpacity style={styles.continueCard}>
+            <Text style={styles.continueText}>Fundamentos: 1/4</Text>
+            <Icon name="chevron-right" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* Footer */}
         <Footer />
@@ -133,9 +139,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
+  mainContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     padding: 20,
+    paddingBottom: 80,
   },
   header: {
     flexDirection: "row",
@@ -184,6 +194,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#A09CAB",
     textDecorationLine: "underline",
+    marginBottom: 0,
   },
   sectionTitle: {
     fontSize: 18,

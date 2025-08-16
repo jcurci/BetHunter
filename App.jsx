@@ -12,6 +12,9 @@ import Notifications from "./src/presentation/screens/Notifications";
 import Roulette from "./src/presentation/screens/Roulette";
 import Aprender from "./src/presentation/screens/Aprender";
 import Graficos from "./src/presentation/screens/Graficos";
+import AccountOverview from "./src/presentation/screens/AccountOverview";
+import AccountHistory from "./src/presentation/screens/AccountHistory";
+import TransactionForm from "./src/presentation/screens/TransactionForm";
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +71,21 @@ const App = () => {
         <Stack.Screen
           name="Graficos"
           component={Graficos}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AccountOverview"
+          component={AccountOverview}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AccountHistory"
+          component={AccountHistory}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TransactionForm"
+          component={TransactionForm}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
