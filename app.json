@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "BetHunter",
+    "slug": "bethunter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/login_background.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./src/assets/login_background.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/login_background.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.bethunter.app"
+    },
+    "web": {
+      "favicon": "./src/assets/login_background.png"
+    },
+    "plugins": []
+  }
+}
