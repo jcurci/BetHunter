@@ -11,52 +11,51 @@ import {
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
-import { useNavigation } from '@react-navigation/native';
-import { Container } from '../../../infrastructure/di/Container';
+import { useNavigation } from "@react-navigation/native";
+import { Container } from "../../../infrastructure/di/Container";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
   const container = Container.getInstance();
-  
-  console.log('Container initialized:', container);
+
+  console.log("Container initialized:", container);
 
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
   };
 
   const handleLogin = async () => {
-    console.log('Login button pressed');
-    console.log('Email:', email);
-    console.log('Password:', password);
-    
+    console.log("Login button pressed");
+    console.log("Email:", email);
+    console.log("Password:", password);
+
     if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      Alert.alert("Erro", "Por favor, preencha todos os campos");
       return;
     }
 
     setLoading(true);
     try {
-      console.log('Getting user use case...');
+      console.log("Getting user use case...");
       const userUseCase = container.getUserUseCase();
-      console.log('User use case obtained');
-      
-      console.log('Attempting login...');
+      console.log("User use case obtained");
+
+      console.log("Attempting login...");
       const result = await userUseCase.login({ email, password });
-      console.log('Login successful:', result);
-      console.log('Navigating to Home');
-      
+      console.log("Login successful:", result);
+      console.log("Navigating to Home");
+
       // Teste simples - navegar direto sem depender do AsyncStorage
       setTimeout(() => {
-        navigation.navigate('Home');
+        navigation.navigate("Home");
       }, 1000);
-      
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Erro', 'Email ou senha incorretos');
+      console.error("Login error:", error);
+      Alert.alert("Erro", "Email ou senha incorretos");
     } finally {
       setLoading(false);
     }
@@ -94,7 +93,10 @@ const Login = () => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity style={styles.eyeIcon} onPress={toggleShowPassword}>
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={toggleShowPassword}
+              >
                 <Icon
                   name={showPassword ? "eye" : "eye-off"}
                   size={20}
@@ -103,29 +105,32 @@ const Login = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, loading && styles.disabledButton]} 
+            <TouchableOpacity
+              style={[styles.loginButton, loading && styles.disabledButton]}
               onPress={() => {
-                console.log('Button pressed!');
+                console.log("Button pressed!");
                 if (email && password) {
                   setLoading(true);
                   setTimeout(() => {
-                    console.log('Login successful - navigating to Home');
-                    navigation.navigate('Home');
+                    console.log("Login successful - navigating to Home");
+                    navigation.navigate("Home");
                     setLoading(false);
                   }, 1000);
                 } else {
-                  Alert.alert('Erro', 'Por favor, preencha todos os campos');
+                  Alert.alert("Erro", "Por favor, preencha todos os campos");
                 }
               }}
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Entrando...' : 'Logar'}
+                {loading ? "Entrando..." : "Logar"}
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.registerButton} onPress={() => navigation.navigate('SiginUp')}>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => navigation.navigate("SiginUp")}
+            >
               <Text style={styles.buttonText}>Cadastrar</Text>
             </TouchableOpacity>
 
@@ -167,7 +172,7 @@ const styles = StyleSheet.create({
   },
   gradientTitleContainer: {
     marginBottom: 10,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     width: "100%",
     height: 40,
   },
@@ -176,6 +181,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#7456C8",
     textAlign: "left",
+    marginBottom: 20,
   },
   form: {
     width: "100%",
@@ -183,30 +189,32 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: "100%",
-    marginBottom: 8,
+    marginBottom: 12,
     position: "relative",
   },
   input: {
     backgroundColor: "#121212",
-    padding: 15,
+    padding: 16,
     paddingRight: 50,
     borderRadius: 10,
     color: "#FFFFFF",
     fontSize: 16,
+    marginBottom: 2,
   },
   eyeIcon: {
     position: "absolute",
-    right: 15,
+    right: 16,
     top: "50%",
     transform: [{ translateY: -10 }],
   },
   loginButton: {
     backgroundColor: "#7456C8",
-    padding: 15,
+    padding: 16,
     borderRadius: 10,
     alignItems: "center",
     width: "100%",
-    marginBottom: 8,
+    marginBottom: 10,
+    marginTop: 6,
   },
   registerButtonGradient: {
     borderRadius: 10,
@@ -215,10 +223,11 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     backgroundColor: "#FFA500",
-    padding: 15,
+    padding: 16,
     borderRadius: 10,
     alignItems: "center",
     width: "100%",
+    marginBottom: 12,
   },
   buttonText: {
     color: "white",
@@ -229,7 +238,8 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: "flex-start",
-    marginBottom: 8,
+    marginBottom: 12,
+    marginTop: 6,
   },
   forgotPasswordText: {
     color: "#A09CAB",
