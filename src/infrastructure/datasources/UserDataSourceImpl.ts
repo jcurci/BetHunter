@@ -6,18 +6,27 @@ export class UserDataSourceImpl implements UserDataSource {
   constructor(private storageService: StorageService) {}
 
   async login(credentials: UserCredentials): Promise<User> {
-    // Simulação de login - em produção seria uma chamada para API
-    const mockUser: User = {
-      id: '1',
-      name: 'John Doe',
+    // Busca usuário existente no storage
+    const existingUser = await this.getCurrentUser();
+    
+    if (existingUser && existingUser.email === credentials.email) {
+      // Usuário já existe, apenas atualiza a sessão
+      await this.storageService.setItem('currentUser', JSON.stringify(existingUser));
+      return existingUser;
+    }
+
+    // Se não existe, cria um novo usuário (simulação de login bem-sucedido)
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: 'Usuário',
       email: credentials.email,
-      points: 47,
+      points: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    await this.storageService.setItem('currentUser', JSON.stringify(mockUser));
-    return mockUser;
+    await this.storageService.setItem('currentUser', JSON.stringify(newUser));
+    return newUser;
   }
 
   async register(userData: UserRegistration): Promise<User> {

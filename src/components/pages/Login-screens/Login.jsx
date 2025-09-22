@@ -29,10 +29,6 @@ const Login = () => {
   };
 
   const handleLogin = async () => {
-    console.log("Login button pressed");
-    console.log("Email:", email);
-    console.log("Password:", password);
-
     if (!email || !password) {
       Alert.alert("Erro", "Por favor, preencha todos os campos");
       return;
@@ -40,19 +36,16 @@ const Login = () => {
 
     setLoading(true);
     try {
-      console.log("Getting user use case...");
       const userUseCase = container.getUserUseCase();
-      console.log("User use case obtained");
-
-      console.log("Attempting login...");
       const result = await userUseCase.login({ email, password });
-      console.log("Login successful:", result);
-      console.log("Navigating to Home");
 
-      // Teste simples - navegar direto sem depender do AsyncStorage
-      setTimeout(() => {
-        navigation.navigate("Home");
-      }, 1000);
+      console.log("Login successful:", result);
+      Alert.alert("Sucesso", "Login realizado com sucesso!", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("Home"),
+        },
+      ]);
     } catch (error) {
       console.error("Login error:", error);
       Alert.alert("Erro", "Email ou senha incorretos");
@@ -107,19 +100,7 @@ const Login = () => {
 
             <TouchableOpacity
               style={[styles.loginButton, loading && styles.disabledButton]}
-              onPress={() => {
-                console.log("Button pressed!");
-                if (email && password) {
-                  setLoading(true);
-                  setTimeout(() => {
-                    console.log("Login successful - navigating to Home");
-                    navigation.navigate("Home");
-                    setLoading(false);
-                  }, 1000);
-                } else {
-                  Alert.alert("Erro", "Por favor, preencha todos os campos");
-                }
-              }}
+              onPress={handleLogin}
               disabled={loading}
             >
               <Text style={styles.buttonText}>
