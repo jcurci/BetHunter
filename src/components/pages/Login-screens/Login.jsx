@@ -13,6 +13,7 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import { Container } from "../../../infrastructure/di/Container";
+import Logo from "../../../assets/logo-img/logo.svg";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -121,16 +122,7 @@ const Login = () => {
           </View>
         </View>
         <View style={styles.logoContainer}>
-          <Image
-            source={require("../../../assets/logo-img/logo_white.svg")}
-            style={styles.bethunterLogoImage}
-            resizeMode="contain"
-          />
-          <Image
-            source={require("../../../assets/logo-img/text_white.svg")}
-            style={styles.bethunterTextLogoImage}
-            resizeMode="contain"
-          />
+          <Logo width={200} height={50} style={styles.bethunterLogoImage} />
         </View>
       </SafeAreaView>
     </ImageBackground>
@@ -142,14 +134,17 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+    backgroundColor: "#1A1923",
   },
   safeArea: {
     flex: 1,
+    backgroundColor: "#1A1923",
   },
   content: {
     flex: 1,
     padding: 20,
     paddingTop: 10,
+    backgroundColor: "#1A1923",
   },
   gradientTitleContainer: {
     marginBottom: 10,
@@ -229,17 +224,11 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: "center",
-    flexDirection: "row",
     justifyContent: "center",
     marginBottom: 40,
   },
   bethunterLogoImage: {
-    width: 60,
-    height: 60,
-    marginRight: 5,
-  },
-  bethunterTextLogoImage: {
-    width: 100,
+    width: 200,
     height: 50,
   },
   disabledButton: {

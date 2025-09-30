@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import Footer from "../comum/Footer";
 import { Container } from "../../infrastructure/di/Container";
 
@@ -37,7 +38,7 @@ const Aprender = () => {
       title: "Fundamentos",
       progress: "1/4",
       percentage: 25,
-      color: "#FF8C43",
+      gradientColors: ["#7456C8", "#FF8C43"],
       hasProgress: true,
     },
     {
@@ -45,7 +46,7 @@ const Aprender = () => {
       title: "Prática com Dinheiro",
       progress: "0/10",
       percentage: 0,
-      color: "#7456C8",
+      gradientColors: ["#7456C8", "#FF69B4"],
       hasProgress: false,
     },
     {
@@ -53,7 +54,7 @@ const Aprender = () => {
       title: "Conhecimento Aplicado",
       progress: "0/15",
       percentage: 0,
-      color: "#FF8C43",
+      gradientColors: ["#7456C8", "#FF8C43"],
       hasProgress: false,
     },
     {
@@ -61,7 +62,7 @@ const Aprender = () => {
       title: "Objetivos e Planejamento",
       progress: "0/8",
       percentage: 0,
-      color: "#7456C8",
+      gradientColors: ["#7456C8", "#FF69B4"],
       hasProgress: false,
     },
     {
@@ -69,7 +70,7 @@ const Aprender = () => {
       title: "Investimentos de Baixo Risco",
       progress: "0/30",
       percentage: 0,
-      color: "#FF8C43",
+      gradientColors: ["#7456C8", "#FF8C43"],
       hasProgress: false,
     },
     {
@@ -77,18 +78,23 @@ const Aprender = () => {
       title: "Investimentos de Alto Risco",
       progress: "0/44",
       percentage: 0,
-      color: "#7456C8",
+      gradientColors: ["#7456C8", "#FF8C43"],
       hasProgress: false,
     },
   ];
 
-  const renderProgressBar = (percentage, hasProgress) => {
+  const renderProgressBar = (percentage, hasProgress, gradientColors) => {
     if (!hasProgress) return null;
 
     return (
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${percentage}%` }]} />
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressFill, { width: `${percentage}%` }]}
+          />
         </View>
         <Text style={styles.percentageText}>{percentage}%</Text>
       </View>
@@ -97,11 +103,15 @@ const Aprender = () => {
 
   const renderModuleCard = (module) => (
     <TouchableOpacity key={module.id} style={styles.moduleCard}>
-      <Text style={[styles.moduleTitle, { color: module.color }]}>
-        {module.title}
-      </Text>
+     
+        <Text style={styles.moduleTitle}>{module.title}</Text>
+      
       <Text style={styles.progressText}>{module.progress}</Text>
-      {renderProgressBar(module.percentage, module.hasProgress)}
+      {renderProgressBar(
+        module.percentage,
+        module.hasProgress,
+        module.gradientColors
+      )}
       {!module.hasProgress && (
         <Text style={styles.percentageText}>{module.percentage}%</Text>
       )}
@@ -135,9 +145,15 @@ const Aprender = () => {
             <Icon name="heart" size={16} color="#FF0000" />
           </View>
           <TouchableOpacity style={styles.rankingButton}>
-            <Text style={styles.rankingButtonText}>Consultar ranking</Text>
+            <Text style={styles.rankingButtonText}>Conferir ranking</Text>
             <Icon name="chevron-down" size={16} color="#7456C8" />
           </TouchableOpacity>
+          <LinearGradient
+            colors={["#7456C8", "#FF8C43"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradientSeparator}
+          />
         </View>
 
         {/* Learning Modules Grid */}
@@ -177,7 +193,7 @@ const styles = StyleSheet.create({
     color: "#7456C8",
   },
   userCard: {
-    backgroundColor: "#2A1B3D",
+    backgroundColor: "#2B2935",
     marginHorizontal: 20,
     marginBottom: 30,
     borderRadius: 15,
@@ -232,6 +248,11 @@ const styles = StyleSheet.create({
     color: "#7456C8",
     marginRight: 5,
   },
+  gradientSeparator: {
+    height: 2,
+    marginTop: 15,
+    borderRadius: 1,
+  },
   modulesContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -249,20 +270,23 @@ const styles = StyleSheet.create({
   },
   moduleCard: {
     width: "48%",
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#2B2935",
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
     minHeight: 120,
   },
+  moduleTitleGradient: {
+    marginBottom: 8,
+  },
   moduleTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 8,
+    color: "#FFFFFF",
   },
   progressText: {
     fontSize: 14,
-    color: "#A0A0A0",
+    color: "#A09CAB",
     marginBottom: 10,
   },
   progressBarContainer: {
@@ -279,12 +303,11 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#7456C8",
     borderRadius: 3,
   },
   percentageText: {
     fontSize: 12,
-    color: "#A0A0A0",
+    color: "#A09CAB",
     alignSelf: "flex-end",
   },
 });
