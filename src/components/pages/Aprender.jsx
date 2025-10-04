@@ -19,6 +19,7 @@ const Aprender = () => {
   const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const container = Container.getInstance();
+  
 
   useEffect(() => {
     loadUserData();
