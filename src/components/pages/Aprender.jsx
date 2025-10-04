@@ -103,18 +103,18 @@ const Aprender = () => {
 
   const renderModuleCard = (module) => (
     <TouchableOpacity key={module.id} style={styles.moduleCard}>
-      <View style={styles.progressBarOne}>
+      <View style={styles.containerTitle}>
         <MaskedView
-          maskElement={
-            <Text style={styles.moduleTitle}>{module.title}</Text>
-          }
+          maskElement={<Text style={styles.moduleTitle}>{module.title}</Text>}
         >
           <LinearGradient
             colors={module.gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={[styles.moduleTitle, {opacity: 0}]}>{module.title}</Text>
+            <Text style={[styles.moduleTitle, { opacity: 0 }]}>
+              {module.title}
+            </Text>
           </LinearGradient>
         </MaskedView>
         <Text style={styles.progressText}>{module.progress}</Text>
@@ -132,12 +132,6 @@ const Aprender = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Aprender</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="x" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
 
         {/* User Card */}
         <View style={styles.userCard}>
@@ -156,19 +150,43 @@ const Aprender = () => {
           </View>
           <TouchableOpacity style={styles.rankingButton}>
             <Text style={styles.rankingButtonText}>Conferir ranking</Text>
-            <Icon name="chevron-down" size={16} color="#7456C8" />
+            <Icon name="chevron-down" size={16} color="#A09CAB" />
           </TouchableOpacity>
-          <LinearGradient
+
+          {/* <LinearGradient
             colors={["#7456C8", "#FF8C43"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientSeparator}
-          />
+          /> */}
         </View>
 
         {/* Learning Modules Grid */}
         <View style={styles.modulesContainer}>
-          <Text style={styles.modulesTitle}>Módulos de Aprendizagem</Text>
+          <LinearGradient
+            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              height: 50,
+              borderRadius: 2,
+              marginBottom: 20,
+              position: "absolute",
+              opacity: 0.25,
+              top: -27,
+              left: 0,
+              right: 0,
+              borderRadius: 5,
+              shadowColor: "#000",
+              shadowOffset: {
+                width: 0,
+                height: 2,
+              },
+              shadowOpacity: 0.35,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+          />
           <View style={styles.modulesGrid}>
             {learningModules.map(renderModuleCard)}
           </View>
@@ -186,28 +204,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
+  // scrollView: {
+  //   flex: 1,
+  // },
+  // header: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "center",
+  //   paddingHorizontal: 20,
+  //   paddingTop: 10,
+  //   paddingBottom: 20,
+  // },
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#7456C8",
   },
   userCard: {
-    backgroundColor: "#2B2935",
-    marginHorizontal: 20,
+    backgroundColor: "#1A1923",
     marginBottom: 30,
-    borderRadius: 15,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   userInfo: {
     flexDirection: "row",
@@ -227,20 +244,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#FFFFFF",
     marginBottom: 5,
   },
   userRank: {
-    fontSize: 14,
-    color: "#7456C8",
+    fontSize: 20,
+    color: "#B9D8E9",
   },
   rankingInfo: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    marginBottom: 10,
+    position: "absolute",
+    right: 20,
+    top: 30,
   },
   rankingNumber: {
     fontSize: 16,
@@ -255,7 +274,7 @@ const styles = StyleSheet.create({
   },
   rankingButtonText: {
     fontSize: 14,
-    color: "#7456C8",
+    color: "#A09CAB",
     marginRight: 5,
   },
   gradientSeparator: {
@@ -265,7 +284,7 @@ const styles = StyleSheet.create({
   },
   modulesContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    
   },
   modulesTitle: {
     fontSize: 20,
@@ -277,6 +296,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: 15, 
+    marginTop: 18  ,
   },
   moduleCard: {
     width: "48%",
@@ -285,18 +306,19 @@ const styles = StyleSheet.create({
     padding: 5,
     marginBottom: 15,
     minHeight: 120,
+   
   },
   moduleTitleGradient: {
     marginBottom: 8,
   },
   moduleTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#FFFFFF",
     padding: 8,
   },
   progressText: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#A09CAB",
     marginBottom: 10,
     paddingLeft: 8,
@@ -306,7 +328,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  progressBarOne: {
+  containerTitle: {
     height: 92,
     backgroundColor: "#1A1923",
     borderRadius: 5,
@@ -317,7 +339,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     flex: 1,
-    height: 45,
+    height: 50,
     backgroundColor: "#1A1923",
     borderRadius: 5,
     marginRight: 10,
