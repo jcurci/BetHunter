@@ -8,70 +8,14 @@ import {
   SafeAreaView,
   ImageBackground,
   Image,
-  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import { Container } from "../../../infrastructure/di/Container";
 
 const SiginUp = () => {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [phone, setPhone] = useState("");
   const navigation = useNavigation();
-  const container = Container.getInstance();
-
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleShowConfirmPassword = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
-  const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert("Erro", "As senhas não coincidem");
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert("Erro", "A senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userUseCase = container.getUserUseCase();
-      const result = await userUseCase.register({
-        name,
-        email,
-        password,
-      });
-
-      console.log("Cadastro realizado com sucesso:", result);
-      Alert.alert("Sucesso", "Cadastro realizado com sucesso!", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("Home"),
-        },
-      ]);
-    } catch (error) {
-      console.error("Erro no cadastro:", error);
-      Alert.alert("Erro", "Erro ao realizar cadastro. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -90,18 +34,7 @@ const SiginUp = () => {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Nome completo"
-                autoCapitalize="words"
-                placeholderTextColor="#A0A0A0"
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
+                placeholder="Escreva seu email"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholderTextColor="#A0A0A0"
@@ -110,56 +43,29 @@ const SiginUp = () => {
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                secureTextEntry={!showPassword}
-                placeholderTextColor="#A0A0A0"
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={toggleShowPassword}
-              >
-                <Icon
-                  name={showPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#A0A0A0"
+            <View style={styles.phoneInputRow}>
+              <View style={styles.countryCodeContainer}>
+                <TextInput
+                  style={styles.countryCodeInput}
+                  value="+55"
+                  editable={false}
+                  placeholderTextColor="#A0A0A0"
                 />
-              </TouchableOpacity>
+              </View>
+              <View style={styles.phoneNumberContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="(11) 99999-9999"
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#A0A0A0"
+                  value={phone}
+                  onChangeText={setPhone}
+                />
+              </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirmar senha"
-                secureTextEntry={!showConfirmPassword}
-                placeholderTextColor="#A0A0A0"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={toggleShowConfirmPassword}
-              >
-                <Icon
-                  name={showConfirmPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#A0A0A0"
-                />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.nextButtonSolid, loading && styles.disabledButton]}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? "Cadastrando..." : "Cadastrar"}
-              </Text>
+            <TouchableOpacity style={styles.nextButtonSolid}>
+              <Text style={styles.buttonText}>Próximo</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -204,22 +110,35 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     width: "100%",
-    marginBottom: 12,
-    position: "relative",
+    marginBottom: 10,
   },
   input: {
     backgroundColor: "#1C1C1C",
     padding: 15,
-    paddingRight: 50,
     borderRadius: 10,
     color: "#FFFFFF",
     fontSize: 16,
   },
-  eyeIcon: {
-    position: "absolute",
-    right: 16,
-    top: "50%",
-    transform: [{ translateY: -10 }],
+  phoneInputRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 20,
+  },
+  countryCodeContainer: {
+    width: "20%",
+    marginRight: 10,
+  },
+  countryCodeInput: {
+    backgroundColor: "#1C1C1C",
+    padding: 15,
+    borderRadius: 10,
+    color: "#FFFFFF",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  phoneNumberContainer: {
+    width: "75%",
   },
   nextButtonSolid: {
     width: "100%",
@@ -233,10 +152,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
-  },
-  disabledButton: {
-    backgroundColor: "#A0A0A0",
-    opacity: 0.7,
   },
 });
 

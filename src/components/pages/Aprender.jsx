@@ -40,7 +40,7 @@ const Aprender = () => {
       title: "Fundamentos",
       progress: "1/4",
       percentage: 25,
-      gradientColors: ["#7456C8", "#FF8C43"],
+      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: true,
     },
     {
@@ -48,7 +48,7 @@ const Aprender = () => {
       title: "Prática com Dinheiro",
       progress: "0/10",
       percentage: 0,
-      gradientColors: ["#7456C8", "#FF69B4"],
+      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: false,
     },
     {
@@ -56,7 +56,7 @@ const Aprender = () => {
       title: "Conhecimento Aplicado",
       progress: "0/15",
       percentage: 0,
-      gradientColors: ["#7456C8", "#FF8C43"],
+      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: false,
     },
     {
@@ -64,15 +64,15 @@ const Aprender = () => {
       title: "Objetivos e Planejamento",
       progress: "0/8",
       percentage: 0,
-      gradientColors: ["#7456C8", "#FF69B4"],
+      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: false,
     },
-    {
+    { 
       id: 5,
       title: "Investimentos de Baixo Risco",
       progress: "0/30",
       percentage: 0,
-      gradientColors: ["#7456C8", "#FF8C43"],
+      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: false,
     },
     {
@@ -80,7 +80,7 @@ const Aprender = () => {
       title: "Investimentos de Alto Risco",
       progress: "0/44",
       percentage: 0,
-      gradientColors: ["#7456C8", "#FF8C43"],
+      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: false,
     },
   ];
@@ -284,7 +284,6 @@ const styles = StyleSheet.create({
   },
   modulesContainer: {
     paddingHorizontal: 20,
-    
   },
   modulesTitle: {
     fontSize: 20,
@@ -296,8 +295,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 15, 
-    marginTop: 18  ,
+    gap: 15,
+    marginTop: 18,
   },
   moduleCard: {
     width: "48%",
@@ -306,7 +305,6 @@ const styles = StyleSheet.create({
     padding: 5,
     marginBottom: 15,
     minHeight: 120,
-   
   },
   moduleTitleGradient: {
     marginBottom: 8,
@@ -315,7 +313,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "#FFFFFF",
-    padding: 8,
+    padding: 9,
   },
   progressText: {
     fontSize: 12,

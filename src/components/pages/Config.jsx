@@ -5,41 +5,12 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import { Container } from "../../infrastructure/di/Container";
 
 const Config = () => {
   const navigation = useNavigation();
-  const container = Container.getInstance();
-
-  const handleLogout = async () => {
-    Alert.alert("Sair", "Tem certeza que deseja sair da sua conta?", [
-      {
-        text: "Cancelar",
-        style: "cancel",
-      },
-      {
-        text: "Sair",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const userUseCase = container.getUserUseCase();
-            await userUseCase.logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          } catch (error) {
-            console.error("Erro ao fazer logout:", error);
-            Alert.alert("Erro", "Erro ao fazer logout. Tente novamente.");
-          }
-        },
-      },
-    ]);
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -79,7 +50,7 @@ const Config = () => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.optionItem} onPress={handleLogout}>
+        <TouchableOpacity style={styles.optionItem}>
           <Icon name="log-out" size={24} color="#FF0000" />
           <View style={styles.optionTextContainer}>
             <Text style={styles.optionTitleRed}>Sair</Text>

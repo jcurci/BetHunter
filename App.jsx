@@ -15,7 +15,6 @@ import Graficos from "./src/components/pages/Graficos";
 import AccountOverview from "./src/components/pages/AccountOverview";
 import AccountHistory from "./src/components/pages/AccountHistory";
 import TransactionForm from "./src/components/pages/TransactionForm";
-import AuthChecker from "./src/components/AuthChecker";
 
 const Stack = createNativeStackNavigator();
 
@@ -23,81 +22,74 @@ const App = () => {
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
-      <AuthChecker>
-        {({ isAuthenticated }) => (
-          <Stack.Navigator
-            initialRouteName={isAuthenticated ? "Home" : "Login"}
-          >
-            <Stack.Screen
-              name="Login"
-              component={Login}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="SiginUp"
-              component={SiginUp}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Home"
-              component={Home}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Config"
-              component={Config}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Profile"
-              component={Profile}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ChangePassword"
-              component={ChangePassword}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Notifications"
-              component={Notifications}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Roulette"
-              component={Roulette}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Aprender"
-              component={Aprender}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Graficos"
-              component={Graficos}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="AccountOverview"
-              component={AccountOverview}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="AccountHistory"
-              component={AccountHistory}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="TransactionForm"
-              component={TransactionForm}
-              options={{ headerShown: false }}
-            />
-          </Stack.Navigator>
-        )}
-      </AuthChecker>
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen
+          name="Login"
+          component={Login}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SiginUp"
+          component={SiginUp}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Home"
+          component={Home}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Config"
+          component={Config}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={Profile}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePassword}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Notifications"
+          component={Notifications}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Roulette"
+          component={Roulette}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Aprender"
+          component={Aprender}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Graficos"
+          component={Graficos}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AccountOverview"
+          component={AccountOverview}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AccountHistory"
+          component={AccountHistory}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TransactionForm"
+          component={TransactionForm}
+          options={{ headerShown: false }}
+        />
+      </Stack.Navigator>
     </NavigationContainer>
-    
   );
 };
 
