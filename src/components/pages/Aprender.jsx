@@ -13,6 +13,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import Footer from "../comum/Footer";
 import { Container } from "../../infrastructure/di/Container";
 
+import MaskedView from "@react-native-masked-view/masked-view";
+
 const Aprender = () => {
   const navigation = useNavigation();
   const [user, setUser] = useState(null);
@@ -84,8 +86,6 @@ const Aprender = () => {
   ];
 
   const renderProgressBar = (percentage, hasProgress, gradientColors) => {
-    if (!hasProgress) return null;
-
     return (
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBar}>
@@ -95,25 +95,35 @@ const Aprender = () => {
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: `${percentage}%` }]}
           />
+          <Text style={styles.percentageText}>{percentage}%</Text>
         </View>
-        <Text style={styles.percentageText}>{percentage}%</Text>
       </View>
     );
   };
 
   const renderModuleCard = (module) => (
     <TouchableOpacity key={module.id} style={styles.moduleCard}>
-     
-        <Text style={styles.moduleTitle}>{module.title}</Text>
-      
-      <Text style={styles.progressText}>{module.progress}</Text>
+      <View style={styles.progressBarOne}>
+        <MaskedView
+          maskElement={
+            <Text style={styles.moduleTitle}>{module.title}</Text>
+          }
+        >
+          <LinearGradient
+            colors={module.gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={[styles.moduleTitle, {opacity: 0}]}>{module.title}</Text>
+          </LinearGradient>
+        </MaskedView>
+        <Text style={styles.progressText}>{module.progress}</Text>
+      </View>
+
       {renderProgressBar(
         module.percentage,
         module.hasProgress,
         module.gradientColors
-      )}
-      {!module.hasProgress && (
-        <Text style={styles.percentageText}>{module.percentage}%</Text>
       )}
     </TouchableOpacity>
   );
@@ -251,7 +261,7 @@ const styles = StyleSheet.create({
   gradientSeparator: {
     height: 2,
     marginTop: 15,
-    borderRadius: 1,
+    borderRadius: 20,
   },
   modulesContainer: {
     paddingHorizontal: 20,
@@ -272,7 +282,7 @@ const styles = StyleSheet.create({
     width: "48%",
     backgroundColor: "#2B2935",
     borderRadius: 12,
-    padding: 15,
+    padding: 5,
     marginBottom: 15,
     minHeight: 120,
   },
@@ -283,32 +293,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#FFFFFF",
+    padding: 8,
   },
   progressText: {
     fontSize: 14,
     color: "#A09CAB",
     marginBottom: 10,
+    paddingLeft: 8,
   },
   progressBarContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  progressBarOne: {
+    height: 92,
+    backgroundColor: "#1A1923",
+    borderRadius: 5,
+    marginRight: 10,
+    width: "100%",
+    borderRadius: 20,
+    marginBottom: 8,
+  },
   progressBar: {
     flex: 1,
-    height: 6,
-    backgroundColor: "#333",
-    borderRadius: 3,
+    height: 45,
+    backgroundColor: "#1A1923",
+    borderRadius: 5,
     marginRight: 10,
+    width: "100%",
+    borderRadius: 20,
   },
   progressFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: 15,
   },
   percentageText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#A09CAB",
     alignSelf: "flex-end",
+    marginTop: -30,
+    marginRight: 10,
   },
 });
 
