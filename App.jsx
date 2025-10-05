@@ -11,7 +11,9 @@ import ChangePassword from "./src/components/pages/Profile-configs/ChangePasswor
 import Notifications from "./src/components/pages/Notifications";
 import Roulette from "./src/components/pages/Roulette";
 import Aprender from "./src/components/pages/Aprender";
+import QuizPage from "./src/components/pages/QuizPage";
 import Graficos from "./src/components/pages/Graficos";
+import QuizResult from "./src/components/pages/QuizResult";
 import AccountOverview from "./src/components/pages/AccountOverview";
 import AccountHistory from "./src/components/pages/AccountHistory";
 import TransactionForm from "./src/components/pages/TransactionForm";
@@ -66,6 +68,16 @@ const App = () => {
         <Stack.Screen
           name="Aprender"
           component={Aprender}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Quiz"
+          component={QuizPage}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="QuizResult"
+          component={QuizResult}
           options={{ headerShown: false }}
         />
         <Stack.Screen

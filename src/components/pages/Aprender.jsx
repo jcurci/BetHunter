@@ -19,7 +19,6 @@ const Aprender = () => {
   const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const container = Container.getInstance();
-  
 
   useEffect(() => {
     loadUserData();
@@ -68,7 +67,7 @@ const Aprender = () => {
       gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
       hasProgress: false,
     },
-    { 
+    {
       id: 5,
       title: "Investimentos de Baixo Risco",
       progress: "0/30",
@@ -102,8 +101,17 @@ const Aprender = () => {
     );
   };
 
+  const handleModulePress = (module) => {
+    const moduleTitle = module.title.toLowerCase().replace(/\s+/g, "-");
+    navigation.navigate("Quiz", { title: moduleTitle, moduleData: module });
+  };
+
   const renderModuleCard = (module) => (
-    <TouchableOpacity key={module.id} style={styles.moduleCard}>
+    <TouchableOpacity
+      key={module.id}
+      style={styles.moduleCard}
+      onPress={() => handleModulePress(module)}
+    >
       <View style={styles.containerTitle}>
         <MaskedView
           maskElement={<Text style={styles.moduleTitle}>{module.title}</Text>}

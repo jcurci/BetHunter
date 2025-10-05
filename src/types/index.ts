@@ -4,4 +4,5 @@ export type RootStackParamList = {
   NewEvent: undefined;
   Recommendations: undefined;
   Roulette: undefined;
+  Quiz: { title: string; moduleData: any };
 }; 
