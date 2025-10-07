@@ -8,37 +8,19 @@ import {
   Dimensions,
   SafeAreaView,
   Modal,
-  Alert,
+  Image,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
-import Svg, {
-  Path,
-  Text as SvgText,
-  G,
-  Circle,
-  Defs,
-  LinearGradient,
-  Stop,
-  DropShadow,
-} from "react-native-svg";
 import Footer from "../comum/Footer";
 import { Container } from "../../infrastructure/di/Container";
-import { RouletteSector } from "../../domain/entities/Roulette";
 
-const AnimatedG = Animated.createAnimatedComponent(G);
-const AnimatedView = Animated.createAnimatedComponent(View);
-
-const WHEEL_SIZE = Math.min(Dimensions.get("window").width, 450) * 0.9;
-const RADIUS = WHEEL_SIZE / 2;
-const CENTER_X = RADIUS;
-const CENTER_Y = RADIUS;
-
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+// Diâmetro muito maior que a largura para "grudar" nas laterais e criar efeito imersivo
+const WHEEL_SIZE = Math.min(SCREEN_WIDTH * 1.6, 800);
 const SPIN_COST = 10;
 
 const Roulette = () => {
   const navigation = useNavigation();
-  const [sectors, setSectors] = useState([]);
   const [user, setUser] = useState(null);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -46,52 +28,25 @@ const Roulette = () => {
   const [lastWinnings, setLastWinnings] = useState(0);
   const spinAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  const neonAnim = useRef(new Animated.Value(0)).current;
   const [spinValue, setSpinValue] = useState(0);
   const container = Container.getInstance();
 
   useEffect(() => {
-    loadData();
-    startGlowAnimation();
+    loadUserData();
   }, []);
 
-  const startGlowAnimation = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
-  };
-
-  const loadData = async () => {
+  const loadUserData = async () => {
     try {
-      const rouletteUseCase = container.getRouletteUseCase();
       const userUseCase = container.getUserUseCase();
-
-      const [sectorsData, currentUser] = await Promise.all([
-        rouletteUseCase.getSectors(),
-        userUseCase.getCurrentUser(),
-      ]);
-
-      setSectors(sectorsData);
+      const currentUser = await userUseCase.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading user data:", error);
     }
   };
 
   const spinWheel = async () => {
-    console.log("SpinWheel called, spinning:", spinning);
+    console.log("spinWheel called, spinning:", spinning);
     if (spinning) return;
 
     setSpinning(true);
@@ -111,22 +66,6 @@ const Roulette = () => {
       }),
     ]).start();
 
-    // Start neon effect during spin
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(neonAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(neonAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
-
     try {
       const rouletteUseCase = container.getRouletteUseCase();
       const userUseCase = container.getUserUseCase();
@@ -136,32 +75,38 @@ const Roulette = () => {
         SPIN_COST
       );
 
-      // Para fase de teste, apenas simular
+      // Simular resultado para teste
+      const mockResults = [
+        { label: "Vitória!", points: 50 },
+        { label: "Prêmio!", points: 30 },
+        { label: "Bônus!", points: 20 },
+        { label: "Sorte!", points: 10 },
+      ];
+
+      const randomResult =
+        mockResults[Math.floor(Math.random() * mockResults.length)];
+      setResult(randomResult.label);
+      setLastWinnings(randomResult.points);
+
+      // Atualizar pontos do usuário
       if (user) {
         const updatedUser = await userUseCase.updateUserPoints(
           user.id,
-          Math.max(0, user.points - SPIN_COST + game.result.pointsWon)
+          Math.max(0, user.points - SPIN_COST + randomResult.points)
         );
         setUser(updatedUser);
       }
 
-      setResult(game.result.sector.label);
-      setLastWinnings(game.result.pointsWon);
-
-      // Animate the wheel with elastic easing
-      const randomSector = game.result.sector;
-      const sectorIndex = sectors.findIndex((s) => s.id === randomSector.id);
-      const SECTOR_ANGLE = 360 / sectors.length;
-      const turns = 5 + Math.random() * 3; // Random extra turns
-      const finalAngle =
-        360 * turns + (360 - sectorIndex * SECTOR_ANGLE - SECTOR_ANGLE / 2);
+      // Animate the wheel - sempre para um pouco antes
+      const turns = 5; // Número fixo de voltas
+      const targetAngle = -30; // Sempre para 30 graus antes da posição inicial
+      const totalRotation = 360 * turns + targetAngle;
 
       Animated.timing(spinAnim, {
-        toValue: spinValue + finalAngle,
+        toValue: spinValue + totalRotation,
         duration: 3000,
         useNativeDriver: true,
         easing: (t) => {
-          // Elastic easing for more realistic deceleration
           if (t < 0.7) {
             return t * t;
           } else {
@@ -170,12 +115,8 @@ const Roulette = () => {
           }
         },
       }).start(() => {
-        setSpinValue(spinValue + finalAngle);
+        setSpinValue(spinValue + totalRotation);
         setSpinning(false);
-
-        // Stop neon effect
-        neonAnim.stopAnimation();
-        neonAnim.setValue(0);
 
         // Show result modal after a short delay
         setTimeout(() => {
@@ -188,102 +129,6 @@ const Roulette = () => {
     }
   };
 
-  const createSectorPath = (startAngle, endAngle) => {
-    const startRad = (startAngle * Math.PI) / 180;
-    const endRad = (endAngle * Math.PI) / 180;
-
-    const x1 = CENTER_X + RADIUS * Math.cos(startRad);
-    const y1 = CENTER_Y + RADIUS * Math.sin(startRad);
-    const x2 = CENTER_X + RADIUS * Math.cos(endRad);
-    const y2 = CENTER_Y + RADIUS * Math.sin(endRad);
-
-    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-
-    return `M ${CENTER_X} ${CENTER_Y} L ${x1} ${y1} A ${RADIUS} ${RADIUS} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
-  };
-
-  const getSectorTextPosition = (sectorIndex) => {
-    const SECTOR_ANGLE = 360 / sectors.length;
-    const angle = sectorIndex * SECTOR_ANGLE + SECTOR_ANGLE / 2;
-    const rad = (angle * Math.PI) / 180;
-    const textRadius = RADIUS * 0.7;
-
-    return {
-      x: CENTER_X + textRadius * Math.cos(rad),
-      y: CENTER_Y + textRadius * Math.sin(rad),
-    };
-  };
-
-  const renderSectors = () => {
-    if (!sectors.length) return null;
-
-    const SECTOR_ANGLE = 360 / sectors.length;
-
-    return (
-      <>
-        <Defs>
-          {sectors.map((sector, index) => (
-            <LinearGradient
-              key={`gradient-${sector.id}`}
-              id={`gradient-${sector.id}`}
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="100%"
-            >
-              <Stop offset="0%" stopColor={sector.color} stopOpacity="1" />
-              <Stop offset="100%" stopColor={sector.color} stopOpacity="0.7" />
-            </LinearGradient>
-          ))}
-        </Defs>
-        {sectors.map((sector, index) => {
-          const startAngle = index * SECTOR_ANGLE;
-          const endAngle = (index + 1) * SECTOR_ANGLE;
-          const textPos = getSectorTextPosition(index);
-
-          return (
-            <G key={sector.id}>
-              <Path
-                d={createSectorPath(startAngle, endAngle)}
-                fill={`url(#gradient-${sector.id})`}
-                stroke="#FFFFFF"
-                strokeWidth="3"
-                strokeOpacity="0.2"
-              />
-              <SvgText
-                x={textPos.x}
-                y={textPos.y - 8}
-                fontSize="12"
-                fontWeight="bold"
-                fill="#FFFFFF"
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {sector.label}
-              </SvgText>
-              <SvgText
-                x={textPos.x}
-                y={textPos.y + 8}
-                fontSize="10"
-                fontWeight="bold"
-                fill="#FFD700"
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {sector.points} pts
-              </SvgText>
-            </G>
-          );
-        })}
-      </>
-    );
-  };
-
-  const pointsInfo = user
-    ? `Você possui ${user.points} pontos. Modo teste: giros liberados!`
-    : "Modo teste: giros liberados!";
-  const spinButtonDisabled = spinning;
-
   // Animated rotation for the wheel
   const animatedRotate = spinAnim.interpolate({
     inputRange: [0, 360],
@@ -294,168 +139,82 @@ const Roulette = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🎰 Gire a Roleta!</Text>
+        <Text style={styles.headerTitle}>Gire a roleta!</Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.closeButton}
         >
-          <Icon name="close" size={24} color="#FFFFFF" />
+          <Text style={styles.closeButtonText}>×</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Points Card */}
-      <View style={styles.pointsCard}>
-        <View style={styles.pointsCardContent}>
-          <Icon name="diamond-stone" size={24} color="#FFD700" />
-          <Text style={styles.pointsValue}>{user?.points || 0}</Text>
-          <Text style={styles.pointsLabel}>pontos</Text>
-        </View>
-        <Text style={styles.spinCostText}>
-          🎮 MODO TESTE - Giros ilimitados para testar!
+      {/* Points Info */}
+      <View style={styles.pointsInfo}>
+        <Text style={styles.pointsInfoText}>
+          Você possui {user?.points || 47} pontos. Você pode gastar 10 pontos
+          para girar a roleta.
         </Text>
+      </View>
+
+      {/* Spin Button */}
+      <View style={styles.spinButtonContainer}>
+        <TouchableOpacity
+          style={[styles.spinButton, spinning && styles.disabledSpinButton]}
+          onPress={spinWheel}
+          disabled={spinning}
+        >
+          <Text style={styles.spinButtonText}>
+            {spinning ? "🎰 Girando..." : "Girar!"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Roulette Wheel Container */}
       <View style={styles.wheelSection}>
+        {/* Wheel */}
         <View style={styles.wheelWrapper}>
-          <AnimatedView
+          {/* Glow/Shadow elíptica para efeito 3D na base */}
+          <View style={styles.wheelGlow} />
+          {/* Pointer/Indicator */}
+          <View style={styles.pointerContainer}>
+            <Image
+              source={require("../../assets/roleta_pointer.png")}
+              style={styles.pointerImage}
+              resizeMode="contain"
+            />
+          </View>
+          <Animated.View
             style={[
               styles.wheelContainer,
               {
-                transform: [{ scale: bounceAnim }],
-                shadowColor: spinning
-                  ? neonAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["#FF0080", "#00FF80"],
-                    })
-                  : glowAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["#6B21A8", "#8B5CF6"],
-                    }),
-                shadowOpacity: spinning
-                  ? neonAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1],
-                    })
-                  : glowAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.3, 0.8],
-                    }),
-                shadowRadius: spinning
-                  ? neonAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 40],
-                    })
-                  : glowAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [10, 25],
-                    }),
-                borderWidth: spinning ? 4 : 2,
-                borderColor: spinning
-                  ? neonAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["#FF0080", "#00FF80"],
-                    })
-                  : "#8B5CF6",
+                transform: [{ scale: bounceAnim }, { rotate: animatedRotate }],
               },
             ]}
           >
-            <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
-              <Defs>
-                <LinearGradient
-                  id="wheelShadow"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <Stop offset="0%" stopColor="#000000" stopOpacity="0.3" />
-                  <Stop offset="100%" stopColor="#000000" stopOpacity="0.1" />
-                </LinearGradient>
-              </Defs>
+            <Image
+              source={require("../../assets/roleta_circulo.png")}
+              style={styles.wheelImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-              {/* Wheel Shadow */}
-              <Circle
-                cx={CENTER_X + 5}
-                cy={CENTER_Y + 5}
-                r={RADIUS}
-                fill="url(#wheelShadow)"
-              />
-
-              <AnimatedG
-                originX={CENTER_X}
-                originY={CENTER_Y}
-                style={{
-                  transform: [{ rotate: animatedRotate }],
-                }}
-              >
-                {renderSectors()}
-
-                {/* Center Hub */}
-                <Circle
-                  cx={CENTER_X}
-                  cy={CENTER_Y}
-                  r={RADIUS * 0.2}
-                  fill="#FFFFFF"
-                  stroke="#333"
-                  strokeWidth="3"
-                />
-                <SvgText
-                  x={CENTER_X}
-                  y={CENTER_Y}
-                  fontSize="16"
-                  fontWeight="bold"
-                  fill="#333"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  GIRAR
-                </SvgText>
-              </AnimatedG>
-
-              {/* Pointer */}
-              <Path
-                d={`M ${CENTER_X} ${CENTER_Y - RADIUS - 10} L ${CENTER_X - 8} ${
-                  CENTER_Y - RADIUS + 8
-                } L ${CENTER_X + 8} ${CENTER_Y - RADIUS + 8} Z`}
-                fill="#333333"
-                stroke="#000000"
-                strokeWidth="1"
-              />
-            </Svg>
-          </AnimatedView>
+          {/* Logo fixa no centro, não gira com a roleta */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../../assets/roleta_logo.png")}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
 
           {/* Central Spin Button - Invisible overlay on wheel center */}
           <TouchableOpacity
             style={styles.centerButton}
             onPress={spinWheel}
-            disabled={spinButtonDisabled}
+            disabled={spinning}
             activeOpacity={0.8}
           />
         </View>
-      </View>
-
-      {/* Spin Instructions */}
-      <View style={styles.instructionsContainer}>
-        <Text style={styles.instructionsText}>
-          {spinning
-            ? "🎰 Girando..."
-            : "👆 Toque no centro da roleta para girar"}
-        </Text>
-
-        {/* Botão de backup para girar */}
-        <TouchableOpacity
-          style={[
-            styles.backupSpinButton,
-            spinButtonDisabled && styles.disabledBackupButton,
-          ]}
-          onPress={spinWheel}
-          disabled={spinButtonDisabled}
-        >
-          <Text style={styles.backupSpinButtonText}>
-            {spinning ? "🎰 Girando..." : "🎯 GIRAR ROLETA"}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Result Modal */}
@@ -467,7 +226,6 @@ const Roulette = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.resultModal}>
-            <Icon name="star" size={60} color="#FFD700" />
             <Text style={styles.resultTitle}>🎉 Parabéns!</Text>
             <Text style={styles.resultText}>Você ganhou:</Text>
             <Text style={styles.resultPoints}>{lastWinnings} pontos</Text>
@@ -500,119 +258,158 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 5,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#8B5CF6",
-  },
-  closeButton: {
-    backgroundColor: "#1C1C1C",
-    borderRadius: 20,
-    padding: 8,
-  },
-  pointsCard: {
-    backgroundColor: "#1C1C1C",
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#8B5CF6",
-    elevation: 5,
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  },
-  pointsCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  pointsValue: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginHorizontal: 10,
+    textAlign: "left",
+    marginTop: 15,
+    flex: 1,
   },
-  pointsLabel: {
-    fontSize: 16,
-    color: "#A0A0A0",
-    fontWeight: "600",
+  closeButton: {
+    backgroundColor: "transparent",
+    borderRadius: 20,
+    padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  spinCostText: {
-    fontSize: 14,
-    color: "#A0A0A0",
+  closeButtonText: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  pointsInfo: {
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    marginTop: -5,
+  },
+  pointsInfoText: {
+    fontSize: 15,
+    color: "#A09CAB",
+    textAlign: "left",
+    marginRight: 40,
+    lineHeight: 24,
+  },
+  spinButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    alignItems: "center",
+    marginTop: 30,
+  },
+  spinButton: {
+    backgroundColor: "#6B21A8",
+    paddingHorizontal: 40,
+    paddingVertical: 15,
+    borderRadius: 25,
+    borderWidth: 3,
+    borderColor: "#FFD700",
+    elevation: 5,
+    shadowColor: "#FFD700",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+  },
+  disabledSpinButton: {
+    backgroundColor: "#555",
+    borderColor: "#888",
+    shadowOpacity: 0.3,
+  },
+  spinButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
     textAlign: "center",
   },
   wheelSection: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-end",
     alignItems: "center",
-    paddingVertical: 20,
+    paddingTop: 10,
+    paddingBottom: 0,
+  },
+  pointerContainer: {
+    position: "absolute",
+    // Posiciona exatamente no topo da roleta, centralizado horizontalmente
+    top: WHEEL_SIZE * 0.134,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  pointerImage: {
+    width: WHEEL_SIZE * 0.11,
+    height: WHEEL_SIZE * 0.11,
   },
   wheelWrapper: {
     position: "relative",
-    width: WHEEL_SIZE,
+    width: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.3),
     height: WHEEL_SIZE,
+    justifyContent: "center",
+    alignItems: "center",
+    // avança mais a roleta para baixo para dar sensação 3D mais pronunciada
+    marginBottom: -WHEEL_SIZE * 0.12,
+  },
+  wheelGlow: {
+    position: "absolute",
+    bottom: -WHEEL_SIZE * 0.15,
+    width: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.4),
+    height: WHEEL_SIZE * 0.3,
+    borderRadius: WHEEL_SIZE * 0.3,
+    backgroundColor: "#8B5CF6",
+    opacity: 0.6,
+    filter: undefined,
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1.0,
+    shadowRadius: 50,
+    zIndex: 0,
   },
   wheelContainer: {
-    borderRadius: WHEEL_SIZE / 2,
+    width: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.3),
+    height: WHEEL_SIZE,
+    borderRadius: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.3) / 2,
     elevation: 10,
     shadowColor: "#8B5CF6",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
   },
+  wheelImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.3) / 2,
+  },
+  logoContainer: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: WHEEL_SIZE * 0.05,
+    height: WHEEL_SIZE * 0.05,
+    marginTop: -(WHEEL_SIZE * 0.025),
+    marginLeft: -(WHEEL_SIZE * 0.025),
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 5,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+  },
   centerButton: {
     position: "absolute",
     top: "50%",
     left: "50%",
-    width: RADIUS * 0.5,
-    height: RADIUS * 0.5,
-    borderRadius: (RADIUS * 0.5) / 2,
-    marginTop: -(RADIUS * 0.25),
-    marginLeft: -(RADIUS * 0.25),
-    zIndex: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.1)", // Levemente visível para debug
-    borderWidth: 2,
-    borderColor: "rgba(139, 92, 246, 0.3)",
-  },
-  instructionsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  instructionsText: {
-    fontSize: 16,
-    color: "#A0A0A0",
-    textAlign: "center",
-    fontWeight: "600",
-    marginBottom: 15,
-  },
-  backupSpinButton: {
-    backgroundColor: "#8B5CF6",
-    paddingHorizontal: 25,
-    paddingVertical: 12,
-    borderRadius: 25,
-    elevation: 5,
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-  },
-  disabledBackupButton: {
-    backgroundColor: "#555",
-    shadowOpacity: 0.2,
-  },
-  backupSpinButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
+    width: WHEEL_SIZE * 0.18,
+    height: WHEEL_SIZE * 0.18,
+    borderRadius: (WHEEL_SIZE * 0.18) / 2,
+    marginTop: -(WHEEL_SIZE * 0.09),
+    marginLeft: -(WHEEL_SIZE * 0.09),
+    zIndex: 15,
+    backgroundColor: "transparent",
   },
   // Modal Styles
   modalOverlay: {
