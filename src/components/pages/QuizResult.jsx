@@ -66,7 +66,7 @@ const QuizResult = () => {
         >
           <TouchableOpacity
             style={styles.primaryTouchable}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate("Aprender")}
           >
             <Text style={styles.primaryButtonText}>Voltar</Text>
           </TouchableOpacity>
@@ -158,4 +158,3 @@ const styles = StyleSheet.create({
 });
 
 export default QuizResult;
-

@@ -88,22 +88,22 @@ const Roulette = () => {
       setResult(randomResult.label);
       setLastWinnings(randomResult.points);
 
-      // Atualizar pontos do usuário
+      // Atualizar pontos do usuário - sempre subtrai 10 pontos
       if (user) {
         const updatedUser = await userUseCase.updateUserPoints(
           user.id,
-          Math.max(0, user.points - SPIN_COST + randomResult.points)
+          Math.max(0, user.points - SPIN_COST)
         );
         setUser(updatedUser);
       }
 
-      // Animate the wheel - sempre para um pouco antes
+      // Animate the wheel - sempre para no mesmo lugar que iniciou
       const turns = 5; // Número fixo de voltas
-      const targetAngle = -30; // Sempre para 30 graus antes da posição inicial
-      const totalRotation = 360 * turns + targetAngle;
+      const targetAngle = 0; // Sempre para no ângulo inicial (posição original)
+      const finalAngle = 360 * turns + targetAngle;
 
       Animated.timing(spinAnim, {
-        toValue: spinValue + totalRotation,
+        toValue: spinValue + finalAngle,
         duration: 3000,
         useNativeDriver: true,
         easing: (t) => {
@@ -115,7 +115,7 @@ const Roulette = () => {
           }
         },
       }).start(() => {
-        setSpinValue(spinValue + totalRotation);
+        setSpinValue(spinValue + finalAngle);
         setSpinning(false);
 
         // Show result modal after a short delay
@@ -196,16 +196,16 @@ const Roulette = () => {
               style={styles.wheelImage}
               resizeMode="contain"
             />
-          </Animated.View>
 
-          {/* Logo fixa no centro, não gira com a roleta */}
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("../../assets/roleta_logo.png")}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
+            {/* Logo no centro da roleta */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("../../assets/roleta_logo.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </Animated.View>
 
           {/* Central Spin Button - Invisible overlay on wheel center */}
           <TouchableOpacity
@@ -258,14 +258,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 5,
+    paddingBottom: 20,
   },
   headerTitle: {
-    fontSize: 40,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#FFFFFF",
-    textAlign: "left",
-    marginTop: 15,
+    textAlign: "center",
     flex: 1,
   },
   closeButton: {
@@ -284,21 +283,18 @@ const styles = StyleSheet.create({
   },
   pointsInfo: {
     paddingHorizontal: 20,
-    paddingVertical: 0,
-    marginTop: -5,
+    paddingVertical: 15,
   },
   pointsInfoText: {
-    fontSize: 15,
-    color: "#A09CAB",
-    textAlign: "left",
-    marginRight: 40,
+    fontSize: 16,
+    color: "#FFFFFF",
+    textAlign: "center",
     lineHeight: 24,
   },
   spinButtonContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     alignItems: "center",
-    marginTop: 30,
   },
   spinButton: {
     backgroundColor: "#6B21A8",
@@ -353,21 +349,6 @@ const styles = StyleSheet.create({
     // avança mais a roleta para baixo para dar sensação 3D mais pronunciada
     marginBottom: -WHEEL_SIZE * 0.12,
   },
-  wheelGlow: {
-    position: "absolute",
-    bottom: -WHEEL_SIZE * 0.15,
-    width: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.4),
-    height: WHEEL_SIZE * 0.3,
-    borderRadius: WHEEL_SIZE * 0.3,
-    backgroundColor: "#8B5CF6",
-    opacity: 0.6,
-    filter: undefined,
-    shadowColor: "#8B5CF6",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1.0,
-    shadowRadius: 50,
-    zIndex: 0,
-  },
   wheelContainer: {
     width: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.3),
     height: WHEEL_SIZE,
@@ -398,6 +379,21 @@ const styles = StyleSheet.create({
   logoImage: {
     width: "100%",
     height: "100%",
+  },
+  wheelGlow: {
+    position: "absolute",
+    bottom: -WHEEL_SIZE * 0.15,
+    width: Math.max(WHEEL_SIZE, SCREEN_WIDTH * 1.4),
+    height: WHEEL_SIZE * 0.3,
+    borderRadius: WHEEL_SIZE * 0.3,
+    backgroundColor: "#8B5CF6",
+    opacity: 0.6,
+    filter: undefined,
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1.0,
+    shadowRadius: 50,
+    zIndex: 0,
   },
   centerButton: {
     position: "absolute",

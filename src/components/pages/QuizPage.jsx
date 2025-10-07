@@ -478,6 +478,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#3A3842",
+    minHeight: 60,
+    justifyContent: "center",
   },
   optionButtonSelected: {
     borderColor: "#D783D8",
@@ -521,6 +523,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
+    flexShrink: 0,
   },
   submitContainer: {
     paddingHorizontal: 20,

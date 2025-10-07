@@ -236,8 +236,8 @@ const Graficos = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Account Summary */}
-        <View style={styles.accountSection}>
+        {/* Account Summary Card */}
+        <View style={styles.accountCard}>
           <View style={styles.accountHeader}>
             <Text style={styles.accountTitle}>Conta</Text>
             <TouchableOpacity style={styles.periodSelector}>
@@ -245,42 +245,47 @@ const Graficos = () => {
               <Icon name="chevron-down" size={16} color="#7456C8" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.balanceText}>{accountBalance}</Text>
-        </View>
-
-        {/* Main Chart */}
-        {chartData && (
-          <View style={styles.chartContainer}>
+          <View style={styles.balanceContainer}>
+            <Text style={styles.balanceValue}>123,91</Text>
+            <Text style={styles.balanceCurrency}>$BET</Text>
+          </View>
+          <View style={styles.chartArea}>
             <LineChart
               data={chartData}
-              width={width - 40}
-              height={220}
+              width={width - 80}
+              height={120}
               chartConfig={{
-                backgroundColor: "#000",
-                backgroundGradientFrom: "#000",
-                backgroundGradientTo: "#000",
+                backgroundColor: "transparent",
+                backgroundGradientFrom: "transparent",
+                backgroundGradientTo: "transparent",
                 decimalPlaces: 0,
                 color: (opacity = 1) => `rgba(116, 86, 200, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                labelColor: (opacity = 0) => `rgba(255, 255, 255, ${opacity})`,
                 style: {
                   borderRadius: 16,
                 },
                 propsForDots: {
-                  r: "6",
+                  r: "4",
                   strokeWidth: "2",
                   stroke: "#7456C8",
                 },
+                fillShadowGradient: "#7456C8",
+                fillShadowGradientOpacity: 0.3,
               }}
               bezier
-              style={styles.chart}
+              withHorizontalLabels={false}
+              withVerticalLabels={false}
+              withDots={true}
+              withShadow={true}
+              style={styles.areaChart}
             />
           </View>
-        )}
+        </View>
 
-        {/* Investments Section */}
+        {/* Asset Visualizer Section */}
         <View style={styles.investmentsSection}>
           <View style={styles.investmentsHeader}>
-            <Text style={styles.investmentsTitle}>Investimentos</Text>
+            <Text style={styles.investmentsTitle}>Visualizador de Ativos</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Icon name="chevron-right" size={20} color="#7456C8" />
             </TouchableOpacity>
@@ -329,9 +334,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#7456C8",
   },
-  accountSection: {
-    paddingHorizontal: 20,
+  accountCard: {
+    backgroundColor: "#1A1A1A",
+    marginHorizontal: 20,
     marginBottom: 30,
+    borderRadius: 16,
+    padding: 20,
   },
   accountHeader: {
     flexDirection: "row",
@@ -357,10 +365,27 @@ const styles = StyleSheet.create({
     color: "#7456C8",
     marginRight: 5,
   },
-  balanceText: {
-    fontSize: 32,
+  balanceContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 20,
+  },
+  balanceValue: {
+    fontSize: 36,
     fontWeight: "bold",
-    color: "#FF8C43",
+    color: "#FFFFFF",
+  },
+  balanceCurrency: {
+    fontSize: 16,
+    color: "#A0A0A0",
+    marginLeft: 8,
+  },
+  chartArea: {
+    height: 120,
+    justifyContent: "center",
+  },
+  areaChart: {
+    marginVertical: 0,
   },
   chartContainer: {
     paddingHorizontal: 20,
@@ -381,7 +406,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   investmentsTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
@@ -389,7 +414,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   investmentsList: {
-    gap: 15,
+    gap: 0,
   },
   investmentItem: {
     flexDirection: "row",
@@ -397,7 +422,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#1A1A1A",
     borderRadius: 12,
-    padding: 15,
+    padding: 12,
+    marginBottom: 8,
   },
   investmentLeft: {
     flexDirection: "row",
