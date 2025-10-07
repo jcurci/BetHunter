@@ -11,9 +11,11 @@ import {
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { Container } from "../../../infrastructure/di/Container";
 import Logo from "../../../assets/logo-img/logo.svg";
+import MaskedView from "@react-native-masked-view/masked-view";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -63,7 +65,17 @@ const Login = () => {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
-          <Text style={styles.title}>Login</Text>
+          <MaskedView
+            maskElement={<Text style={styles.moduleTitle}>Login</Text>}
+          >
+            <LinearGradient
+              colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={[styles.moduleTitle, { opacity: 0 }]}>Login</Text>
+            </LinearGradient>
+          </MaskedView>
 
           <View style={styles.form}>
             <View style={styles.inputContainer}>
@@ -109,12 +121,16 @@ const Login = () => {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            <LinearGradient
+              colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.registerButton}
+              onTouchEnd={() => navigation.navigate("SiginUp")}
               onPress={() => navigation.navigate("SiginUp")}
             >
               <Text style={styles.buttonText}>Cadastrar</Text>
-            </TouchableOpacity>
+            </LinearGradient>
 
             <TouchableOpacity style={styles.forgotPassword}>
               <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
@@ -159,6 +175,13 @@ const styles = StyleSheet.create({
     textAlign: "left",
     marginBottom: 20,
   },
+  moduleTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "left",
+    marginBottom: 20,
+  },
   form: {
     width: "100%",
     alignItems: "center",
@@ -169,7 +192,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   input: {
-    backgroundColor: "#121212",
+    backgroundColor: "#2B2935",
     padding: 16,
     paddingRight: 50,
     borderRadius: 10,
@@ -196,6 +219,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: "100%",
     marginBottom: 8,
+    marginTop: 12,
   },
   registerButton: {
     backgroundColor: "#FFA500",
