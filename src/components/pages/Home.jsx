@@ -16,6 +16,8 @@ import ImageGrafico from "../../assets/image-grafico.svg";
 import { Container } from "../../infrastructure/di/Container";
 import { Article } from "../../domain/entities/Article";
 import HomeAccountButton from "../comum/HomeAccountButton";
+import { LinearGradient } from "expo-linear-gradient";
+import MaskedView from "@react-native-masked-view/masked-view";
 
 const Home = () => {
   const navigation = useNavigation();
@@ -75,7 +77,12 @@ const Home = () => {
           </View>
 
           {/* Points Card */}
-          <View style={styles.pointsCard}>
+          <LinearGradient
+            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.pointsCard}
+          >
             <View>
               <Text style={styles.pointsText}>
                 Você tem {user?.points || 0} pontos
@@ -88,16 +95,58 @@ const Home = () => {
               <Icon name="controller-record" size={30} color="#FFFFFF" />
               <Icon name="chevron-right" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
 
           {/* Initiative Section */}
           <View style={styles.initiativeSection}>
             <Text style={styles.initiativeTitle}>
               Sua iniciativa já te gerou
             </Text>
-            <Text style={styles.initiativeAmount}>R$14.884,20</Text>
-            <TouchableOpacity>
-              <Text style={styles.historyText}>Conferir histórico</Text>
+            <MaskedView
+              maskElement={
+                <Text style={styles.initiativeAmount}>R$14.884,20</Text>
+              }
+            >
+              <LinearGradient
+                colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Text style={[styles.initiativeAmount, { opacity: 0 }]}>
+                  R$14.884,20
+                </Text>
+              </LinearGradient>
+            </MaskedView>
+
+            <TouchableOpacity style={{ alignItems: "center" }}>
+              <MaskedView
+                maskElement={
+                  <Text style={styles.historyText}>Conferir histórico</Text>
+                }
+              >
+                <LinearGradient
+                  colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={[styles.historyText, { opacity: 0 }]}>
+                    Conferir histórico
+                  </Text>
+                </LinearGradient>
+              </MaskedView>
+              <MaskedView
+                maskElement={
+                  <Icon name="chevron-down" size={24} color="#FFFFFF" />
+                }
+              >
+                <LinearGradient
+                  colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Icon name="chevron-down" size={24} style={{ opacity: 0 }} />
+                </LinearGradient>
+              </MaskedView>
             </TouchableOpacity>
 
             {/* Account Button */}
@@ -133,8 +182,8 @@ const Home = () => {
         </ScrollView>
 
         {/* Footer */}
-        <Footer />
       </View>
+      <Footer />
     </SafeAreaView>
   );
 };
@@ -150,7 +199,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    paddingBottom: 80,
+    paddingBottom: 160,
   },
   header: {
     flexDirection: "row",
@@ -185,12 +234,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   initiativeTitle: {
-    fontSize: 18,
+    fontSize: 32,
     color: "#FFFFFF",
     marginBottom: 5,
   },
   initiativeAmount: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
     color: "#FFA500",
     marginBottom: 5,
@@ -200,6 +249,7 @@ const styles = StyleSheet.create({
     color: "#A09CAB",
     textDecorationLine: "underline",
     marginBottom: 0,
+    marginTop: 5,
   },
   sectionTitle: {
     fontSize: 18,
@@ -248,7 +298,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#1C1C1C",
     padding: 15,
     borderRadius: 10,
-    marginBottom: 20,
+    marginBottom: 60,
   },
   continueText: {
     fontSize: 16,

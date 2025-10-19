@@ -18,57 +18,76 @@ import { ArticleUseCase } from '../../domain/usecases/ArticleUseCase';
 
 export class Container {
   private static instance: Container;
-  private storageService: StorageService;
-  private userDataSource: UserDataSource;
-  private rouletteDataSource: RouletteDataSource;
-  private articleDataSource: ArticleDataSource;
-  private userRepository: UserRepository;
-  private rouletteRepository: RouletteRepository;
-  private articleRepository: ArticleRepository;
-  private userUseCase: UserUseCase;
-  private rouletteUseCase: RouletteUseCase;
-  private articleUseCase: ArticleUseCase;
-
+  
+  // Storage Services
+  private storageService!: StorageService;
+  
+  // Data Sources
+  private userDataSource!: UserDataSource;
+  private rouletteDataSource!: RouletteDataSource;
+  private articleDataSource!: ArticleDataSource;
+  
+  // Repositories
+  private userRepository!: UserRepository;
+  private rouletteRepository!: RouletteRepository;
+  private articleRepository!: ArticleRepository;
+  
+  // Use Cases
+  private userUseCase!: UserUseCase;
+  private rouletteUseCase!: RouletteUseCase;
+  private articleUseCase!: ArticleUseCase;
+  
   private constructor() {
     this.initializeServices();
   }
-
+  
   public static getInstance(): Container {
     if (!Container.instance) {
       Container.instance = new Container();
     }
     return Container.instance;
   }
-
-  private initializeServices(): void {
-    // Storage
-    this.storageService = new AsyncStorageService();
-
-    // Data Sources
-    this.userDataSource = new UserDataSourceImpl(this.storageService);
-    this.rouletteDataSource = new RouletteDataSourceImpl();
-    this.articleDataSource = new ArticleDataSourceImpl();
-
-    // Repositories
-    this.userRepository = new UserRepositoryImpl(this.userDataSource);
-    this.rouletteRepository = new RouletteRepositoryImpl(this.rouletteDataSource);
-    this.articleRepository = new ArticleRepositoryImpl(this.articleDataSource);
-
-    // Use Cases
-    this.userUseCase = new UserUseCase(this.userRepository);
-    this.rouletteUseCase = new RouletteUseCase(this.rouletteRepository);
-    this.articleUseCase = new ArticleUseCase(this.articleRepository);
-  }
-
+  
+  // Getters públicos
   public getUserUseCase(): UserUseCase {
     return this.userUseCase;
   }
-
+  
   public getRouletteUseCase(): RouletteUseCase {
     return this.rouletteUseCase;
   }
-
+  
   public getArticleUseCase(): ArticleUseCase {
     return this.articleUseCase;
   }
-} 
+  
+  public getStorageService(): StorageService {
+    return this.storageService;
+  }
+  
+  // Métodos privados
+  private initializeServices(): void {
+    try {
+      // Storage
+      this.storageService = new AsyncStorageService();
+      
+      // Data Sources
+      this.userDataSource = new UserDataSourceImpl(this.storageService);
+      this.rouletteDataSource = new RouletteDataSourceImpl();
+      this.articleDataSource = new ArticleDataSourceImpl();
+      
+      // Repositories
+      this.userRepository = new UserRepositoryImpl(this.userDataSource);
+      this.rouletteRepository = new RouletteRepositoryImpl(this.rouletteDataSource);
+      this.articleRepository = new ArticleRepositoryImpl(this.articleDataSource);
+      
+      // Use Cases
+      this.userUseCase = new UserUseCase(this.userRepository);
+      this.rouletteUseCase = new RouletteUseCase(this.rouletteRepository);
+      this.articleUseCase = new ArticleUseCase(this.articleRepository);
+    } catch (error) {
+      console.error('Erro ao inicializar Container:', error);
+      throw error;
+    }
+  }
+}
