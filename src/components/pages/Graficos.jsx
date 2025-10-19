@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
@@ -75,61 +76,61 @@ const Graficos = () => {
           id: 1,
           ticker: "MSFT",
           company: "Microsoft Corp.",
-          logo: "🪟",
-          currentValue: "R$213.10",
-          percentageChange: -2.5,
-          isPositive: false,
-          miniChartData: [210, 208, 212, 209, 213],
+          logo: require("../../assets/icon-bolsa/microsoft-icon.png"),
+          currentValue: "$524,28",
+          percentageChange: 0.06,
+          isPositive: true,
+          miniChartData: [522, 523, 524, 523.5, 524.28],
         },
         {
           id: 2,
           ticker: "GOOGL",
           company: "Alphabet Inc.",
-          logo: "🔍",
-          currentValue: "R$213.10",
-          percentageChange: 1.1,
-          isPositive: true,
-          miniChartData: [215, 217, 214, 216, 213],
+          logo: require("../../assets/icon-bolsa/google-icon.png"),
+          currentValue: "$244,62",
+          percentageChange: -0.46,
+          isPositive: false,
+          miniChartData: [246, 245.5, 245, 244.8, 244.62],
         },
         {
           id: 3,
           ticker: "SPOT",
           company: "Spotify Technology",
-          logo: "🎵",
-          currentValue: "R$213.10",
-          percentageChange: -0.8,
+          logo: require("../../assets/icon-bolsa/spotify-icon.png"),
+          currentValue: "$675,23",
+          percentageChange: -0.77,
           isPositive: false,
-          miniChartData: [218, 216, 217, 215, 213],
+          miniChartData: [680, 678, 677, 676, 675.23],
         },
         {
           id: 4,
           ticker: "NVDA",
           company: "Nvidia Corp.",
-          logo: "🎮",
-          currentValue: "R$213.10",
-          percentageChange: 3.2,
+          logo: require("../../assets/icon-bolsa/nvidia-icon.png"),
+          currentValue: "$188,98",
+          percentageChange: 2.13,
           isPositive: true,
-          miniChartData: [210, 215, 218, 220, 213],
+          miniChartData: [185, 186, 187, 188, 188.98],
         },
         {
           id: 5,
           ticker: "AAPL",
           company: "Apple Inc.",
-          logo: "🍎",
-          currentValue: "R$213.10",
-          percentageChange: 0.5,
+          logo: require("../../assets/icon-bolsa/apple-icon.png"),
+          currentValue: "$257,99",
+          percentageChange: 0.59,
           isPositive: true,
-          miniChartData: [212, 213, 214, 213, 213],
+          miniChartData: [256, 256.5, 257, 257.5, 257.99],
         },
         {
           id: 6,
           ticker: "TSLA",
           company: "Tesla Inc.",
-          logo: "⚡",
-          currentValue: "R$213.10",
-          percentageChange: -1.3,
-          isPositive: false,
-          miniChartData: [220, 218, 216, 214, 213],
+          logo: require("../../assets/icon-bolsa/tesla-icon.png"),
+          currentValue: "$439,44",
+          percentageChange: 1.47,
+          isPositive: true,
+          miniChartData: [433, 435, 437, 438, 439.44],
         },
       ];
       setInvestments(mockInvestments);
@@ -169,7 +170,7 @@ const Graficos = () => {
     <TouchableOpacity key={investment.id} style={styles.investmentItem}>
       <View style={styles.investmentLeft}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>{investment.logo}</Text>
+          <Image source={investment.logo} style={styles.logoImage} />
         </View>
         <View style={styles.investmentInfo}>
           <Text style={styles.tickerText}>{investment.ticker}</Text>
@@ -438,9 +439,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    overflow: "hidden",
   },
-  logoText: {
-    fontSize: 18,
+  logoImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   investmentInfo: {
     flex: 1,
