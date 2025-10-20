@@ -10,7 +10,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-// Removed LinearGradient - using solid colors
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAccountStore } from '../../storage/accountStore';

@@ -6,15 +6,34 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../../types/navigation";
 
 const SiginUp: React.FC = () => {
+  const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const navigation = useNavigation<NavigationProp>();
+
+  const handleNext = () => {
+    if (!name.trim()) {
+      Alert.alert("Erro", "Por favor, preencha seu nome");
+      return;
+    }
+    if (!email.trim()) {
+      Alert.alert("Erro", "Por favor, preencha seu email");
+      return;
+    }
+    if (!phone.trim()) {
+      Alert.alert("Erro", "Por favor, preencha seu telefone");
+      return;
+    }
+
+    navigation.navigate("SignUpPassword", { name, email, phone });
+  };
 
   return (
     <View style={styles.container}>
@@ -30,6 +49,17 @@ const SiginUp: React.FC = () => {
           <Text style={styles.subtitle}>Cadastre-se para continuar</Text>
 
           <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nome completo"
+                autoCapitalize="words"
+                placeholderTextColor="#A0A0A0"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
@@ -63,7 +93,7 @@ const SiginUp: React.FC = () => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.nextButtonSolid}>
+            <TouchableOpacity style={styles.nextButtonSolid} onPress={handleNext}>
               <Text style={styles.buttonText}>Próximo</Text>
             </TouchableOpacity>
           </View>
@@ -154,3 +184,5 @@ const styles = StyleSheet.create({
 });
 
 export default SiginUp;
+
+

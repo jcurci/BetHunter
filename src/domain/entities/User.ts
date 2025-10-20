@@ -14,4 +14,5 @@ export interface UserCredentials {
 
 export interface UserRegistration extends UserCredentials {
   name: string;
+  cellphone: string;
 } 

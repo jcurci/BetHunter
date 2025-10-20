@@ -1,47 +1,97 @@
 import { User, UserCredentials, UserRegistration } from '../../domain/entities/User';
 import { UserDataSource } from '../../data/datasources/UserDataSource';
 import { StorageService } from '../storage/StorageService';
+import { authService } from '../../services/auth/authService';
+import { saveToken, removeToken } from '../../services/api/apiClient';
+import { decode as base64Decode } from 'base-64';
+
+// Helper function to manually decode JWT (works in React Native)
+const decodeJWT = (token: string): any => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Token JWT inválido');
+    }
+    
+    // Decodificar a parte do payload (parte 2)
+    const payload = parts[1];
+    // Adicionar padding se necessário
+    const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+    const decoded = base64Decode(paddedPayload);
+    return JSON.parse(decoded);
+  } catch (error) {
+    console.error('Erro ao decodificar JWT:', error);
+    throw new Error('Erro ao decodificar token');
+  }
+};
 
 export class UserDataSourceImpl implements UserDataSource {
   constructor(private storageService: StorageService) {}
 
   async login(credentials: UserCredentials): Promise<User> {
-    // Busca usuário existente no storage
-    const existingUser = await this.getCurrentUser();
-    
-    if (existingUser && existingUser.email === credentials.email) {
-      // Usuário já existe, apenas atualiza a sessão
-      await this.storageService.setItem('currentUser', JSON.stringify(existingUser));
-      return existingUser;
+    try {
+      // Chamar API real para login
+      const response = await authService.login(credentials);
+      
+      console.log('Response do login:', response);
+      
+      // Verificar se o token existe
+      if (!response?.token) {
+        throw new Error('Token não retornado pelo servidor');
+      }
+      
+      // Salvar token no AsyncStorage
+      await saveToken(response.token);
+      
+      // Decodificar JWT para extrair dados do usuário
+      const decoded = decodeJWT(response.token);
+      console.log('Token decodificado:', decoded);
+      
+      // Criar objeto User com dados do token e fallbacks
+      const user: User = {
+        id: decoded?.sub || credentials.email,
+        email: decoded?.sub || credentials.email,
+        name: 'Usuário', // temporário até backend retornar dados completos
+        points: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Salvar usuário no storage local
+      await this.storageService.setItem('currentUser', JSON.stringify(user));
+      
+      return user;
+    } catch (error) {
+      console.error('Erro no login:', error);
+      throw error;
     }
-
-    // Se não existe, cria um novo usuário (simulação de login bem-sucedido)
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: 'Usuário',
-      email: credentials.email,
-      points: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await this.storageService.setItem('currentUser', JSON.stringify(newUser));
-    return newUser;
   }
 
   async register(userData: UserRegistration): Promise<User> {
-    // Simulação de registro - em produção seria uma chamada para API
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: userData.name,
-      email: userData.email,
-      points: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await this.storageService.setItem('currentUser', JSON.stringify(newUser));
-    return newUser;
+    try {
+      // Chamar API real para registro
+      const response = await authService.register(userData);
+      
+      console.log('Response do registro:', response);
+      
+      // Backend não retorna token no registro, apenas confirma criação
+      // Criar objeto User temporário apenas para retornar sucesso
+      const user: User = {
+        id: userData.email,
+        email: userData.email,
+        name: userData.name,
+        points: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      console.log('User registrado:', user);
+      
+      return user;
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      throw error;
+    }
   }
 
   async getCurrentUser(): Promise<User | null> {
@@ -65,6 +115,14 @@ export class UserDataSourceImpl implements UserDataSource {
   }
 
   async logout(): Promise<void> {
-    await this.storageService.removeItem('currentUser');
+    try {
+      // Remover token do AsyncStorage
+      await removeToken();
+      // Remover dados do usuário do storage local
+      await this.storageService.removeItem('currentUser');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      throw error;
+    }
   }
 } 
