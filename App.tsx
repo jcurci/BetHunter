@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Login from "./src/components/pages/Login-screens/Login";
 import SiginUp from "./src/components/pages/Login-screens/SiginUp";
+import SignUpPassword from "./src/components/pages/Login-screens/SignUpPassword";
 import Home from "./src/components/pages/Home";
 import Config from "./src/components/pages/Config";
 import Profile from "./src/components/pages/Profile-configs/Profile";
@@ -36,6 +37,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="SiginUp"
           component={SiginUp}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SignUpPassword"
+          component={SignUpPassword}
           options={{
             headerShown: false,
           }}
@@ -137,3 +145,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+

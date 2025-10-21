@@ -18,72 +18,47 @@ import MaskedView from "@react-native-masked-view/masked-view";
 const Aprender = () => {
   const navigation = useNavigation();
   const [user, setUser] = useState(null);
+  const [learningModules, setLearningModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const container = Container.getInstance();
 
   useEffect(() => {
-    loadUserData();
+    loadData();
   }, []);
 
-  const loadUserData = async () => {
+  const loadData = async () => {
     try {
+      setLoading(true);
+
+      // Carregar dados do usuário
       const userUseCase = container.getUserUseCase();
       const currentUser = await userUseCase.getCurrentUser();
       setUser(currentUser);
+
+      // Carregar lições da API
+      const lessonUseCase = container.getLessonUseCase();
+      const lessons = await lessonUseCase.getUserLessons();
+
+      // Mapear lições da API para o formato da UI
+      const mappedLessons = lessons.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        progress: `${lesson.completedTopics}/${lesson.totalTopics}`,
+        percentage: lesson.progressPercent,
+        gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+        hasProgress: lesson.completedTopics > 0,
+      }));
+
+      setLearningModules(mappedLessons);
+      setError(null);
     } catch (error) {
-      console.error("Error loading user data:", error);
+      console.error("Error loading data:", error);
+      setError("Erro ao carregar lições. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  const learningModules = [
-    {
-      id: 1,
-      title: "Fundamentos",
-      progress: "1/4",
-      percentage: 25,
-      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      hasProgress: true,
-    },
-    {
-      id: 2,
-      title: "Prática com Dinheiro",
-      progress: "0/10",
-      percentage: 0,
-      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      hasProgress: false,
-    },
-    {
-      id: 3,
-      title: "Conhecimento Aplicado",
-      progress: "0/15",
-      percentage: 0,
-      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      hasProgress: false,
-    },
-    {
-      id: 4,
-      title: "Objetivos e Planejamento",
-      progress: "0/8",
-      percentage: 0,
-      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      hasProgress: false,
-    },
-    {
-      id: 5,
-      title: "Investimentos de Baixo Risco",
-      progress: "0/30",
-      percentage: 0,
-      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      hasProgress: false,
-    },
-    {
-      id: 6,
-      title: "Investimentos de Alto Risco",
-      progress: "0/44",
-      percentage: 0,
-      gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      hasProgress: false,
-    },
-  ];
 
   const renderProgressBar = (percentage, hasProgress, gradientColors) => {
     return (
@@ -142,6 +117,16 @@ const Aprender = () => {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
 
+        {/* Error Message */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={loadData} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* User Card */}
         <View style={styles.userCard}>
           <View style={styles.userInfo}>
@@ -197,7 +182,13 @@ const Aprender = () => {
             }}
           />
           <View style={styles.modulesGrid}>
-            {learningModules.map(renderModuleCard)}
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Carregando lições...</Text>
+              </View>
+            ) : (
+              learningModules.map(renderModuleCard)
+            )}
           </View>
         </View>
       </ScrollView>
@@ -363,6 +354,39 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     marginTop: -30,
     marginRight: 10,
+  },
+  loadingContainer: {
+    width: "100%",
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#A09CAB",
+  },
+  errorContainer: {
+    backgroundColor: "#FF3B30",
+    marginHorizontal: 20,
+    marginVertical: 10,
+    padding: 15,
+    borderRadius: 10,
+  },
+  errorText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    marginBottom: 10,
+  },
+  retryButton: {
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  retryButtonText: {
+    color: "#FF3B30",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
 

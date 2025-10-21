@@ -49,9 +49,23 @@ const Login: React.FC = () => {
           onPress: () => navigation.navigate("Home"),
         },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      Alert.alert("Erro", "Email ou senha incorretos");
+      
+      // Tratamento específico de erros do backend
+      if (error.response?.status === 401) {
+        Alert.alert("Erro", "Email ou senha incorretos");
+      } else if (error.response?.status === 404) {
+        Alert.alert("Erro", "Usuário não encontrado");
+      } else if (error.response?.status === 400) {
+        Alert.alert("Erro", "Dados inválidos. Verifique email e senha");
+      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+        Alert.alert("Erro", "Erro de conexão. Verifique sua internet");
+      } else if (error.code === 'ECONNABORTED') {
+        Alert.alert("Erro", "Timeout. Tente novamente");
+      } else {
+        Alert.alert("Erro", "Erro ao conectar com servidor. Tente novamente");
+      }
     } finally {
       setLoading(false);
     }

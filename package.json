@@ -16,9 +16,12 @@
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
     "@types/react": "~18.2.45",
+    "axios": "^1.12.2",
+    "base-64": "^1.0.0",
     "expo": "~50.0.0",
     "expo-linear-gradient": "~12.7.2",
     "expo-status-bar": "~1.11.1",
+    "jwt-decode": "^4.0.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-native": "0.73.6",
@@ -34,6 +37,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@types/base-64": "^1.0.2",
+    "@types/jwt-decode": "^2.2.1",
     "@types/react-native-vector-icons": "^6.4.18"
   },
   "private": true
