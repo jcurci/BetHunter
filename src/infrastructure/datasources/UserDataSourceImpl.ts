@@ -2,8 +2,8 @@ import { User, UserCredentials, UserRegistration } from '../../domain/entities/U
 import { UserDataSource } from '../../data/datasources/UserDataSource';
 import { StorageService } from '../storage/StorageService';
 import { authService } from '../../services/auth/authService';
-import { saveToken, removeToken } from '../../services/api/apiClient';
 import { decode as base64Decode } from 'base-64';
+import { useAuthStore } from '../../storage/authStore';
 
 // Helper function to manually decode JWT (works in React Native)
 const decodeJWT = (token: string): any => {
@@ -34,14 +34,12 @@ export class UserDataSourceImpl implements UserDataSource {
       const response = await authService.login(credentials);
       
       console.log('Response do login:', response);
+      console.log('🔑 TOKEN RECEBIDO:', response?.token);
       
       // Verificar se o token existe
       if (!response?.token) {
         throw new Error('Token não retornado pelo servidor');
       }
-      
-      // Salvar token no AsyncStorage
-      await saveToken(response.token);
       
       // Decodificar JWT para extrair dados do usuário
       const decoded = decodeJWT(response.token);
@@ -57,8 +55,14 @@ export class UserDataSourceImpl implements UserDataSource {
         updatedAt: new Date(),
       };
       
-      // Salvar usuário no storage local
-      await this.storageService.setItem('currentUser', JSON.stringify(user));
+      // Salvar APENAS no authStore (Zustand com persistência)
+      const authStore = useAuthStore.getState();
+      await authStore.login(response.token, {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        points: user.points,
+      });
       
       return user;
     } catch (error) {
@@ -116,10 +120,9 @@ export class UserDataSourceImpl implements UserDataSource {
 
   async logout(): Promise<void> {
     try {
-      // Remover token do AsyncStorage
-      await removeToken();
-      // Remover dados do usuário do storage local
-      await this.storageService.removeItem('currentUser');
+      // Limpar APENAS authStore (que já limpa o AsyncStorage)
+      const authStore = useAuthStore.getState();
+      await authStore.logout();
     } catch (error) {
       console.error('Erro no logout:', error);
       throw error;

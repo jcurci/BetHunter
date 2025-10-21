@@ -1,36 +1,20 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ENV } from '../../config/env';
+import { useAuthStore } from '../../storage/authStore';
 
-// Funções para gerenciar token
-export const saveToken = async (token: string): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(ENV.TOKEN_KEY, token);
-  } catch (error) {
-    console.error('Erro ao salvar token:', error);
-    throw error;
-  }
-};
 
 export const getToken = async (): Promise<string | null> => {
   try {
-    return await AsyncStorage.getItem(ENV.TOKEN_KEY);
+   
+    return await AsyncStorage.getItem('@BetHunter:token');
   } catch (error) {
     console.error('Erro ao obter token:', error);
     return null;
   }
 };
 
-export const removeToken = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(ENV.TOKEN_KEY);
-  } catch (error) {
-    console.error('Erro ao remover token:', error);
-    throw error;
-  }
-};
 
-// Configuração do cliente HTTP
 const apiClient: AxiosInstance = axios.create({
   baseURL: ENV.API_BASE_URL,
   timeout: 10000,
@@ -45,6 +29,9 @@ apiClient.interceptors.request.use(
     const token = await getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 Token adicionado ao header:', `Bearer ${token.substring(0, 20)}...`);
+    } else {
+      console.log('ℹ️ Nenhum token encontrado para adicionar ao header');
     }
     return config;
   },
@@ -59,11 +46,10 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // Se token expirou (401), limpar token e redirecionar para login
+    // Se token expirou (401), limpar via authStore
     if (error.response?.status === 401) {
-      await removeToken();
-      // Aqui você pode adicionar lógica para redirecionar para login
-      console.log('Token expirado, removendo do storage');
+      console.log('⚠️ Token expirado (401), fazendo logout...');
+      await useAuthStore.getState().logout();
     }
     
     return Promise.reject(error);
