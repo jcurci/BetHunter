@@ -1,5 +1,6 @@
 import { StorageService } from '../storage/StorageService';
 import { AsyncStorageService } from '../storage/AsyncStorageService';
+import { AuthStorageService } from '../storage/AuthStorageService';
 import { UserDataSource } from '../../data/datasources/UserDataSource';
 import { UserDataSourceImpl } from '../datasources/UserDataSourceImpl';
 import { RouletteDataSource } from '../../data/datasources/RouletteDataSource';
@@ -26,6 +27,7 @@ export class Container {
   
   // Storage Services
   private storageService!: StorageService;
+  private authStorageService!: AuthStorageService;
   
   // Data Sources
   private userDataSource!: UserDataSource;
@@ -82,9 +84,10 @@ export class Container {
     try {
       // Storage
       this.storageService = new AsyncStorageService();
+      this.authStorageService = new AuthStorageService();
       
       // Data Sources
-      this.userDataSource = new UserDataSourceImpl(this.storageService);
+      this.userDataSource = new UserDataSourceImpl(this.authStorageService);
       this.rouletteDataSource = new RouletteDataSourceImpl();
       this.articleDataSource = new ArticleDataSourceImpl();
       this.lessonDataSource = new LessonDataSourceImpl();

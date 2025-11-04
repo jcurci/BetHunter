@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from '../../../types/navigation';
+import { NavigationProp } from '../../types/navigation';
 
 const ChangePassword: React.FC = () => {
     const navigation = useNavigation<NavigationProp>();

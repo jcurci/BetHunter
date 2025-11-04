@@ -11,8 +11,8 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
-import { NavigationProp, RootStackParamList } from "../../../types/navigation";
-import { Container } from "../../../infrastructure/di/Container";
+import { NavigationProp, RootStackParamList } from "../../types/navigation";
+import { Container } from "../../infrastructure/di/Container";
 
 const SignUpPassword: React.FC = () => {
   const [password, setPassword] = useState<string>("");

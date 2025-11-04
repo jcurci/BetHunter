@@ -9,11 +9,12 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Container } from "../../infrastructure/di/Container";
+import { NavigationProp, RouteProp, RootStackParamList } from "../../types/navigation";
 
 const QuizResult = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const { score = 0, total = 0 } = route.params || {};
+  const { score = 0, total = 0 } = (route.params as { score: number; total: number }) || {};
   const [userName, setUserName] = useState("Usuário");
 
   useEffect(() => {
@@ -102,7 +103,6 @@ const styles = StyleSheet.create({
     borderRadius: (RING_SIZE + 40) / 2,
     backgroundColor: "#7456C8",
     opacity: 0.15,
-    filter: "blur(30px)",
   },
   ring: {
     width: RING_SIZE,

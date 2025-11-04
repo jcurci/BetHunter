@@ -6,4 +6,6 @@ export interface Article {
   category: string;
   publishedAt: Date;
   readTime: number; // em minutos
+  updateAt: Date;
+  createdAt: Date;
 } 

@@ -97,9 +97,11 @@ src/
 
 - **JWT Bearer Token**: Todas as requisições autenticadas incluem token no header
 - **Interceptor HTTP**: Adiciona automaticamente `Authorization: Bearer {token}`
-- **Estado Global**: Gerenciamento centralizado de autenticação via Zustand
+- **AuthStorageService**: Gerenciamento de autenticação na camada Infrastructure
+- **Estado Global**: Zustand sincronizado com AuthStorageService para UI reativa
 - **Persistência**: Token e dados salvos em AsyncStorage
 - **Logout Automático**: Em caso de token expirado (401)
+- **Validações**: Regras de negócio validadas nos Use Cases
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -125,9 +127,11 @@ src/
 ### Arquitetura
 
 - **Clean Architecture** - Separação de camadas
-- **Dependency Injection** - Inversão de controle
+- **Dependency Injection** - Inversão de controle e hooks personalizados
 - **Repository Pattern** - Abstração de dados
-- **Use Cases** - Lógica de negócio isolada
+- **Use Cases** - Lógica de negócio isolada com validações
+- **Custom Errors** - Tratamento de erros tipados (ValidationError, AuthenticationError, etc.)
+- **Fallback Strategy** - DataSources com fallback para dados mockados se API falhar
 
 ## 🛠️ Requisitos
 
@@ -247,6 +251,67 @@ npx tsc --noEmit
 ## 📄 Licença
 
 MIT
+
+## 🔄 Melhorias Recentes (Refatoração Clean Architecture)
+
+### ✅ Problemas Corrigidos
+
+1. **Separação de Camadas**
+
+   - Criado `AuthStorageService` na camada Infrastructure
+   - Removido acesso direto ao Zustand store nos DataSources
+   - Zustand agora apenas para estado reativo da UI
+
+2. **Container Duplicado**
+
+   - Removido `Container.safe.ts`
+   - Mantido apenas `Container.ts` como fonte única de dependências
+
+3. **Padronização TypeScript**
+
+   - Convertidos todos arquivos `.jsx` para `.tsx`
+   - Projeto 100% TypeScript
+
+4. **Validações nos Use Cases**
+
+   - `UserUseCase`: Validação de email, senha, nome, telefone
+   - `RouletteUseCase`: Validação de saldo, custo, userId
+   - Classes de erro customizadas: `ValidationError`, `AuthenticationError`, `InsufficientBalanceError`
+
+5. **APIs Reais**
+
+   - `RouletteDataSourceImpl`: Implementada integração com API `/roulette/*`
+   - `ArticleDataSourceImpl`: Implementada integração com API `/articles/*`
+   - `LessonDataSourceImpl`: Já integrado com API `/lessons/*`
+   - Fallback automático para dados mockados se API falhar
+
+6. **Dependency Injection**
+   - Criados hooks personalizados: `useUserUseCase()`, `useRouletteUseCase()`, etc.
+   - Reduz acoplamento direto com Container nas telas
+
+### 📊 Estrutura Final
+
+```typescript
+// Exemplo de uso correto da arquitetura:
+
+// 1. Domain Layer - Validação
+class UserUseCase {
+  async login(credentials) {
+    if (!credentials.email) throw new ValidationError("Email obrigatório");
+    return await this.userRepository.login(credentials);
+  }
+}
+
+// 2. Infrastructure Layer - Persistência
+class AuthStorageService {
+  async login(token, user) {
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+  }
+}
+
+// 3. Presentation Layer - UI Reativa
+const authStore = useAuthStore(); // Zustand para reatividade
+```
 
 ## 👥 Equipe
 

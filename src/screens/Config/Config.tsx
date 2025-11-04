@@ -8,9 +8,10 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
+import { NavigationProp } from "../../types/navigation";
 
 const Config = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.safeArea}>

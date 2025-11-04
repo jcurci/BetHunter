@@ -11,7 +11,7 @@ import {
   Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Footer from "../comum/Footer";
+import { Footer } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import Svg, {
   Path,

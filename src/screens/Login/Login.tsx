@@ -12,10 +12,10 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import { Container } from "../../../infrastructure/di/Container";
-import Logo from "../../../assets/logo-img/logo.svg";
+import { Container } from "../../infrastructure/di/Container";
+import Logo from "../../assets/logo-img/logo.svg";
 import MaskedView from "@react-native-masked-view/masked-view";
-import { NavigationProp } from "../../../types/navigation";
+import { NavigationProp } from "../../types/navigation";
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -36,44 +36,44 @@ const Login: React.FC = () => {
       Alert.alert("Erro", "Por favor, preencha todos os campos");
       return;
     }
-
+    navigation.navigate("Home");
     setLoading(true);
-    try {
-      const userUseCase = container.getUserUseCase();
-      const result = await userUseCase.login({ email, password });
+    // try {
+    //   const userUseCase = container.getUserUseCase();
+    //   const result = await userUseCase.login({ email, password });
 
-      console.log("Login successful:", result);
-      Alert.alert("Sucesso", "Login realizado com sucesso!", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("Home"),
-        },
-      ]);
-    } catch (error: any) {
-      console.error("Login error:", error);
+    //   console.log("Login successful:", result);
+    //   Alert.alert("Sucesso", "Login realizado com sucesso!", [
+    //     {
+    //       text: "OK",
+    //       onPress: () => navigation.navigate("Home"),
+    //     },
+    //   ]);
+    // } catch (error: any) {
+    //   console.error("Login error:", error);
       
-      // Tratamento específico de erros do backend
-      if (error.response?.status === 401) {
-        Alert.alert("Erro", "Email ou senha incorretos");
-      } else if (error.response?.status === 404) {
-        Alert.alert("Erro", "Usuário não encontrado");
-      } else if (error.response?.status === 400) {
-        Alert.alert("Erro", "Dados inválidos. Verifique email e senha");
-      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
-        Alert.alert("Erro", "Erro de conexão. Verifique sua internet");
-      } else if (error.code === 'ECONNABORTED') {
-        Alert.alert("Erro", "Timeout. Tente novamente");
-      } else {
-        Alert.alert("Erro", "Erro ao conectar com servidor. Tente novamente");
-      }
-    } finally {
-      setLoading(false);
-    }
+    //   // Tratamento específico de erros do backend
+    //   if (error.response?.status === 401) {
+    //     Alert.alert("Erro", "Email ou senha incorretos");
+    //   } else if (error.response?.status === 404) {
+    //     Alert.alert("Erro", "Usuário não encontrado");
+    //   } else if (error.response?.status === 400) {
+    //     Alert.alert("Erro", "Dados inválidos. Verifique email e senha");
+    //   } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+    //     Alert.alert("Erro", "Erro de conexão. Verifique sua internet");
+    //   } else if (error.code === 'ECONNABORTED') {
+    //     Alert.alert("Erro", "Timeout. Tente novamente");
+    //   } else {
+    //     Alert.alert("Erro", "Erro ao conectar com servidor. Tente novamente");
+    //   }
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   return (
     <ImageBackground
-      source={require("../../../assets/login_background.png")}
+      source={require("../../assets/login_background.png")}
       style={styles.background}
       resizeMode="cover"
     >

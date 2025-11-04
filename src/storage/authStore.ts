@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthStorageService } from '../infrastructure/storage/AuthStorageService';
 
 interface User {
   id: string;
@@ -14,92 +14,75 @@ interface AuthStore {
   isAuthenticated: boolean;
   
   // Actions
-  setToken: (token: string) => Promise<void>;
-  setUser: (user: User) => Promise<void>;
+  setToken: (token: string) => void;
+  setUser: (user: User) => void;
   login: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
   loadAuth: () => Promise<void>;
 }
 
-const TOKEN_KEY = '@BetHunter:token';
-const USER_KEY = '@BetHunter:user';
+// Instância do AuthStorageService para sincronização
+const authStorageService = new AuthStorageService();
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   token: null,
   user: null,
   isAuthenticated: false,
 
-  setToken: async (token: string) => {
-    try {
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-      console.log('✅ Token salvo no authStore:', token);
-      set({ token, isAuthenticated: true });
-    } catch (error) {
-      console.error('❌ Erro ao salvar token:', error);
-      throw error;
-    }
+  setToken: (token: string) => {
+    set({ token, isAuthenticated: true });
   },
 
-  setUser: async (user: User) => {
-    try {
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-      console.log('✅ Usuário salvo no authStore:', user);
-      set({ user });
-    } catch (error) {
-      console.error('❌ Erro ao salvar usuário:', error);
-      throw error;
-    }
+  setUser: (user: User) => {
+    set({ user });
   },
 
   login: async (token: string, user: User) => {
     try {
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+      // Salvar via AuthStorageService (Infrastructure Layer)
+      await authStorageService.login(token, user);
       
-      console.log('✅ Login salvo no authStore');
-      console.log('🔑 Token:', token);
-      console.log('👤 User:', user);
+      console.log('✅ [AuthStore] Estado atualizado após login');
       
+      // Atualizar estado reativo da UI
       set({
         token,
         user,
         isAuthenticated: true,
       });
     } catch (error) {
-      console.error('❌ Erro ao fazer login no authStore:', error);
+      console.error('❌ [AuthStore] Erro ao fazer login:', error);
       throw error;
     }
   },
 
   logout: async () => {
     try {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      await AsyncStorage.removeItem(USER_KEY);
+      // Limpar via AuthStorageService (Infrastructure Layer)
+      await authStorageService.logout();
       
-      console.log('✅ Logout realizado no authStore');
+      console.log('✅ [AuthStore] Estado limpo após logout');
       
+      // Atualizar estado reativo da UI
       set({
         token: null,
         user: null,
         isAuthenticated: false,
       });
     } catch (error) {
-      console.error('❌ Erro ao fazer logout:', error);
+      console.error('❌ [AuthStore] Erro ao fazer logout:', error);
       throw error;
     }
   },
 
   loadAuth: async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const userJson = await AsyncStorage.getItem(USER_KEY);
+      // Carregar via AuthStorageService (Infrastructure Layer)
+      const token = await authStorageService.getToken();
+      const user = await authStorageService.getUser();
       
-      if (token && userJson) {
-        const user = JSON.parse(userJson);
-        
-        console.log('✅ Autenticação carregada do authStore');
-        console.log('🔑 Token:', token);
-        console.log('👤 User:', user);
+      if (token && user) {
+        console.log('✅ [AuthStore] Autenticação carregada');
         
         set({
           token,
@@ -107,7 +90,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           isAuthenticated: true,
         });
       } else {
-        console.log('ℹ️ Nenhuma autenticação encontrada');
+        console.log('ℹ️ [AuthStore] Nenhuma autenticação encontrada');
         set({
           token: null,
           user: null,
@@ -115,7 +98,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar autenticação:', error);
+      console.error('❌ [AuthStore] Erro ao carregar autenticação:', error);
       set({
         token: null,
         user: null,
@@ -124,5 +107,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 }));
+
+
 
 

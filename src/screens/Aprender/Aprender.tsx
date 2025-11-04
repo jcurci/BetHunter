@@ -10,17 +10,29 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import Footer from "../comum/Footer";
+import { Footer } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
+import { User } from "../../domain/entities/User";
+import { Lesson } from "../../domain/entities/Lesson";
+import { NavigationProp } from "../../types/navigation";
 
 import MaskedView from "@react-native-masked-view/masked-view";
 
+interface LearningModule {
+  id: string;
+  title: string;
+  progress: string;
+  percentage: number;
+  gradientColors: string[];
+  hasProgress: boolean;
+}
+
 const Aprender = () => {
-  const navigation = useNavigation();
-  const [user, setUser] = useState(null);
-  const [learningModules, setLearningModules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const navigation = useNavigation<NavigationProp>();
+  const [user, setUser] = useState<User | null>(null);
+  const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const container = Container.getInstance();
 
   useEffect(() => {
@@ -60,7 +72,7 @@ const Aprender = () => {
     }
   };
 
-  const renderProgressBar = (percentage, hasProgress, gradientColors) => {
+  const renderProgressBar = (percentage: number, hasProgress: boolean, gradientColors: string[]) => {
     return (
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBar}>
@@ -76,12 +88,12 @@ const Aprender = () => {
     );
   };
 
-  const handleModulePress = (module) => {
+  const handleModulePress = (module: LearningModule) => {
     const moduleTitle = module.title.toLowerCase().replace(/\s+/g, "-");
     navigation.navigate("Quiz", { title: moduleTitle, moduleData: module });
   };
 
-  const renderModuleCard = (module) => (
+  const renderModuleCard = (module: LearningModule) => (
     <TouchableOpacity
       key={module.id}
       style={styles.moduleCard}
@@ -114,7 +126,7 @@ const Aprender = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView>
         {/* Header */}
 
         {/* Error Message */}
@@ -163,14 +175,13 @@ const Aprender = () => {
             end={{ x: 1, y: 0 }}
             style={{
               height: 50,
-              borderRadius: 2,
+              borderRadius: 5,
               marginBottom: 20,
               position: "absolute",
               opacity: 0.25,
               top: -27,
               left: 0,
               right: 0,
-              borderRadius: 5,
               shadowColor: "#000",
               shadowOffset: {
                 width: 0,
@@ -329,20 +340,18 @@ const styles = StyleSheet.create({
   containerTitle: {
     height: 92,
     backgroundColor: "#1A1923",
-    borderRadius: 5,
+    borderRadius: 20,
     marginRight: 10,
     width: "100%",
-    borderRadius: 20,
     marginBottom: 8,
   },
   progressBar: {
     flex: 1,
     height: 50,
     backgroundColor: "#1A1923",
-    borderRadius: 5,
+    borderRadius: 20,
     marginRight: 10,
     width: "100%",
-    borderRadius: 20,
   },
   progressFill: {
     height: "100%",

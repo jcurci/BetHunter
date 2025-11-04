@@ -9,20 +9,10 @@ export interface AuthResponse {
 export class AuthService {
   async login(credentials: UserCredentials): Promise<AuthResponse> {
     try {
-      console.log('📤 Enviando requisição de login...');
-      console.log('📧 Email:', credentials.email);
-      console.log('🔒 Password:', credentials.password ? '***' + credentials.password.slice(-3) : 'undefined');
-      console.log('🌐 URL:', '/auth/login');
-      
       const response = await apiClient.post('/auth/login', credentials);
       
-      console.log('✅ Login bem-sucedido, status:', response.status);
       return response.data;
     } catch (error: any) {
-      console.error('❌ Erro no login:', error);
-      console.error('📊 Status:', error.response?.status);
-      console.error('📝 Mensagem:', error.response?.data);
-      console.error('🔍 Headers:', error.response?.headers);
       throw error;
     }
   }

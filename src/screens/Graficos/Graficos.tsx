@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import Footer from "../comum/Footer";
+import { Footer } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";

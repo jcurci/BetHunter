@@ -8,21 +8,22 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Icon from "react-native-vector-icons/Entypo";
-import Footer from "../comum/Footer";
+import { Footer, HomeAccountButton } from "../../components";
 import { useNavigation } from "@react-navigation/native";
 import ImageBitcoin from "../../assets/image-bitcoin.svg";
 import ImageMoeda from "../../assets/image-moeda.svg";
 import ImageGrafico from "../../assets/image-grafico.svg";
 import { Container } from "../../infrastructure/di/Container";
 import { Article } from "../../domain/entities/Article";
-import HomeAccountButton from "../comum/HomeAccountButton";
+import { User } from "../../domain/entities/User";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
+import { NavigationProp } from "../../types/navigation";
 
-const Home = () => {
-  const navigation = useNavigation();
-  const [articles, setArticles] = useState([]);
-  const [user, setUser] = useState(null);
+const Home: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const container = Container.getInstance();
 
   useEffect(() => {
@@ -46,7 +47,7 @@ const Home = () => {
     }
   };
 
-  const getArticleImage = (article) => {
+  const getArticleImage = (article: Article): JSX.Element | null => {
     switch (article.imageUrl) {
       case "bitcoin":
         return <ImageBitcoin width="100%" height={90} />;
@@ -76,83 +77,9 @@ const Home = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Points Card */}
-          <LinearGradient
-            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.pointsCard}
-          >
-            <View>
-              <Text style={styles.pointsText}>
-                Você tem {user?.points || 0} pontos
-              </Text>
-              <Text style={styles.pointsSubtitle}>
-                Pode girar a roleta {Math.floor((user?.points || 0) / 10)} vezes
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate("Roulette")}>
-              <Icon name="controller-record" size={30} color="#FFFFFF" />
-              <Icon name="chevron-right" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </LinearGradient>
+         
 
-          {/* Initiative Section */}
-          <View style={styles.initiativeSection}>
-            <Text style={styles.initiativeTitle}>
-              Sua iniciativa já te gerou
-            </Text>
-            <MaskedView
-              maskElement={
-                <Text style={styles.initiativeAmount}>R$14.884,20</Text>
-              }
-            >
-              <LinearGradient
-                colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Text style={[styles.initiativeAmount, { opacity: 0 }]}>
-                  R$14.884,20
-                </Text>
-              </LinearGradient>
-            </MaskedView>
-
-            <TouchableOpacity style={{ alignItems: "center" }}>
-              <MaskedView
-                maskElement={
-                  <Text style={styles.historyText}>Conferir histórico</Text>
-                }
-              >
-                <LinearGradient
-                  colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Text style={[styles.historyText, { opacity: 0 }]}>
-                    Conferir histórico
-                  </Text>
-                </LinearGradient>
-              </MaskedView>
-              <MaskedView
-                maskElement={
-                  <Icon name="chevron-down" size={24} color="#FFFFFF" />
-                }
-              >
-                <LinearGradient
-                  colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <Icon name="chevron-down" size={24} style={{ opacity: 0 }} />
-                </LinearGradient>
-              </MaskedView>
-            </TouchableOpacity>
-
-            {/* Account Button */}
-            <HomeAccountButton />
-          </View>
-
+          
           {/* For You Section */}
           <Text style={styles.sectionTitle}>Para você</Text>
           <ScrollView
@@ -160,12 +87,12 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.carouselContainer}
           >
-            {articles.map((article) => (
-              <View key={article.id} style={styles.articleCard}>
+            {articles?.map((article: Article) => (
+              <View key={article?.id} style={styles.articleCard}>
                 <View style={styles.articleImageContainer}>
                   {getArticleImage(article)}
                 </View>
-                <Text style={styles.articleTitle}>{article.title}</Text>
+                <Text style={styles.articleTitle}>{article?.title || ''}</Text>
                 <Text style={styles.articleDescription}>
                   {article.description}
                 </Text>

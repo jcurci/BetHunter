@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { TouchableOpacity, Text, View, StyleSheet, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { NavigationProp } from '../../types/navigation';
+import { NavigationProp } from '../../../types/navigation';
 
 const HomeAccountButton: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -83,3 +83,4 @@ const styles = StyleSheet.create({
 });
 
 export default HomeAccountButton;
+
