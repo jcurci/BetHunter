@@ -22,6 +22,15 @@ import ImageGrafico from "../../assets/image-grafico.svg";
 import Meditation from "../../assets/home/meditation.svg";
 import Reset from "../../assets/home/reset.svg";
 import Block from "../../assets/home/block.svg";
+import BetHunterIcon from "../../assets/home/bethunter.svg";
+import AcessorIcon from "../../assets/home/acessor.svg";
+import JornadaIcon from "../../assets/home/jornada.svg";
+import MedicoIcon from "../../assets/home/medico.svg";
+import EventosIcon from "../../assets/home/eventos.svg";
+import CursosIcon from "../../assets/home/cursos.svg";
+import ForumsIcon from "../../assets/home/forums.svg";
+import ArtigosIcon from "../../assets/home/artigos.svg";
+import VideosIcon from "../../assets/home/videos.svg";
 
 // Domain & Infrastructure
 import { Container } from "../../infrastructure/di/Container";
@@ -37,11 +46,14 @@ const GRADIENT_HEIGHT_EXPANDED = 450;
 const DAYS_IN_MONTH = 30;
 const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]; // Adicione esta linha
 
+type TabType = "conta" | "parceiros" | "social";
+
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [articles, setArticles] = useState<Article[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<TabType>("conta");
   const container = Container.getInstance();
 
   useEffect(() => {
@@ -77,6 +89,154 @@ const Home: React.FC = () => {
 
   const toggleFreeOfBetBox = () => {
     setShowFreeOfBetBox(!showFreeOfBetBox);
+  };
+
+  const renderTabButton = (tab: TabType, label: string) => {
+    const isActive = activeTab === tab;
+    
+    if (isActive) {
+      return (
+        <TouchableOpacity
+          key={tab}
+          onPress={() => setActiveTab(tab)}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={TEXT_GRADIENT_COLORS}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.tabButtonGradient}
+          >
+            <View style={styles.tabButtonInner}>
+              <Text style={styles.tabButtonTextActive}>{label}</Text>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        key={tab}
+        onPress={() => setActiveTab(tab)}
+        style={styles.tabButtonInactive}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.tabButtonTextInactive}>{label}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "conta":
+        return (
+          <View style={styles.cardsContainer}>
+            {/* Minha Conta */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <BetHunterIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Conta</Text>
+            </TouchableOpacity>
+
+            {/* Meu Acessor */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <AcessorIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Acessor</Text>
+            </TouchableOpacity>
+
+            {/* Minha Jornada */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <JornadaIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Jornada</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      case "parceiros":
+        return (
+          <View style={styles.cardsContainer}>
+            {/* Consultas */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <MedicoIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Consultas</Text>
+            </TouchableOpacity>
+
+            {/* Eventos */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <EventosIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Eventos</Text>
+            </TouchableOpacity>
+
+            {/* Cursos */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <CursosIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Cursos</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      case "social":
+        return (
+          <View style={styles.cardsContainer}>
+            {/* Fóruns */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <ForumsIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Fóruns</Text>
+            </TouchableOpacity>
+
+            {/* Artigos */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <ArtigosIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Artigos</Text>
+            </TouchableOpacity>
+
+            {/* Vídeos */}
+            <TouchableOpacity style={styles.iconCard}>
+              <View style={styles.iconCardGradient}>
+                <View style={styles.iconCircleBorder}>
+                  <VideosIcon width={24} height={24} />
+                </View>
+              </View>
+              <Text style={styles.iconCardTitle}>Vídeos</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      default:
+        return null;
+    }
   };
 
   const renderHeader = () => (
@@ -235,119 +395,15 @@ const Home: React.FC = () => {
             <View style={styles.divider} />
           </TouchableOpacity>
 
-          {/* Seção Conta, Parceiros, Social */}
-          <View style={{ flexDirection: "row", justifyContent: "flex-start", marginVertical: 10 }}>
-            {/* Conta Button (Active) */}
-            <LinearGradient
-              colors={TEXT_GRADIENT_COLORS}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                borderRadius: 12,
-                padding: 1.2,
-                marginRight: 8,
-              }}
-            >
-              <View
-                style={{
-                  backgroundColor: "#161522",
-                  borderRadius: 12,
-                  paddingHorizontal: 18,
-                  paddingVertical: 6,
-                }}>
-                <Text
-                  style={{
-                    color: "#fff",
-                    fontWeight: "500",
-                    fontSize: 15,
-                  }}
-                >
-                  Conta
-                </Text>
-              </View>
-            </LinearGradient>
-
-            {/* Parceiros Button (Inactive) */}
-            <View
-              style={{
-                borderRadius: 12,
-                backgroundColor: "#161522",
-                paddingHorizontal: 18,
-                paddingVertical: 6,
-                marginRight: 8,
-                borderWidth: 1,
-                borderColor: "#282232",
-              }}
-            >
-              <Text
-                style={{
-                  color: "#C7C3D1",
-                  fontWeight: "500",
-                  fontSize: 15,
-                }}
-              >
-                Parceiros
-              </Text>
-            </View>
-            
-            {/* Social Button (Inactive) */}
-            <View
-              style={{
-                borderRadius: 12,
-                backgroundColor: "#161522",
-                paddingHorizontal: 18,
-                paddingVertical: 6,
-                borderWidth: 1,
-                borderColor: "#282232",
-              }}
-            >
-              <Text
-                style={{
-                  color: "#C7C3D1",
-                  fontWeight: "500",
-                  fontSize: 15,
-                }}
-              >
-                Social
-              </Text>
-            </View>
+          {/* Seção Conta, Parceiros, Social - Tabs */}
+          <View style={styles.tabsContainer}>
+            {renderTabButton("conta", "Conta")}
+            {renderTabButton("parceiros", "Parceiros")}
+            {renderTabButton("social", "Social")}
           </View>
 
-          {/* Cards Container: Minha Conta, Meu Acessor, Minha Jornada */}
-          <View style={styles.cardsContainer}>
-            {/* Minha Conta */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <Text style={styles.iconEmoji}>🐱</Text>
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Minha</Text>
-              <Text style={styles.iconCardTitle}>Conta</Text>
-            </TouchableOpacity>
-
-            {/* Meu Acessor */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <Text style={styles.iconEmoji}>💼</Text>
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Meu</Text>
-              <Text style={styles.iconCardTitle}>Acessor</Text>
-            </TouchableOpacity>
-
-            {/* Minha Jornada */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <Text style={styles.iconEmoji}>🎯</Text>
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Minha</Text>
-              <Text style={styles.iconCardTitle}>Jornada</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Tab Content - Cards dinâmicos baseados na aba ativa */}
+          {renderTabContent()}
 
           {/* Seção Para Você */}
           <Text style={styles.sectionTitle}>Para você</Text>
@@ -544,6 +600,43 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
+  // Tabs Styles
+  tabsContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginVertical: 10,
+  },
+  tabButtonGradient: {
+    borderRadius: 12,
+    padding: 1.2,
+    marginRight: 8,
+  },
+  tabButtonInner: {
+    backgroundColor: "#161522",
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+  },
+  tabButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "500",
+    fontSize: 15,
+  },
+  tabButtonInactive: {
+    borderRadius: 12,
+    backgroundColor: "#161522",
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#282232",
+  },
+  tabButtonTextInactive: {
+    color: "#C7C3D1",
+    fontWeight: "500",
+    fontSize: 15,
+  },
+
   // Cards Container (Minha Conta, Meu Acessor, Minha Jornada)
   cardsContainer: {
     flexDirection: "row",
@@ -553,22 +646,22 @@ const styles = StyleSheet.create({
   },
   iconCard: {
     flex: 1,
-    backgroundColor: "#14121B",
+    backgroundColor: "#1A1825",
     borderRadius: 24,
     paddingTop: 24,
     paddingBottom: 20,
     paddingHorizontal: 16,
     alignItems: "flex-start",
     borderWidth: 1,
-    borderColor: "14121B",
+
     minHeight: 100,
   },
   iconCardGradient: {
     marginBottom: 20,
   },
   iconCircleBorder: {
-    borderWidth: 2,
-    borderColor: "#201F2A",
+    
+    
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
