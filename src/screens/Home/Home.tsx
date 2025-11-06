@@ -13,7 +13,7 @@ import Icon from "react-native-vector-icons/Entypo";
 import MaskedView from "@react-native-masked-view/masked-view";
 
 // Components
-import { Footer, StatsDisplay } from "../../components";
+import { Footer, StatsDisplay, IconCard } from "../../components";
 
 // Assets
 import ImageBitcoin from "../../assets/image-bitcoin.svg";
@@ -132,105 +132,54 @@ const Home: React.FC = () => {
       case "conta":
         return (
           <View style={styles.cardsContainer}>
-            {/* Minha Conta */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <BetHunterIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Conta</Text>
-            </TouchableOpacity>
-
-            {/* Meu Acessor */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <AcessorIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Acessor</Text>
-            </TouchableOpacity>
-
-            {/* Minha Jornada */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <JornadaIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Jornada</Text>
-            </TouchableOpacity>
+            <IconCard 
+              icon={<BetHunterIcon width={24} height={24} />} 
+              title="Conta" 
+            />
+            <IconCard 
+              icon={<AcessorIcon width={24} height={24} />} 
+              title="Acessor" 
+            />
+            <IconCard 
+              icon={<JornadaIcon width={24} height={24} />} 
+              title="Jornada" 
+            />
           </View>
         );
 
       case "parceiros":
         return (
           <View style={styles.cardsContainer}>
-            {/* Consultas */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <MedicoIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Consultas</Text>
-            </TouchableOpacity>
-
-            {/* Eventos */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <EventosIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Eventos</Text>
-            </TouchableOpacity>
-
-            {/* Cursos */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <CursosIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Cursos</Text>
-            </TouchableOpacity>
+            <IconCard 
+              icon={<MedicoIcon width={24} height={24} />} 
+              title="Consultas" 
+            />
+            <IconCard 
+              icon={<EventosIcon width={24} height={24} />} 
+              title="Eventos" 
+            />
+            <IconCard 
+              icon={<CursosIcon width={24} height={24} />} 
+              title="Cursos" 
+            />
           </View>
         );
 
       case "social":
         return (
           <View style={styles.cardsContainer}>
-            {/* Fóruns */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <ForumsIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Fóruns</Text>
-            </TouchableOpacity>
-
-            {/* Artigos */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <ArtigosIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Artigos</Text>
-            </TouchableOpacity>
-
-            {/* Vídeos */}
-            <TouchableOpacity style={styles.iconCard}>
-              <View style={styles.iconCardGradient}>
-                <View style={styles.iconCircleBorder}>
-                  <VideosIcon width={24} height={24} />
-                </View>
-              </View>
-              <Text style={styles.iconCardTitle}>Vídeos</Text>
-            </TouchableOpacity>
+            <IconCard 
+              icon={<ForumsIcon width={24} height={24} />} 
+              title="Fóruns" 
+            />
+            <IconCard 
+              icon={<ArtigosIcon width={24} height={24} />} 
+              title="Artigos" 
+            />
+            <IconCard 
+              icon={<VideosIcon width={24} height={24} />} 
+              title="Vídeos" 
+            />
           </View>
         );
 
@@ -400,7 +349,7 @@ const Home: React.FC = () => {
             {renderTabButton("conta", "Conta")}
             {renderTabButton("parceiros", "Parceiros")}
             {renderTabButton("social", "Social")}
-          </View>
+          </View> 
 
           {/* Tab Content - Cards dinâmicos baseados na aba ativa */}
           {renderTabContent()}
@@ -643,41 +592,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginVertical: 20,
     gap: 12,
-  },
-  iconCard: {
-    flex: 1,
-    backgroundColor: "#1A1825",
-    borderRadius: 24,
-    paddingTop: 24,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    alignItems: "flex-start",
-    borderWidth: 1,
-
-    minHeight: 100,
-  },
-  iconCardGradient: {
-    marginBottom: 20,
-  },
-  iconCircleBorder: {
-    
-    
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    width: 48,
-    height: 48,
-    backgroundColor: "#201F2A",
-  },
-  iconEmoji: {
-    fontSize: 24,
-  },
-  iconCardTitle: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "left",
-    lineHeight: 16,
   },
 
   // Section Styles
