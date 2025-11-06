@@ -34,7 +34,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({
 const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: "column",
-    alignItems: "center",
+    alignItems: "flex-end",
     gap: 12,
   },
   statRow: {

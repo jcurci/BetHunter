@@ -67,7 +67,7 @@ const QuizResult = () => {
         >
           <TouchableOpacity
             style={styles.primaryTouchable}
-            onPress={() => navigation.navigate("Aprender")}
+            onPress={() => navigation.navigate("Cursos")}
           >
             <Text style={styles.primaryButtonText}>Voltar</Text>
           </TouchableOpacity>

@@ -40,23 +40,23 @@ const Footer: React.FC = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Aprender")}
+        onPress={() => navigation.navigate("MenuEducacional")}
       >
         <View
           style={
-            isActive("Aprender")
+            isActive("MenuEducacional")
               ? styles.activeIconWrapper
               : styles.inactiveIconWrapper
           }
         >
           <Icon
-            name={isActive("Aprender") ? "book" : "book-outline"}
+            name={isActive("MenuEducacional") ? "book" : "book-outline"}
             size={24}
-            color={isActive("Aprender") ? "#FFFFFF" : "#A09CAB"}
+            color={isActive("MenuEducacional") ? "#FFFFFF" : "#A09CAB"}
           />
         </View>
         <Text
-          style={isActive("Aprender") ? styles.activeIconText : styles.iconText}
+          style={isActive("MenuEducacional") ? styles.activeIconText : styles.iconText}
         >
           Aprender
         </Text>

@@ -10,7 +10,7 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Footer } from "../../components";
+import { Footer, StatsDisplay } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import { User } from "../../domain/entities/User";
 import { Lesson } from "../../domain/entities/Lesson";
@@ -27,7 +27,7 @@ interface LearningModule {
   hasProgress: boolean;
 }
 
-const Aprender = () => {
+const Cursos = () => {
   const navigation = useNavigation<NavigationProp>();
   const [user, setUser] = useState<User | null>(null);
   const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
@@ -126,9 +126,29 @@ const Aprender = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <View style={styles.headerContainer}>
         {/* Header */}
-
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Icon name="arrow-left" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Cursos</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <StatsDisplay energy={10} streak="3d" />
+          </View>
+        </View>
+      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Error Message */}
         {error && (
           <View style={styles.errorContainer}>
@@ -215,26 +235,48 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
-  // scrollView: {
-  //   flex: 1,
-  // },
-  // header: {
-  //   flexDirection: "row",
-  //   justifyContent: "space-between",
-  //   alignItems: "center",
-  //   paddingHorizontal: 20,
-  //   paddingTop: 10,
-  //   paddingBottom: 20,
-  // },
+  headerContainer: {
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 0,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 16,
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
+  },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#7456C8",
+    color: "#FFFFFF",
+    lineHeight: 28,
+  },
+  headerRight: {
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   userCard: {
     backgroundColor: "#1A1923",
     marginBottom: 30,
-    paddingHorizontal: 20,
     paddingVertical: 15,
   },
   userInfo: {
@@ -294,7 +336,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   modulesContainer: {
-    paddingHorizontal: 20,
   },
   modulesTitle: {
     fontSize: 20,
@@ -399,4 +440,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Aprender;
+export default Cursos;
