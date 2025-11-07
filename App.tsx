@@ -13,6 +13,7 @@ import Notifications from "./src/screens/Config/Notifications";
 import Roulette from "./src/screens/Roulette/Roulette";
 import MenuEducacional from "./src/screens/Educacional/MenuEducacional";
 import Cursos from "./src/screens/Educacional/Cursos";
+import Ranking from "./src/screens/Educacional/Ranking";
 import QuizPage from "./src/screens/Quiz/QuizPage";
 import Graficos from "./src/screens/Graficos/Graficos";
 import QuizResult from "./src/screens/Quiz/QuizResult";
@@ -101,6 +102,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="Cursos"
           component={Cursos}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Ranking"
+          component={Ranking}
           options={{
             headerShown: false,
           }}

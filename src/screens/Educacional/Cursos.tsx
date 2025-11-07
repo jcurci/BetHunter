@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Footer, StatsDisplay } from "../../components";
+import { Footer, StatsDisplay, Avatar, BackIconButton } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import { User } from "../../domain/entities/User";
-import { Lesson } from "../../domain/entities/Lesson";
 import { NavigationProp } from "../../types/navigation";
 
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -27,12 +27,80 @@ interface LearningModule {
   hasProgress: boolean;
 }
 
+const MOCK_LEARNING_MODULES: LearningModule[] = [
+  {
+    id: "fundamentos",
+    title: "Fundamentos",
+    progress: "1/4",
+    percentage: 25,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: true,
+  },
+  {
+    id: "pratica-dinheiro",
+    title: "Prática com Dinheiro",
+    progress: "0/10",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+  {
+    id: "conhecimento-aplicado",
+    title: "Conhecimento Aplicado",
+    progress: "0/15",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+  {
+    id: "objetivos-planejamento",
+    title: "Objetivos e Planejamento",
+    progress: "0/8",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+  {
+    id: "investimentos-baixo-risco",
+    title: "Investimentos de Baixo Risco",
+    progress: "0/30",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+  {
+    id: "investimentos-alto-risco",
+    title: "Investimentos de Alto Risco",
+    progress: "0/44",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+  {
+    id: "criptomoedas-basico",
+    title: "Criptomoedas: Básico",
+    progress: "0/12",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+  {
+    id: "criptomoedas-intermediario",
+    title: "Criptomoedas: Intermediário",
+    progress: "0/18",
+    percentage: 0,
+    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+    hasProgress: false,
+  },
+];
+
 const Cursos = () => {
   const navigation = useNavigation<NavigationProp>();
   const [user, setUser] = useState<User | null>(null);
   const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const container = Container.getInstance();
 
   useEffect(() => {
@@ -48,21 +116,20 @@ const Cursos = () => {
       const currentUser = await userUseCase.getCurrentUser();
       setUser(currentUser);
 
-      // Carregar lições da API
-      const lessonUseCase = container.getLessonUseCase();
-      const lessons = await lessonUseCase.getUserLessons();
+      // Serviço de lições temporariamente offline.
+      // Quando estiver disponível novamente, reative as linhas abaixo para utilizar os dados reais:
+      // const lessonUseCase = container.getLessonUseCase();
+      // const lessons = await lessonUseCase.getUserLessons();
+      // const mappedLessons = lessons.map((lesson) => ({
+      //   id: lesson.id,
+      //   title: lesson.title,
+      //   progress: `${lesson.completedTopics}/${lesson.totalTopics}`,
+      //   percentage: lesson.progressPercent,
+      //   gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
+      //   hasProgress: lesson.completedTopics > 0,
+      // }));
 
-      // Mapear lições da API para o formato da UI
-      const mappedLessons = lessons.map((lesson) => ({
-        id: lesson.id,
-        title: lesson.title,
-        progress: `${lesson.completedTopics}/${lesson.totalTopics}`,
-        percentage: lesson.progressPercent,
-        gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-        hasProgress: lesson.completedTopics > 0,
-      }));
-
-      setLearningModules(mappedLessons);
+      setLearningModules(MOCK_LEARNING_MODULES);
       setError(null);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -91,6 +158,15 @@ const Cursos = () => {
   const handleModulePress = (module: LearningModule) => {
     const moduleTitle = module.title.toLowerCase().replace(/\s+/g, "-");
     navigation.navigate("Quiz", { title: moduleTitle, moduleData: module });
+  };
+
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return "JD";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   const renderModuleCard = (module: LearningModule) => (
@@ -128,19 +204,42 @@ const Cursos = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-            >
-              <Icon name="arrow-left" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTopLeft}>
+            <BackIconButton onPress={() => navigation.goBack()} size={42} />
             <Text style={styles.headerTitle}>Cursos</Text>
           </View>
-          <View style={styles.headerRight}>
-            <StatsDisplay energy={10} streak="3d" />
+          <StatsDisplay energy={10} streak="3d" />
+        </View>
+
+        <View style={styles.headerBottom}>
+          <Avatar initials={getInitials(user?.name)} size={48} style={styles.headerAvatar} />
+          <View style={styles.searchWrapper}>
+            <LinearGradient
+              colors={["#373344", "#1A1825", "#373344"]}
+              locations={[0, 0.5, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.searchGradient}
+            >
+              <LinearGradient
+                colors={["rgba(255,255,255,0.35)", "rgba(255,255,255,0)"]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.searchHighlight}
+                pointerEvents="none"
+              />
+              <View style={styles.searchContainer}>
+                <Icon name="search" size={18} color="#A09CAB" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Pesquisar"
+                  placeholderTextColor="#A09CAB"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+            </LinearGradient>
           </View>
         </View>
       </View>
@@ -149,7 +248,6 @@ const Cursos = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Error Message */}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
@@ -159,59 +257,8 @@ const Cursos = () => {
           </View>
         )}
 
-        {/* User Card */}
-        <View style={styles.userCard}>
-          <View style={styles.userInfo}>
-            <View style={styles.avatarContainer}>
-              <Icon name="user" size={24} color="#A0A0A0" />
-            </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user?.name || "John Doe"}</Text>
-              <Text style={styles.userRank}>Prata - #7</Text>
-            </View>
-          </View>
-          <View style={styles.rankingInfo}>
-            <Text style={styles.rankingNumber}>5</Text>
-            <Icon name="heart" size={16} color="#FF0000" />
-          </View>
-          <TouchableOpacity style={styles.rankingButton}>
-            <Text style={styles.rankingButtonText}>Conferir ranking</Text>
-            <Icon name="chevron-down" size={16} color="#A09CAB" />
-          </TouchableOpacity>
-
-          {/* <LinearGradient
-            colors={["#7456C8", "#FF8C43"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientSeparator}
-          /> */}
-        </View>
-
         {/* Learning Modules Grid */}
         <View style={styles.modulesContainer}>
-          <LinearGradient
-            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{
-              height: 50,
-              borderRadius: 5,
-              marginBottom: 20,
-              position: "absolute",
-              opacity: 0.25,
-              top: -27,
-              left: 0,
-              right: 0,
-              shadowColor: "#000",
-              shadowOffset: {
-                width: 0,
-                height: 2,
-              },
-              shadowOpacity: 0.35,
-              shadowRadius: 8,
-              elevation: 8,
-            }}
-          />
           <View style={styles.modulesGrid}>
             {loading ? (
               <View style={styles.loadingContainer}>
@@ -240,22 +287,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 0,
   },
-  header: {
+  headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
+    alignItems: "center",
+    marginBottom: 16,
     marginTop: 8,
   },
-  headerLeft: {
+  headerTopLeft: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    marginRight: 16,
-  },
-  backButton: {
-    marginRight: 12,
-    padding: 4,
+    gap: 12,
   },
   headerTitle: {
     fontSize: 24,
@@ -263,9 +305,52 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     lineHeight: 28,
   },
-  headerRight: {
-    alignItems: "flex-end",
-    justifyContent: "flex-start",
+  headerBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 24,
+  },
+  headerAvatar: {
+    marginRight: 4,
+  },
+  searchWrapper: {
+    flex: 1,
+  },
+  searchGradient: {
+    borderRadius: 28,
+    padding: 1,
+  },
+  searchHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "60%",
+    borderRadius: 28,
+    opacity: 0.9,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#16141F",
+    borderRadius: 27,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: "#2B2737",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 16,
   },
   scrollView: {
     flex: 1,
@@ -273,137 +358,67 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-  },
-  userCard: {
-    backgroundColor: "#1A1923",
-    marginBottom: 30,
-    paddingVertical: 15,
-  },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  avatarContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#444",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 5,
-  },
-  userRank: {
-    fontSize: 20,
-    color: "#B9D8E9",
-  },
-  rankingInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    position: "absolute",
-    right: 20,
-    top: 30,
-  },
-  rankingNumber: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginRight: 5,
-  },
-  rankingButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rankingButtonText: {
-    fontSize: 14,
-    color: "#A09CAB",
-    marginRight: 5,
-  },
-  gradientSeparator: {
-    height: 2,
-    marginTop: 15,
-    borderRadius: 20,
+    paddingTop: 12,
   },
   modulesContainer: {
-  },
-  modulesTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 20,
+    paddingTop: 12,
   },
   modulesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 15,
-    marginTop: 18,
+    marginTop: 0,
   },
   moduleCard: {
-    width: "48%",
+    width: 168.26,
+    height: 154.42,
     backgroundColor: "#2B2935",
-    borderRadius: 12,
-    padding: 5,
-    marginBottom: 15,
-    minHeight: 120,
+    borderRadius: 15,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    marginBottom: 16,
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   moduleTitleGradient: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   moduleTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
-    padding: 9,
+    paddingBottom: 4,
   },
   progressText: {
     fontSize: 12,
     color: "#A09CAB",
-    marginBottom: 10,
-    paddingLeft: 8,
+    marginTop: 6,
   },
   progressBarContainer: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  containerTitle: {
-    height: 92,
-    backgroundColor: "#1A1923",
-    borderRadius: 20,
-    marginRight: 10,
-    width: "100%",
-    marginBottom: 8,
+    justifyContent: "center",
+    width: 160.81,
+    marginTop: 0,
+    alignSelf: "center",
   },
   progressBar: {
-    flex: 1,
-    height: 50,
-    backgroundColor: "#1A1923",
-    borderRadius: 20,
-    marginRight: 10,
     width: "100%",
+    height: 53.25,
+    backgroundColor: "#1A1923",
+    borderRadius: 13,
+    position: "relative",
+    overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    borderRadius: 15,
+    borderRadius: 13,
   },
   percentageText: {
     fontSize: 14,
     color: "#A09CAB",
-    alignSelf: "flex-end",
-    marginTop: -30,
-    marginRight: 10,
+    position: "absolute",
+    right: 12,
+    bottom: 12,
   },
   loadingContainer: {
     width: "100%",
@@ -437,6 +452,18 @@ const styles = StyleSheet.create({
     color: "#FF3B30",
     fontSize: 14,
     fontWeight: "bold",
+  },
+  containerTitle: {
+    width: 161.87,
+    height: 88.39,
+    backgroundColor: "#1A1923",
+    borderRadius: 13,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+    alignItems: "flex-start",
+    alignSelf: "center",
   },
 });
 

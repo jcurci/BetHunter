@@ -12,7 +12,7 @@ const Avatar: React.FC<AvatarProps> = ({
   size = 48,
   style 
 }) => {
-  const fontSize = size * 0.5; // 50% do tamanho do círculo
+  const fontSize = size * 0.5; 
   
   return (
     <View style={[styles.container, { width: size, height: size, borderRadius: size / 2 }, style]}>
@@ -25,12 +25,12 @@ const Avatar: React.FC<AvatarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#EAEAE5",
+    backgroundColor: "#A09CAB",
     justifyContent: "center",
     alignItems: "center",
   },
   initials: {
-    color: "#FFFFFF",
+    color: "#EAEAE5",
     fontWeight: "600",
   },
 });

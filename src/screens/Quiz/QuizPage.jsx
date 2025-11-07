@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BackIconButton, QuizPrimaryButton, QuizDisabledButton } from "../../components";
+import BettyIcon from "../../assets/Betty.png";
 
 const QuizPage = () => {
   const navigation = useNavigation();
@@ -19,16 +22,20 @@ const QuizPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answers, setAnswers] = useState({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
+  const checkTimeoutRef = useRef(null);
 
   // Reset state when component mounts
   useEffect(() => {
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setAnswers({});
-    setIsSubmitted(false);
     setShowAnswer(false);
+    setHasChecked(false);
+    if (checkTimeoutRef.current) {
+      clearTimeout(checkTimeoutRef.current);
+    }
   }, [title]);
 
   // Mock do serviço do quiz (estrutura idêntica à resposta do backend)
@@ -219,12 +226,9 @@ const QuizPage = () => {
     ((currentQuestionIndex + 1) / quizData.questions.length) * 100;
 
   const handleAnswerSelect = (answerId) => {
+    setAnswers({ ...answers, [currentQuestion.id]: answerId });
     setSelectedAnswer(answerId);
-    setShowAnswer(true);
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: answerId,
-    }));
+    setHasChecked(false);
   };
 
   const handleNextQuestion = () => {
@@ -234,6 +238,7 @@ const QuizPage = () => {
         answers[quizData.questions[currentQuestionIndex + 1]?.id] || null
       );
       setShowAnswer(false);
+      setHasChecked(false);
     } else {
       handleSubmitQuiz();
     }
@@ -260,29 +265,25 @@ const QuizPage = () => {
         answers[quizData.questions[currentQuestionIndex - 1]?.id] || null
       );
       setShowAnswer(false);
+      setHasChecked(false);
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
     } else {
       navigation.goBack();
     }
   };
 
-  const getButtonText = () => {
-    if (isSubmitted) return "Quiz Concluído";
-    if (currentQuestionIndex === quizData.questions.length - 1)
-      return "Finalizar Quiz";
-    return "Próxima Pergunta";
-  };
-
-  const getButtonStyle = () => {
-    if (isSubmitted) return [styles.submitButton, styles.submitButtonDisabled];
-    if (!selectedAnswer)
-      return [styles.submitButton, styles.submitButtonDisabled];
-    return styles.submitButton;
-  };
-
-  const getButtonTextStyle = () => {
-    if (isSubmitted || !selectedAnswer)
-      return [styles.submitButtonText, styles.submitButtonTextDisabled];
-    return styles.submitButtonText;
+  const handleCheckAnswer = () => {
+    if (!selectedAnswer) return;
+    setHasChecked(true);
+    setShowAnswer(true);
+    if (checkTimeoutRef.current) {
+      clearTimeout(checkTimeoutRef.current);
+    }
+    checkTimeoutRef.current = setTimeout(() => {
+      handleNextQuestion();
+    }, 1200);
   };
 
   const getOptionStyle = (option) => {
@@ -322,48 +323,17 @@ const QuizPage = () => {
     return { name: "x", color: "#F44336", borderColor: "#F44336" };
   };
 
-  if (isSubmitted) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{quizData.title} - Concluído</Text>
-        </View>
-        <View style={styles.completedContainer}>
-          <Icon name="check-circle" size={80} color="#4CAF50" />
-          <Text style={styles.completedTitle}>Quiz Concluído!</Text>
-          <Text style={styles.completedSubtitle}>
-            Você respondeu {quizData.questions.length} perguntas
-          </Text>
-          <TouchableOpacity
-            style={styles.returnButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.returnButtonText}>Voltar aos Módulos</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Icon name="arrow-left" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <BackIconButton onPress={handleBack} size={42} />
         <Text style={styles.headerTitle}>
           {quizData.title} - {Math.round(progress / 25)}/4
         </Text>
+        <Image source={BettyIcon} style={styles.bettyIcon} resizeMode="contain" />
       </View>
 
       {/* Question Progress */}
@@ -382,6 +352,7 @@ const QuizPage = () => {
       <View style={styles.optionsContainer}>
         {currentQuestion.alternative.map((option, index) => {
           const icon = getOptionIconProps(option);
+          const isSelected = selectedAnswer === option.id;
           return (
             <TouchableOpacity
               key={option.id || index}
@@ -389,11 +360,31 @@ const QuizPage = () => {
               onPress={() => !showAnswer && handleAnswerSelect(option.id)}
               disabled={showAnswer}
             >
-              <Text
-                style={[getOptionTextStyle(option), styles.optionTextContent]}
-              >
-                {option.text}
-              </Text>
+              <View style={styles.optionLeft}>
+                <View
+                  style={[
+                    styles.optionMarker,
+                    isSelected && styles.optionMarkerSelected,
+                    showAnswer && option.correct && styles.optionMarkerCorrect,
+                    showAnswer && !option.correct && isSelected && styles.optionMarkerIncorrect,
+                  ]}
+                >
+                  {(showAnswer || isSelected) && (
+                    <View
+                      style={[
+                        styles.optionMarkerInner,
+                        showAnswer && option.correct && styles.optionMarkerInnerCorrect,
+                        showAnswer && !option.correct && isSelected && styles.optionMarkerInnerIncorrect,
+                      ]}
+                    />
+                  )}
+                </View>
+                <Text
+                  style={[getOptionTextStyle(option), styles.optionTextContent]}
+                >
+                  {option.text}
+                </Text>
+              </View>
               {icon && (
                 <View
                   style={[styles.iconBadge, { borderColor: icon.borderColor }]}
@@ -408,15 +399,13 @@ const QuizPage = () => {
 
       {/* Submit Button */}
       <View style={styles.submitContainer}>
-        <TouchableOpacity
-          style={getButtonStyle()}
-          onPress={handleNextQuestion}
-          disabled={!selectedAnswer || isSubmitted}
-        >
-          <Text style={getButtonTextStyle()}>
-            {selectedAnswer ? getButtonText() : "Selecione uma alternativa"}
-          </Text>
-        </TouchableOpacity>
+        {!selectedAnswer ? (
+          <QuizDisabledButton label="Selecione uma resposta" />
+        ) : !hasChecked ? (
+          <QuizPrimaryButton label="Checar" onPress={handleCheckAnswer} />
+        ) : (
+          <QuizDisabledButton label="Checando..." />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -434,14 +423,16 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
   },
-  backButton: {
-    marginRight: 15,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
     flex: 1,
+  },
+  bettyIcon: {
+    width: 44,
+    height: 44,
+    marginLeft: 12,
   },
   questionProgress: {
     paddingHorizontal: 20,
@@ -470,6 +461,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  optionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
   optionButton: {
     backgroundColor: "#2B2935",
     borderRadius: 12,
@@ -491,9 +488,39 @@ const styles = StyleSheet.create({
     borderColor: "#F44336",
     backgroundColor: "#4A2E2E",
   },
+  optionMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  optionMarkerSelected: {
+    borderColor: "#D783D8",
+  },
+  optionMarkerCorrect: {
+    borderColor: "#4CAF50",
+  },
+  optionMarkerIncorrect: {
+    borderColor: "#F44336",
+  },
+  optionMarkerInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#D783D8",
+  },
+  optionMarkerInnerCorrect: {
+    backgroundColor: "#4CAF50",
+  },
+  optionMarkerInnerIncorrect: {
+    backgroundColor: "#F44336",
+  },
   optionText: {
     fontSize: 16,
-    color: "#A09CAB",
+    color: "#FFFFFF",
     lineHeight: 22,
   },
   optionTextContent: {

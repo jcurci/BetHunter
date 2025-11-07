@@ -77,7 +77,11 @@ const MenuEducacional: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           {/* XP Progress Card */}
-          <TouchableOpacity activeOpacity={0.9} style={styles.xpCard}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.xpCard}
+            onPress={() => navigation.navigate("Ranking")}
+          >
             <LinearGradient
               colors={XP_GRADIENT_COLORS}
               locations={XP_GRADIENT_LOCATIONS}

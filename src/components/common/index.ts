@@ -4,4 +4,6 @@ export { default as StatsDisplay } from './StatsDisplay/StatsDisplay';
 export { default as IconCard } from './IconCard/IconCard';
 export { default as Avatar } from './Avatar/Avatar';
 export { default as DayCounter } from './DayCounter/DayCounter';
+export { CloseIconButton, HelpIconButton, BackIconButton } from './utilities/IconButtons';
+export { QuizPrimaryButton, QuizDisabledButton } from './utilities/QuizButtons';
 

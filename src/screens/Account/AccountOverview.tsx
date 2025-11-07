@@ -13,6 +13,7 @@ import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAccountStore } from '../../storage/accountStore';
+import { BackIconButton } from '../../components';
 
 const { width } = Dimensions.get('window');
 
@@ -111,11 +112,9 @@ const AccountOverview = () => {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          <BackIconButton onPress={() => navigation.goBack()} size={42} />
           <Text style={styles.headerTitle}>Conta</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 42 }} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>

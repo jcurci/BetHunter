@@ -179,11 +179,9 @@ const TransactionForm = () => {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          <BackIconButton onPress={() => navigation.goBack()} size={42} />
           <Text style={styles.headerTitle}>Histórico</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 42 }} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>

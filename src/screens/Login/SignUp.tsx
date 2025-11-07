@@ -8,9 +8,9 @@ import {
   SafeAreaView,
   Alert,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
+import Icon from "react-native-vector-icons/MaterialIcons";
 
 const SiginUp: React.FC = () => {
   const [name, setName] = useState<string>("");

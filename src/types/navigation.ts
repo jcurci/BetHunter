@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Roulette: undefined;
   MenuEducacional: undefined;
   Cursos: undefined;
+  Ranking: undefined;
   Quiz: { title: string; moduleData: any };
   QuizResult: { score: number; total: number };
   Graficos: undefined;
