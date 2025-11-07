@@ -20,6 +20,7 @@ export type RootStackParamList = {
   AccountHistory: undefined;
   TransactionForm: { type: 'income' | 'expense' };
   EmConstrucao: undefined;
+  Acessor: undefined;
 };
 
 export type NavigationProp = RNNavigationProp<RootStackParamList>;
