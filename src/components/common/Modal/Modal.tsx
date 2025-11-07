@@ -9,8 +9,8 @@ import {
   Dimensions,
   Animated,
   TouchableWithoutFeedback,
-  ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ModalProps, ButtonConfig, HeaderAction } from './Modal.types';
 
@@ -22,6 +22,9 @@ const SIZE_HEIGHTS = {
   medium: SCREEN_HEIGHT * 0.5,
   small: SCREEN_HEIGHT * 0.3,
 };
+
+const GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#1A1923", "#000000"];
+const GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62, 1];
 
 const CustomModal: React.FC<ModalProps> = ({
   visible,
@@ -89,61 +92,10 @@ const CustomModal: React.FC<ModalProps> = ({
     </TouchableOpacity>
   );
 
-  const renderButton = (button: ButtonConfig, index: number) => {
-    const buttonStyle = [
-      styles.button,
-      button.variant === 'primary' && styles.buttonPrimary,
-      button.variant === 'secondary' && styles.buttonSecondary,
-      button.variant === 'danger' && styles.buttonDanger,
-      button.variant === 'ghost' && styles.buttonGhost,
-      button.disabled && styles.buttonDisabled,
-      button.customStyle,
-    ];
-
-    const textStyle = [
-      styles.buttonText,
-      button.variant === 'primary' && styles.buttonTextPrimary,
-      button.variant === 'secondary' && styles.buttonTextSecondary,
-      button.variant === 'danger' && styles.buttonTextDanger,
-      button.variant === 'ghost' && styles.buttonTextGhost,
-      button.disabled && styles.buttonTextDisabled,
-      button.customTextStyle,
-    ];
-
-    return (
-      <TouchableOpacity
-        key={index}
-        style={buttonStyle}
-        onPress={button.onPress}
-        disabled={button.disabled || button.loading}
-        activeOpacity={0.8}
-      >
-        {button.loading ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <>
-            {button.icon && button.iconPosition === 'left' && (
-              <Icon
-                name={button.icon}
-                size={20}
-                color={button.variant === 'secondary' ? '#FFFFFF' : '#FFFFFF'}
-                style={styles.buttonIconLeft}
-              />
-            )}
-            <Text style={textStyle}>{button.label}</Text>
-            {button.icon && button.iconPosition === 'right' && (
-              <Icon
-                name={button.icon}
-                size={20}
-                color={button.variant === 'secondary' ? '#FFFFFF' : '#FFFFFF'}
-                style={styles.buttonIconRight}
-              />
-            )}
-          </>
-        )}
-      </TouchableOpacity>
-    );
-  };
+  // TODO: Usar componente Button comum ao invés dessa implementação
+  // const renderButton = (button: ButtonConfig, index: number) => {
+  //   return <Button key={index} {...button} />;
+  // };
 
   const modalContent = (
     <View style={styles.container}>
@@ -165,6 +117,15 @@ const CustomModal: React.FC<ModalProps> = ({
             : { opacity: fadeAnim },
         ]}
       >
+        {/* Background Gradient */}
+        <LinearGradient
+          colors={GRADIENT_COLORS}
+          locations={GRADIENT_LOCATIONS}
+          start={{ x: 0.25, y: 0 }}
+          end={{ x: 0.75, y: 1 }}
+          style={styles.backgroundGradient}
+        />
+
         {/* Header */}
         <View style={styles.header}>
           {/* Left Actions */}
@@ -203,11 +164,15 @@ const CustomModal: React.FC<ModalProps> = ({
         </ScrollView>
 
         {/* Buttons */}
+        {/* TODO: Implementar com componente Button comum
         {buttons && buttons.length > 0 && (
           <View style={styles.buttonsContainer}>
-            {buttons.map(renderButton)}
+            {buttons.map((button, index) => (
+              <Button key={index} {...button} />
+            ))}
           </View>
         )}
+        */}
       </Animated.View>
     </View>
   );
@@ -234,35 +199,47 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalContainer: {
-    backgroundColor: '#14121B',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
   },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#201F2A',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    zIndex: 10,
   },
   headerCenter: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 80,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    zIndex: 10,
   },
   closeButton: {
     width: 48,
@@ -299,64 +276,63 @@ const styles = StyleSheet.create({
   contentInner: {
     padding: 20,
   },
+  // TODO: Remover estilos de botões quando usar componente Button comum
   buttonsContainer: {
     padding: 20,
     paddingTop: 12,
     gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#201F2A',
   },
-  button: {
-    height: 56,
-    borderRadius: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  buttonPrimary: {
-    backgroundColor: '#FF6B9D',
-  },
-  buttonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  buttonDanger: {
-    backgroundColor: '#FF4444',
-  },
-  buttonGhost: {
-    backgroundColor: 'transparent',
-  },
-  buttonDisabled: {
-    backgroundColor: '#2A2733',
-    opacity: 0.5,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonTextPrimary: {
-    color: '#FFFFFF',
-  },
-  buttonTextSecondary: {
-    color: '#FFFFFF',
-  },
-  buttonTextDanger: {
-    color: '#FFFFFF',
-  },
-  buttonTextGhost: {
-    color: '#FFFFFF',
-  },
-  buttonTextDisabled: {
-    color: '#666666',
-  },
-  buttonIconLeft: {
-    marginRight: 8,
-  },
-  buttonIconRight: {
-    marginLeft: 8,
-  },
+  // button: {
+  //   height: 56,
+  //   borderRadius: 28,
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   justifyContent: 'center',
+  //   paddingHorizontal: 24,
+  // },
+  // buttonPrimary: {
+  //   backgroundColor: '#FF6B9D',
+  // },
+  // buttonSecondary: {
+  //   backgroundColor: 'transparent',
+  //   borderWidth: 1.5,
+  //   borderColor: '#FFFFFF',
+  // },
+  // buttonDanger: {
+  //   backgroundColor: '#FF4444',
+  // },
+  // buttonGhost: {
+  //   backgroundColor: 'transparent',
+  // },
+  // buttonDisabled: {
+  //   backgroundColor: '#2A2733',
+  //   opacity: 0.5,
+  // },
+  // buttonText: {
+  //   fontSize: 16,
+  //   fontWeight: '600',
+  // },
+  // buttonTextPrimary: {
+  //   color: '#FFFFFF',
+  // },
+  // buttonTextSecondary: {
+  //   color: '#FFFFFF',
+  // },
+  // buttonTextDanger: {
+  //   color: '#FFFFFF',
+  // },
+  // buttonTextGhost: {
+  //   color: '#FFFFFF',
+  // },
+  // buttonTextDisabled: {
+  //   color: '#666666',
+  // },
+  // buttonIconLeft: {
+  //   marginRight: 8,
+  // },
+  // buttonIconRight: {
+  //   marginLeft: 8,
+  // },
 });
 
 export default CustomModal;
