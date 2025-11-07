@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -31,6 +34,7 @@ import CursosIcon from "../../assets/home/cursos.svg";
 import ForumsIcon from "../../assets/home/forums.svg";
 import ArtigosIcon from "../../assets/home/artigos.svg";
 import VideosIcon from "../../assets/home/videos.svg";
+import BetcoinIcon from "../../assets/home/betcoin.svg";
 
 // Domain & Infrastructure
 import { Container } from "../../infrastructure/di/Container";
@@ -44,7 +48,9 @@ const GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62];
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 const DAYS_IN_MONTH = 30;
-const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]; // Adicione esta linha
+const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CAROUSEL_WIDTH = SCREEN_WIDTH - 40; // 20px padding em cada lado
 
 type TabType = "conta" | "parceiros" | "social";
 
@@ -54,6 +60,7 @@ const Home: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>("conta");
+  const carouselRef = useRef<ScrollView>(null);
   const container = Container.getInstance();
 
   useEffect(() => {
@@ -91,6 +98,34 @@ const Home: React.FC = () => {
     setShowFreeOfBetBox(!showFreeOfBetBox);
   };
 
+  const getTabIndex = (tab: TabType): number => {
+    const tabs: TabType[] = ["conta", "parceiros", "social"];
+    return tabs.indexOf(tab);
+  };
+
+  const getTabByIndex = (index: number): TabType => {
+    const tabs: TabType[] = ["conta", "parceiros", "social"];
+    return tabs[index] || "conta";
+  };
+
+  const handleTabPress = (tab: TabType) => {
+    setActiveTab(tab);
+    const index = getTabIndex(tab);
+    carouselRef.current?.scrollTo({
+      x: index * CAROUSEL_WIDTH,
+      animated: true,
+    });
+  };
+
+  const handleCarouselScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / CAROUSEL_WIDTH);
+    const newTab = getTabByIndex(index);
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+    }
+  };
+
   const renderTabButton = (tab: TabType, label: string) => {
     const isActive = activeTab === tab;
     
@@ -98,7 +133,7 @@ const Home: React.FC = () => {
       return (
         <TouchableOpacity
           key={tab}
-          onPress={() => setActiveTab(tab)}
+          onPress={() => handleTabPress(tab)}
           activeOpacity={0.8}
         >
           <LinearGradient
@@ -118,74 +153,13 @@ const Home: React.FC = () => {
     return (
       <TouchableOpacity
         key={tab}
-        onPress={() => setActiveTab(tab)}
+        onPress={() => handleTabPress(tab)}
         style={styles.tabButtonInactive}
         activeOpacity={0.8}
       >
         <Text style={styles.tabButtonTextInactive}>{label}</Text>
       </TouchableOpacity>
     );
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "conta":
-        return (
-          <View style={styles.cardsContainer}>
-            <IconCard 
-              icon={<BetHunterIcon width={24} height={24} />} 
-              title="Conta" 
-            />
-            <IconCard 
-              icon={<AcessorIcon width={24} height={24} />} 
-              title="Acessor" 
-            />
-            <IconCard 
-              icon={<JornadaIcon width={24} height={24} />} 
-              title="Jornada" 
-            />
-          </View>
-        );
-
-      case "parceiros":
-        return (
-          <View style={styles.cardsContainer}>
-            <IconCard 
-              icon={<MedicoIcon width={24} height={24} />} 
-              title="Consultas" 
-            />
-            <IconCard 
-              icon={<EventosIcon width={24} height={24} />} 
-              title="Eventos" 
-            />
-            <IconCard 
-              icon={<CursosIcon width={24} height={24} />} 
-              title="Cursos" 
-            />
-          </View>
-        );
-
-      case "social":
-        return (
-          <View style={styles.cardsContainer}>
-            <IconCard 
-              icon={<ForumsIcon width={24} height={24} />} 
-              title="Fóruns" 
-            />
-            <IconCard 
-              icon={<ArtigosIcon width={24} height={24} />} 
-              title="Artigos" 
-            />
-            <IconCard 
-              icon={<VideosIcon width={24} height={24} />} 
-              title="Vídeos" 
-            />
-          </View>
-        );
-
-      default:
-        return null;
-    }
   };
 
   const renderHeader = () => (
@@ -351,8 +325,137 @@ const Home: React.FC = () => {
             {renderTabButton("social", "Social")}
           </View> 
 
-          {/* Tab Content - Cards dinâmicos baseados na aba ativa */}
-          {renderTabContent()}
+          {/* Carousel - Cards dinâmicos baseados na aba ativa */}
+          <ScrollView
+            ref={carouselRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleCarouselScroll}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            snapToInterval={CAROUSEL_WIDTH}
+            snapToAlignment="center"
+            contentContainerStyle={styles.carouselContentContainer}
+            style={styles.carousel}
+          >
+            {/* Conta */}
+            <View style={[styles.cardsContainer, { width: CAROUSEL_WIDTH }]}>
+              <IconCard 
+                icon={<BetHunterIcon width={24} height={24} />} 
+                title="Minha Conta" 
+                onPress={() => navigation.navigate("EmConstrucao")}
+              />
+              <IconCard 
+                icon={<AcessorIcon width={24} height={24} />} 
+                title="Meu Acessor" 
+                onPress={() => navigation.navigate("EmConstrucao")}
+              />
+              <IconCard 
+                icon={<JornadaIcon width={24} height={24} />} 
+                title="Minha  Jornada" 
+                onPress={() => navigation.navigate("EmConstrucao")}
+              />
+            </View>
+
+            {/* Parceiros */}
+            <View style={[styles.cardsContainer, { width: CAROUSEL_WIDTH }]}>
+              <IconCard 
+                icon={<MedicoIcon width={24} height={24} />} 
+                title="Consultas" 
+              />
+              <IconCard 
+                icon={<EventosIcon width={24} height={24} />} 
+                title="Eventos" 
+              />
+              <IconCard 
+                icon={<CursosIcon width={24} height={24} />} 
+                title="Cursos" 
+              />
+            </View>
+
+            {/* Social */}
+            <View style={[styles.cardsContainer, { width: CAROUSEL_WIDTH }]}>
+              <IconCard 
+                icon={<ForumsIcon width={24} height={24} />} 
+                title="Fóruns" 
+              />
+              <IconCard 
+                icon={<ArtigosIcon width={24} height={24} />} 
+                title="Artigos" 
+              />
+              <IconCard 
+                icon={<VideosIcon width={24} height={24} />} 
+                title="Vídeos" 
+              />
+            </View>
+          </ScrollView>
+
+          {/* Dots Indicator */}
+          <View style={styles.dotsContainer}>
+            {["conta", "parceiros", "social"].map((tab, index) => (
+              <View
+                key={tab}
+                style={[
+                  styles.dot,
+                  activeTab === tab && styles.dotActive
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Betcoins Roulette Box */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate("Roulette")}
+            style={styles.rouletteBoxContainer}
+          >
+            <LinearGradient
+              colors={GRADIENT_COLORS}
+              locations={GRADIENT_LOCATIONS}
+              start={{ x: 0.25, y: 0 }}
+              end={{ x: 0.75, y: 1 }}
+              style={styles.rouletteBox}
+            >
+              <View style={styles.rouletteContent}>
+                <View style={styles.rouletteTextContainer}>
+                  <View style={styles.rouletteTextInner}>
+                    <Text style={styles.rouletteTitle}>Você tem</Text>
+                    <View style={styles.betcoinsRow}>
+                      <Text style={styles.betcoinsAmount}>
+                        {user?.betcoins || 40}
+                      </Text>
+                 
+                      <MaskedView
+                        maskElement={
+                          <Text style={styles.betcoinsTextMask}>
+                            betcoins
+                          </Text>
+                        }
+                      >
+                        <LinearGradient
+                          colors={TEXT_GRADIENT_COLORS}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.betcoinsGradient}
+                        >
+                          <Text style={styles.betcoinsTextHidden}>
+                            betcoins
+                          </Text>
+                        </LinearGradient>
+                      </MaskedView>
+                    </View>
+                  </View>
+                  <Text style={styles.rouletteSubtitle}>
+                    Toque aqui para ir a roleta
+                  </Text>
+                </View>
+                <View style={styles.rouletteIconContainer}>
+                  <BetcoinIcon width={93} height={67} />
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
 
           {/* Seção Para Você */}
           <Text style={styles.sectionTitle}>Para você</Text>
@@ -472,14 +575,14 @@ const styles = StyleSheet.create({
   },
   freeOfBetContainerExpanded: {
     width: "96%",
-    height: 210,
-    marginBottom: 28,
+    height: 210, 
     padding: 20,
     justifyContent: "flex-start",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 18,
     elevation: 14,
+   
   },
   freeOfBetTitle: {
     color: "#A19DAA",
@@ -587,11 +690,38 @@ const styles = StyleSheet.create({
   },
 
   // Cards Container (Minha Conta, Meu Acessor, Minha Jornada)
+  carousel: {
+    marginVertical: 20,
+  },
+  carouselContentContainer: {
+    paddingHorizontal: 0,
+  },
   cardsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 20,
     gap: 12,
+  },
+
+  // Dots Indicator
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 4,
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#3A3644",
+  },
+  dotActive: {
+    width: 24,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#D783D8",
   },
 
   // Section Styles
@@ -644,6 +774,78 @@ const styles = StyleSheet.create({
   continueText: {
     fontSize: 16,
     color: "#FFFFFF",
+  },
+
+  // Roulette Box Styles
+  rouletteBoxContainer: {
+    marginVertical: 20,
+  },
+  rouletteBox: {
+    borderRadius: 24,
+    padding: 20,
+    paddingBottom: 16,
+    minHeight: 140,
+    justifyContent: "flex-end",
+  },
+  rouletteContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginTop: 15,
+  },
+  rouletteTextContainer: {
+    flex: 1,
+  },
+  rouletteTextInner: {
+    marginBottom: 0,
+  },
+  rouletteTitle: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "400",
+  },
+  betcoinsRow: {
+    flexDirection: "row",
+    marginBottom: 0,
+  },
+  betcoinsAmount: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  coinEmoji: {
+    fontSize: 24,
+    marginHorizontal: 4,
+  },
+  betcoinsText: {
+    fontSize: 48,
+    fontWeight: "bold",
+  },
+  betcoinsTextMask: {
+    fontSize: 24,
+    fontWeight: "bold",
+    backgroundColor: "transparent",
+  },
+  betcoinsGradient: {
+    flex: 1,
+  },
+  betcoinsTextHidden: {
+    fontSize: 48,
+    fontWeight: "bold",
+    opacity: 0,
+  },
+  rouletteSubtitle: {
+    fontSize: 14,
+    color: "#B8B3BF",
+    fontWeight: "400",
+  },
+  rouletteIconContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  chevronIcon: {
+    marginLeft: 4,
   },
 });
 

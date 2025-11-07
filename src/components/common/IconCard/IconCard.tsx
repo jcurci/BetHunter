@@ -23,7 +23,7 @@ const IconCard: React.FC<IconCardProps> = ({ icon, title, onPress }) => {
 const styles = StyleSheet.create({
   iconCard: {
     flex: 1,
-    backgroundColor: "#1A1825",
+    backgroundColor: "#15121B",
     borderRadius: 24,
     paddingTop: 24,
     paddingBottom: 20,
@@ -54,4 +54,5 @@ const styles = StyleSheet.create({
 });
 
 export default IconCard;
+
 
