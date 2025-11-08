@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import type { ReactElement } from "react";
 import {
   View,
   Text,
@@ -43,12 +44,12 @@ import { User } from "../../domain/entities/User";
 import { NavigationProp } from "../../types/navigation";
 
 // Constants
-const GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#1A1923"];
-const GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62];
+const GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#1A1923"] as const;
+const GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62] as const;
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 const DAYS_IN_MONTH = 30;
-const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"] as const;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CAROUSEL_WIDTH = SCREEN_WIDTH - 40; // 20px padding em cada lado
 
@@ -84,8 +85,8 @@ const Home: React.FC = () => {
     }
   };
 
-  const getArticleImage = (article: Article): JSX.Element | null => {
-    const imageMap: Record<string, JSX.Element> = {
+  const getArticleImage = (article: Article): ReactElement | null => {
+    const imageMap: Record<string, ReactElement> = {
       bitcoin: <ImageBitcoin width="100%" height={90} />,
       moeda: <ImageMoeda width="100%" height={90} />,
       grafico: <ImageGrafico width="100%" height={90} />,
