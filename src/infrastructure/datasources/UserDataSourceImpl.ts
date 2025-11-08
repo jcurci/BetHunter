@@ -47,6 +47,7 @@ export class UserDataSourceImpl implements UserDataSource {
         email: decoded?.sub || credentials.email,
         name: 'Usuário', // temporário até backend retornar dados completos
         points: 0,
+        betcoins: decoded?.betcoins ?? 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -57,6 +58,7 @@ export class UserDataSourceImpl implements UserDataSource {
         name: user.name,
         email: user.email,
         points: user.points,
+        betcoins: user.betcoins,
       });
       
       return user;
@@ -80,6 +82,7 @@ export class UserDataSourceImpl implements UserDataSource {
         email: userData.email,
         name: userData.name,
         points: 0,
+        betcoins: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -102,6 +105,7 @@ export class UserDataSourceImpl implements UserDataSource {
       name: user.name,
       email: user.email,
       points: user.points,
+      betcoins: user.betcoins ?? 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -114,6 +118,7 @@ export class UserDataSourceImpl implements UserDataSource {
     const updatedUser: User = {
       ...currentUser,
       points,
+      betcoins: currentUser.betcoins,
       updatedAt: new Date(),
     };
 

@@ -22,6 +22,7 @@ import AccountHistory from "./src/screens/Account/AccountHistory";
 import TransactionForm from "./src/screens/Account/TransactionForm";
 import EmConstrucao from "./src/screens/EmConstrucao/EmConstrucao";
 import Acessor from "./src/screens/Acessor/Acessor";
+import HistoryList from "./src/screens/Acessor/HistoryList";
 import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -167,6 +168,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="Acessor"
           component={Acessor}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="HistoryList"
+          component={HistoryList}
           options={{
             headerShown: false,
           }}
