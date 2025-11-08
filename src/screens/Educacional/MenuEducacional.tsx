@@ -17,8 +17,11 @@ import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 
 // Assets
-import CursosIcon from "../../assets/home/cursos.svg";
-import RouletteIcon from "../../assets/roleta.svg";
+const bookIcon = require("../../assets/icon-book.png");
+const abcIcon = require("../../assets/icon-abc.png");
+const diceIcon = require("../../assets/icon-dados.png");
+const savedAbcIcon = require("../../assets/icon-saves-abc.png");
+import EmojiHappy from "../../assets/emoji-happy.svg";
 
 // Constants
 const XP_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#14121B"];
@@ -133,23 +136,17 @@ const MenuEducacional: React.FC = () => {
               {/* Row 1 */}
               <View style={styles.optionsRow}>
                 <IconCard
-                  icon={<CursosIcon width={24} height={24} />}
+                  icon={<Image source={bookIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Cursos"
+                  onPress={() => navigation.navigate("Cursos")}
                 />
                 <IconCard
-                  icon={
-                    <View style={styles.abcIcon}>
-                      <Text style={styles.abcText}>A</Text>
-                      <View style={styles.abcBottom}>
-                        <Text style={styles.abcText}>B</Text>
-                        <Text style={styles.abcText}>C</Text>
-                      </View>
-                    </View>
-                  }
+                  icon={<Image source={abcIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Aulas"
+                  onPress={() => navigation.navigate("Cursos")}
                 />
                 <IconCard
-                  icon={<RouletteIcon width={24} height={24} />}
+                  icon={<Image source={diceIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Roleta Bethunter"
                   onPress={() => navigation.navigate("Roulette")}
                 />
@@ -158,33 +155,15 @@ const MenuEducacional: React.FC = () => {
               {/* Row 2 */}
               <View style={styles.optionsRow}>
                 <IconCard
-                  icon={
-                    <View style={styles.iconWithBookmark}>
-                      <CursosIcon width={24} height={24} />
-                      <View style={styles.bookmark} />
-                    </View>
-                  }
+                  icon={<Image source={bookIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Cursos Salvos"
                 />
                 <IconCard
-                  icon={
-                    <View style={styles.iconWithBookmark}>
-                      <View style={styles.abcIcon}>
-                        <Text style={styles.abcText}>A</Text>
-                        <View style={styles.abcBottom}>
-                          <Text style={styles.abcText}>B</Text>
-                          <Text style={styles.abcText}>C</Text>
-                        </View>
-                      </View>
-                      <View style={styles.bookmark} />
-                    </View>
-                  }
+                  icon={<Image source={savedAbcIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Aulas Salvas"
                 />
                 <IconCard
-                  icon={
-                    <Text style={styles.smileyIcon}>😊</Text>
-                  }
+                  icon={<EmojiHappy width={32} height={32} />}
                   title="Parceiros Bethunter"
                 />
               </View>
@@ -381,43 +360,16 @@ const styles = StyleSheet.create({
   optionsGrid: {
     gap: 12,
   },
+  optionIconImage: {
+    width: 32,
+    height: 32,
+  },
   optionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
     marginBottom: 12,
     width: "100%",
-  },
-  abcIcon: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  abcBottom: {
-    flexDirection: "row",
-    gap: 4,
-    marginTop: 2,
-  },
-  abcText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  iconWithBookmark: {
-    position: "relative",
-    width: 24,
-    height: 24,
-  },
-  bookmark: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    backgroundColor: "#7456C8",
-    borderRadius: 2,
-  },
-  smileyIcon: {
-    fontSize: 24,
   },
   studySection: {
     marginTop: 32,

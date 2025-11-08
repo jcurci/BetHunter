@@ -7,6 +7,8 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
+  Animated,
+  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -25,6 +27,13 @@ const QuizPage = () => {
   const [showAnswer, setShowAnswer] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
   const checkTimeoutRef = useRef(null);
+  const [isTipVisible, setIsTipVisible] = useState(false);
+  const [isTipLoading, setIsTipLoading] = useState(false);
+  const [tipText, setTipText] = useState("");
+  const tipTimeoutRef = useRef(null);
+  const tipLoadingTimeoutRef = useRef(null);
+  const tipOpacity = useRef(new Animated.Value(0)).current;
+  const tipTranslate = useRef(new Animated.Value(40)).current;
 
   // Reset state when component mounts
   useEffect(() => {
@@ -36,6 +45,7 @@ const QuizPage = () => {
     if (checkTimeoutRef.current) {
       clearTimeout(checkTimeoutRef.current);
     }
+    closeTip(true);
   }, [title]);
 
   // Mock do serviço do quiz (estrutura idêntica à resposta do backend)
@@ -46,6 +56,7 @@ const QuizPage = () => {
         id: "343ed31c-792a-4b6f-b0ee-2c431eae9d94",
         question_number: 1,
         statement: "Qual é o principal objetivo de um orçamento pessoal?",
+        hint: "Um orçamento serve para dar clareza sobre entradas e saídas de dinheiro.",
         alternative: [
           {
             id: "2d6d9d6b-76e8-48e1-b9ab-46e782b5a06a",
@@ -73,6 +84,7 @@ const QuizPage = () => {
         id: "a1e2f3c4-0001-0002-0003-000000000001",
         question_number: 2,
         statement: "O que é uma reserva de emergência?",
+        hint: "Pense em algo que te ajuda quando surge um gasto inesperado.",
         alternative: [
           {
             id: "a1e2f3c4-1111-1111-1111-111111111111",
@@ -100,6 +112,7 @@ const QuizPage = () => {
         id: "a1e2f3c4-0001-0002-0003-000000000002",
         question_number: 3,
         statement: "Qual é uma boa prática ao usar cartão de crédito?",
+        hint: "Evitar juros do cartão é sempre prioridade.",
         alternative: [
           {
             id: "b1e2f3c4-1111-1111-1111-111111111111",
@@ -127,6 +140,7 @@ const QuizPage = () => {
         id: "a1e2f3c4-0001-0002-0003-000000000003",
         question_number: 4,
         statement: "A regra 50-30-20 sugere que:",
+        hint: "A divisão clássica equilibra necessidades, desejos e futuro.",
         alternative: [
           {
             id: "c1e2f3c4-1111-1111-1111-111111111111",
@@ -154,6 +168,7 @@ const QuizPage = () => {
         id: "a1e2f3c4-0001-0002-0003-000000000004",
         question_number: 5,
         statement: "Qual é a melhor ordem para organizar as finanças?",
+        hint: "Resolva o que gera mais juros antes de pensar em investir.",
         alternative: [
           {
             id: "d1e2f3c4-1111-1111-1111-111111111111",
@@ -181,6 +196,7 @@ const QuizPage = () => {
         id: "a1e2f3c4-0001-0002-0003-000000000005",
         question_number: 6,
         statement: "Qual é um exemplo de despesa fixa mensal?",
+        hint: "É aquela conta que vem todo mês, com valor previsível.",
         alternative: [
           {
             id: "e1e2f3c4-1111-1111-1111-111111111111",
@@ -239,6 +255,10 @@ const QuizPage = () => {
       );
       setShowAnswer(false);
       setHasChecked(false);
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+      closeTip(true);
     } else {
       handleSubmitQuiz();
     }
@@ -269,6 +289,7 @@ const QuizPage = () => {
       if (checkTimeoutRef.current) {
         clearTimeout(checkTimeoutRef.current);
       }
+      closeTip(true);
     } else {
       navigation.goBack();
     }
@@ -285,6 +306,84 @@ const QuizPage = () => {
       handleNextQuestion();
     }, 1200);
   };
+
+  const closeTip = (instant = false) => {
+    if (!isTipVisible && !instant) return;
+    if (tipTimeoutRef.current) {
+      clearTimeout(tipTimeoutRef.current);
+    }
+    if (tipLoadingTimeoutRef.current) {
+      clearTimeout(tipLoadingTimeoutRef.current);
+    }
+    if (instant) {
+      tipOpacity.setValue(0);
+      tipTranslate.setValue(40);
+      setIsTipVisible(false);
+      setIsTipLoading(false);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(tipOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tipTranslate, {
+        toValue: 40,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        setIsTipVisible(false);
+        setIsTipLoading(false);
+      }
+    });
+  };
+
+  const handleBettyPress = () => {
+    if (isTipVisible) {
+      closeTip();
+      return;
+    }
+
+    const hint = currentQuestion?.hint || "Vamos nessa! Pense no conceito principal.";
+    setTipText(hint);
+    setIsTipVisible(true);
+    setIsTipLoading(true);
+
+    tipOpacity.setValue(0);
+    tipTranslate.setValue(40);
+
+    Animated.parallel([
+      Animated.timing(tipOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tipTranslate, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    tipLoadingTimeoutRef.current = setTimeout(() => {
+      setIsTipLoading(false);
+    }, 700);
+
+    tipTimeoutRef.current = setTimeout(() => {
+      closeTip();
+    }, 8000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+      if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current);
+      if (tipLoadingTimeoutRef.current) clearTimeout(tipLoadingTimeoutRef.current);
+    };
+  }, []);
 
   const getOptionStyle = (option) => {
     if (!showAnswer) {
@@ -333,7 +432,9 @@ const QuizPage = () => {
         <Text style={styles.headerTitle}>
           {quizData.title} - {Math.round(progress / 25)}/4
         </Text>
-        <Image source={BettyIcon} style={styles.bettyIcon} resizeMode="contain" />
+        <TouchableOpacity onPress={handleBettyPress} activeOpacity={0.8}>
+          <Image source={BettyIcon} style={styles.bettyIcon} resizeMode="contain" />
+        </TouchableOpacity>
       </View>
 
       {/* Question Progress */}
@@ -407,6 +508,37 @@ const QuizPage = () => {
           <QuizDisabledButton label="Checando..." />
         )}
       </View>
+
+      {isTipVisible && (
+        <Animated.View
+          style={[
+            styles.tipModalWrapper,
+            {
+              opacity: tipOpacity,
+              transform: [{ translateY: tipTranslate }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.tipGradientBorder}
+          >
+            <View style={styles.tipInnerContent}>
+              <TouchableOpacity onPress={closeTip} style={styles.tipHandleWrapper} activeOpacity={0.7}>
+                <View style={styles.tipHandleBar} />
+              </TouchableOpacity>
+              <View style={styles.tipContentRow}>
+                <Image source={BettyIcon} style={styles.tipAvatarImage} resizeMode="contain" />
+                <Text style={styles.tipTextContent}>
+                  {isTipLoading ? "Pensando em uma resposta..." : tipText}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 };
@@ -433,6 +565,57 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     marginLeft: 12,
+  },
+  tipModalWrapper: {
+    position: "absolute",
+    left: -10,
+    right: -10,
+    bottom: -10,
+    paddingLeft: 10,
+    paddingRight: 10,
+    paddingBottom: 10,
+  },
+  tipGradientBorder: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 3,
+  },
+  tipInnerContent: {
+    backgroundColor: "#1F1D28",
+    borderTopLeftRadius: 29,
+    borderTopRightRadius: 29,
+    paddingTop: 20,
+    paddingBottom: 48,
+    paddingHorizontal: 24,
+  },
+  tipHandleWrapper: {
+    alignSelf: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 40,
+    marginBottom: 20,
+  },
+  tipHandleBar: {
+    width: 64,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  tipContentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  tipAvatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  tipTextContent: {
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 16,
+    lineHeight: 24,
+    paddingTop: 4,
   },
   questionProgress: {
     paddingHorizontal: 20,
@@ -603,6 +786,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#FFFFFF",
     fontWeight: "bold",
+  },
+  tipWrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#000",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  tipBorder: {
+    position: "absolute",
+    top: -10,
+    left: "50%",
+    transform: [{ translateX: -10 }],
+    width: 20,
+    height: 20,
+    backgroundColor: "#000",
+    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2B2935",
+  },
+  tipContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#2B2935",
+    borderRadius: 12,
+    padding: 15,
+    marginTop: 10,
+  },
+  tipHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: "#3A3842",
+    borderRadius: 2.5,
+    marginBottom: 10,
+  },
+  tipHandleBar: {
+    width: 30,
+    height: 4,
+    backgroundColor: "#3A3842",
+    borderRadius: 2,
+  },
+  tipContentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  tipAvatar: {
+    width: 30,
+    height: 30,
+    marginRight: 10,
+  },
+  tipText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    flex: 1,
   },
 });
 
