@@ -241,21 +241,33 @@ const Home: React.FC = () => {
           </View>
           
           <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("EmConstrucao")}
+              activeOpacity={0.85}
+            >
               <View style={styles.actionIconCircle}>
                 <Meditation width={24} height={24} />
               </View>
               <Text style={styles.actionText}>Meditar</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("EmConstrucao")}
+              activeOpacity={0.85}
+            >
               <View style={styles.actionIconCircle}>
                 <Reset width={24} height={24} />
               </View>
               <Text style={styles.actionText}>Resetar</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("EmConstrucao")}
+              activeOpacity={0.85}
+            >
               <View style={styles.actionIconCircle}>
                 <Block width={27} height={27} />
               </View>
@@ -345,7 +357,7 @@ const Home: React.FC = () => {
               <IconCard 
                 icon={<BetHunterIcon width={24} height={24} />} 
                 title="Minha Conta" 
-                onPress={() => navigation.navigate("EmConstrucao")}
+                onPress={() => navigation.navigate("Profile")}
               />
               <IconCard 
                 icon={<AcessorIcon width={24} height={24} />} 
