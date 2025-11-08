@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface User {
+interface StoredUser {
   id: string;
   name: string;
   email: string;
   points: number;
+  betcoins: number;
 }
 
 const TOKEN_KEY = '@BetHunter:token';
@@ -19,7 +20,7 @@ export class AuthStorageService {
   /**
    * Salva token e usuário no storage
    */
-  async login(token: string, user: User): Promise<void> {
+  async login(token: string, user: StoredUser): Promise<void> {
     try {
       await AsyncStorage.setItem(TOKEN_KEY, token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -64,12 +65,20 @@ export class AuthStorageService {
   /**
    * Busca usuário do storage
    */
-  async getUser(): Promise<User | null> {
+  async getUser(): Promise<StoredUser | null> {
     try {
       const userJson = await AsyncStorage.getItem(USER_KEY);
       if (!userJson) return null;
-      
-      return JSON.parse(userJson);
+
+      const parsed = JSON.parse(userJson) as Partial<StoredUser>;
+
+      return {
+        id: parsed.id ?? "",
+        name: parsed.name ?? "",
+        email: parsed.email ?? "",
+        points: parsed.points ?? 0,
+        betcoins: parsed.betcoins ?? 0,
+      };
     } catch (error) {
       console.error('❌ [AuthStorageService] Erro ao buscar usuário:', error);
       return null;
@@ -86,7 +95,11 @@ export class AuthStorageService {
         throw new Error('Usuário não encontrado');
       }
 
-      const updatedUser = { ...user, points };
+      const updatedUser: StoredUser = {
+        ...user,
+        points,
+        betcoins: user.betcoins ?? 0,
+      };
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       
       console.log('✅ [AuthStorageService] Pontos atualizados:', points);

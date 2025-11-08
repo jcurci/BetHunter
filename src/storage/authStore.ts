@@ -6,6 +6,7 @@ interface User {
   name: string;
   email: string;
   points: number;
+  betcoins: number;
 }
 
 interface AuthStore {

@@ -63,7 +63,7 @@ const Footer: React.FC = () => {
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.tabButton}
-        onPress={() => navigation.navigate("Graficos")}
+        onPress={() => navigation.navigate("EmConstrucao")}
       >
         <View
           style={
