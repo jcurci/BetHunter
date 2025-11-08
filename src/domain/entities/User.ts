@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   points: number;
+  betcoins: number;
   createdAt: Date;
   updatedAt: Date;
 }

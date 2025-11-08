@@ -20,6 +20,7 @@ import QuizResult from "./src/screens/Quiz/QuizResult";
 import AccountOverview from "./src/screens/Account/AccountOverview";
 import AccountHistory from "./src/screens/Account/AccountHistory";
 import TransactionForm from "./src/screens/Account/TransactionForm";
+import EmConstrucao from "./src/screens/EmConstrucao/EmConstrucao";
 import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -151,6 +152,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="TransactionForm"
           component={TransactionForm}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="EmConstrucao"
+          component={EmConstrucao}
           options={{
             headerShown: false,
           }}
