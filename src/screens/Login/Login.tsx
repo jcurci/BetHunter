@@ -6,16 +6,20 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  ImageBackground,
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { Container } from "../../infrastructure/di/Container";
-import Logo from "../../assets/logo-img/logo.svg";
+import Logo from "../../assets/logo-img/LogoImgETexto.svg";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { NavigationProp } from "../../types/navigation";
+import { HORIZONTAL_GRADIENT } from "../../config/colors";
+
+// Constants
+const BACKGROUND_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#0F0E11", "#000000"] as const;
+const BACKGROUND_GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62, 1] as const;
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -72,20 +76,23 @@ const Login: React.FC = () => {
   };
 
   return (
-    <ImageBackground
-      source={require("../../assets/login_background.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Background Gradient - Top to Bottom */}
+        <LinearGradient
+          colors={BACKGROUND_GRADIENT_COLORS}
+          locations={BACKGROUND_GRADIENT_LOCATIONS}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.backgroundGradient}
+        />
+
         <View style={styles.content}>
           <MaskedView
             maskElement={<Text style={styles.moduleTitle}>Login</Text>}
           >
             <LinearGradient
-              colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+              {...HORIZONTAL_GRADIENT}
             >
               <Text style={[styles.moduleTitle, { opacity: 0 }]}>Login</Text>
             </LinearGradient>
@@ -124,60 +131,84 @@ const Login: React.FC = () => {
                 />
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={[styles.loginButton, loading && styles.disabledButton]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? "Entrando..." : "Logar"}
-              </Text>
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.registerButton}
-              onPress={() => navigation.navigate("SiginUp")}
+              style={styles.loginButtonContainer}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
             >
               <LinearGradient
-                colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.gradientButton}
+                colors={HORIZONTAL_GRADIENT.colors}
+                locations={HORIZONTAL_GRADIENT.locations}
+                start={HORIZONTAL_GRADIENT.start}
+                end={HORIZONTAL_GRADIENT.end}
+                style={[styles.loginButton, loading && styles.disabledButton]}
               >
-                <Text style={styles.buttonText}>Cadastrar</Text>
+                <Text style={styles.buttonText}>
+                  {loading ? "Entrando..." : "Logar"}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
+            <TouchableOpacity
+              style={styles.registerLink}
+              onPress={() => navigation.navigate("SiginUp")}
+              activeOpacity={0.7}
+            >
+              <View style={styles.registerLinkContainer}>
+                <Text style={styles.registerLinkText}>Nao tem conta? </Text>
+                <MaskedView
+                  maskElement={<Text style={styles.registerLinkGradientText}>Cadastre-se!</Text>}
+                >
+                  <LinearGradient
+                    colors={HORIZONTAL_GRADIENT.colors}
+                    locations={HORIZONTAL_GRADIENT.locations}
+                    start={HORIZONTAL_GRADIENT.start}
+                    end={HORIZONTAL_GRADIENT.end}
+                  >
+                    <Text style={[styles.registerLinkGradientText, { opacity: 0 }]}>
+                      Cadastre-se!
+                    </Text>
+                  </LinearGradient>
+                </MaskedView>
+              </View>
             </TouchableOpacity>
+
+         
           </View>
         </View>
         <View style={styles.logoContainer}>
-          <Logo width={200} height={50} style={styles.bethunterLogoImage} />
+          <Logo width={211} height={53} style={styles.bethunterLogoImage} />
         </View>
-      </SafeAreaView>
-    </ImageBackground>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#1A1923",
-  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#1A1923",
+    backgroundColor: "#000",
+  },
+  container: {
+    flex: 1,
+  },
+  backgroundGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "100%",
+    zIndex: -1,
   },
   content: {
     flex: 1,
     padding: 20,
     paddingTop: 10,
-    backgroundColor: "#1A1923",
   },
   gradientTitleContainer: {
     marginBottom: 10,
@@ -197,6 +228,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFFFFF",
     textAlign: "left",
+    marginTop: 54,
     marginBottom: 20,
   },
   form: {
@@ -223,30 +255,37 @@ const styles = StyleSheet.create({
     top: "50%",
     transform: [{ translateY: -10 }],
   },
-  loginButton: {
-    backgroundColor: "#7456C8",
-    padding: 16,
-    borderRadius: 10,
-    alignItems: "center",
+  loginButtonContainer: {
     width: "100%",
     marginBottom: 10,
     marginTop: 6,
   },
-  registerButtonGradient: {
-    borderRadius: 10,
-    width: "100%",
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  registerButton: {
-    borderRadius: 10,
-    width: "100%",
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  gradientButton: {
+  loginButton: {
     paddingVertical: 16,
+    borderRadius: 25,
     alignItems: "center",
+    width: "100%",
+  },
+  registerLink: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "flex-start",
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  registerLinkContainer: {
+    flexDirection: "row",
+    display: "flex",
+    justifyContent: "flex-start",
+  },
+  registerLinkText: {
+    color: "#A09CAB",
+    fontSize: 14,
+    fontWeight: "normal",
+  },
+  registerLinkGradientText: {
+    fontSize: 14,
+    fontWeight: "normal",
   },
   buttonText: {
     color: "white",
@@ -271,11 +310,10 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   bethunterLogoImage: {
-    width: 200,
-    height: 50,
+    width: 211,
+    height: 53,
   },
   disabledButton: {
-    backgroundColor: "#A0A0A0",
     opacity: 0.7,
   },
 });
