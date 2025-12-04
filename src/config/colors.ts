@@ -30,3 +30,5 @@ export const HORIZONTAL_GRADIENT = {
   end: { x: 1, y: 0 },
 } as const;
 
+
+
