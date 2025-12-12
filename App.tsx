@@ -3,8 +3,12 @@ import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Login from "./src/screens/Login/Login";
-import SiginUp from "./src/screens/Login/SignUp";
-import SignUpPassword from "./src/screens/Login/SignUpPassword";
+import {
+  SignUpName,
+  SignUpContact,
+  SignUpVerification,
+  SignUpPassword,
+} from "./src/screens/SignUp";
 import Home from "./src/screens/Home/Home";
 import Config from "./src/screens/Config/Config";
 import Profile from "./src/screens/Profile/Profile";
@@ -40,8 +44,22 @@ const App: React.FC = () => {
           }}
         />
         <Stack.Screen
-          name="SiginUp"
-          component={SiginUp}
+          name="SignUpName"
+          component={SignUpName}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SignUpContact"
+          component={SignUpContact}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SignUpVerification"
+          component={SignUpVerification}
           options={{
             headerShown: false,
           }}

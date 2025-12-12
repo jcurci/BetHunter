@@ -1,57 +1,64 @@
 import React from "react";
-import { TouchableOpacity, View, StyleSheet, ViewStyle } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-interface CircularIconButtonProps {
+interface GradientButtonProps {
   onPress?: () => void;
-  children: React.ReactNode;
-  size?: number;
+  title: string;
   gradientColors?: readonly [string, string, ...string[]];
   containerStyle?: ViewStyle;
+  buttonStyle?: ViewStyle;
+  textStyle?: TextStyle;
+  disabled?: boolean;
 }
 
-const CircularIconButton: React.FC<CircularIconButtonProps> = ({
+const GradientButton: React.FC<GradientButtonProps> = ({
   onPress,
-  children,
-  size = 42,
+  title,
   gradientColors = ["rgba(255,255,255,0.35)", "rgba(255,255,255,0.05)", "rgba(0,0,0,0.2)"] as const,
   containerStyle,
+  buttonStyle,
+  textStyle,
+  disabled = false,
 }) => {
   return (
     <LinearGradient
       colors={gradientColors}
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}
-      style={[styles.outerRing, { width: size, height: size, borderRadius: size / 2 }, containerStyle]}
+      style={[styles.gradient, containerStyle]}
     >
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
-        style={[styles.innerButton, { width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }]}
+        style={[styles.button, buttonStyle]}
+        disabled={disabled}
       >
-        <View style={styles.iconWrapper}>{children}</View>
+        <Text style={[styles.text, textStyle]}>{title}</Text>
       </TouchableOpacity>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  outerRing: {
+  gradient: {
+    borderRadius: 25,
     padding: 3,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  innerButton: {
+  button: {
     backgroundColor: "rgba(19, 18, 30, 0.85)",
-    justifyContent: "center",
+    paddingVertical: 18,
+    borderRadius: 22,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
   },
-  iconWrapper: {
-    justifyContent: "center",
-    alignItems: "center",
+  text: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 
-export default CircularIconButton;
+export default GradientButton;
+

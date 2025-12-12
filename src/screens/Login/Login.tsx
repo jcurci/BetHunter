@@ -156,7 +156,7 @@ const Login: React.FC = () => {
 
             <TouchableOpacity
               style={styles.registerLink}
-              onPress={() => navigation.navigate("SiginUp")}
+              onPress={() => navigation.navigate("SignUpName")}
               activeOpacity={0.7}
             >
               <View style={styles.registerLinkContainer}>

@@ -8,4 +8,6 @@ export { default as Avatar } from './Avatar/Avatar';
 export { default as DayCounter } from './DayCounter/DayCounter';
 export { CloseIconButton, HelpIconButton, BackIconButton } from './utilities/IconButtons';
 export { QuizPrimaryButton, QuizDisabledButton } from './utilities/QuizButtons';
+export { default as CircularIconButton } from './utilities/CircularIconButton';
+export { default as GradientButton } from './utilities/GradientButton';
 
