@@ -1,4 +1,4 @@
-import { User, UserCredentials, UserRegistration } from '../entities/User';
+import { User, UserCredentials, UserRegistration, LoginResult } from '../entities/User';
 import { UserRepository } from '../repositories/UserRepository';
 import { ValidationError } from '../errors/CustomErrors';
 
@@ -7,9 +7,10 @@ export class UserUseCase {
 
   /**
    * Realiza login do usuário
-   * @throws ValidationError se email ou password estiverem vazios
+   * @returns LoginResult com user e token
+   * @throws ValidationError se email ou password estiverem vazios/inválidos
    */
-  async login(credentials: UserCredentials): Promise<User> {
+  async login(credentials: UserCredentials): Promise<LoginResult> {
     // Validação de entrada
     if (!credentials.email || credentials.email.trim() === '') {
       throw new ValidationError('Email é obrigatório');

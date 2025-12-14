@@ -1,51 +1,57 @@
 import { create } from 'zustand';
 import { AuthStorageService } from '../infrastructure/storage/AuthStorageService';
+import { setOnTokenExpired, clearOnTokenExpired } from '../services/api/apiClient';
+import { AuthUser } from '../domain/entities/User';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  points: number;
-  betcoins: number;
-}
-
+/**
+ * Interface do AuthStore
+ */
 interface AuthStore {
   token: string | null;
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   
   // Actions
   setToken: (token: string) => void;
-  setUser: (user: User) => void;
-  login: (token: string, user: User) => Promise<void>;
+  setUser: (user: AuthUser) => void;
+  login: (token: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
   loadAuth: () => Promise<void>;
+  initialize: () => Promise<void>;
 }
 
-// Instância do AuthStorageService para sincronização
+// Instância do AuthStorageService (Infrastructure Layer)
 const authStorageService = new AuthStorageService();
 
+/**
+ * AuthStore - Estado reativo de autenticação
+ * Usa Zustand para gerenciamento de estado
+ * Conecta com apiClient via callback para logout automático em 401
+ */
 export const useAuthStore = create<AuthStore>((set, get) => ({
   token: null,
   user: null,
   isAuthenticated: false,
+  isInitialized: false,
 
   setToken: (token: string) => {
     set({ token, isAuthenticated: true });
   },
 
-  setUser: (user: User) => {
+  setUser: (user: AuthUser) => {
     set({ user });
   },
 
-  login: async (token: string, user: User) => {
+  /**
+   * Realiza login e salva credenciais
+   */
+  login: async (token: string, user: AuthUser) => {
     try {
-      // Salvar via AuthStorageService (Infrastructure Layer)
       await authStorageService.login(token, user);
       
-      console.log('✅ [AuthStore] Estado atualizado após login');
+      console.log('✅ [AuthStore] Login realizado');
       
-      // Atualizar estado reativo da UI
       set({
         token,
         user,
@@ -57,14 +63,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
+  /**
+   * Realiza logout e limpa credenciais
+   */
   logout: async () => {
     try {
-      // Limpar via AuthStorageService (Infrastructure Layer)
       await authStorageService.logout();
       
-      console.log('✅ [AuthStore] Estado limpo após logout');
+      console.log('✅ [AuthStore] Logout realizado');
       
-      // Atualizar estado reativo da UI
       set({
         token: null,
         user: null,
@@ -76,9 +83,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
+  /**
+   * Carrega autenticação do storage
+   */
   loadAuth: async () => {
     try {
-      // Carregar via AuthStorageService (Infrastructure Layer)
       const token = await authStorageService.getToken();
       const user = await authStorageService.getUser();
       
@@ -107,8 +116,33 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
     }
   },
+
+  /**
+   * Inicializa o AuthStore
+   * - Carrega autenticação do storage
+   * - Registra callback para token expirado (401)
+   */
+  initialize: async () => {
+    if (get().isInitialized) return;
+
+    // Registrar callback para quando token expirar (401)
+    // Isso conecta apiClient com authStore sem violar Clean Architecture
+    setOnTokenExpired(() => {
+      console.log('⚠️ [AuthStore] Token expirado, realizando logout automático');
+      get().logout();
+    });
+
+    // Carregar autenticação existente
+    await get().loadAuth();
+
+    set({ isInitialized: true });
+    console.log('✅ [AuthStore] Inicializado');
+  },
 }));
 
-
-
-
+/**
+ * Função para limpar callback ao desmontar app (cleanup)
+ */
+export const cleanupAuthStore = (): void => {
+  clearOnTokenExpired();
+};

@@ -16,6 +16,9 @@ import Logo from "../../assets/logo-img/LogoImgETexto.svg";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { NavigationProp } from "../../types/navigation";
 import { HORIZONTAL_GRADIENT } from "../../config/colors";
+import { useAuthStore } from "../../storage/authStore";
+import { toAuthUser } from "../../domain/entities/User";
+import { ValidationError } from "../../domain/errors/CustomErrors";
 
 // Constants
 const BACKGROUND_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#0F0E11", "#000000"] as const;
@@ -28,51 +31,15 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
   const container = Container.getInstance();
-
-  console.log("Container initialized:", container);
+  const authStore = useAuthStore();
 
   const toggleShowPassword = (): void => {
     setShowPassword(!showPassword);
   };
 
-  const handleLogin = async (): Promise<void> => {
-    if (!email || !password) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos");
-      return;
-    }
+  const handleLogin = (): void => {
+    // TODO: Restaurar autenticação real após testes
     navigation.navigate("Home");
-    setLoading(true);
-    // try {
-    //   const userUseCase = container.getUserUseCase();
-    //   const result = await userUseCase.login({ email, password });
-
-    //   console.log("Login successful:", result);
-    //   Alert.alert("Sucesso", "Login realizado com sucesso!", [
-    //     {
-    //       text: "OK",
-    //       onPress: () => navigation.navigate("Home"),
-    //     },
-    //   ]);
-    // } catch (error: any) {
-    //   console.error("Login error:", error);
-      
-    //   // Tratamento específico de erros do backend
-    //   if (error.response?.status === 401) {
-    //     Alert.alert("Erro", "Email ou senha incorretos");
-    //   } else if (error.response?.status === 404) {
-    //     Alert.alert("Erro", "Usuário não encontrado");
-    //   } else if (error.response?.status === 400) {
-    //     Alert.alert("Erro", "Dados inválidos. Verifique email e senha");
-    //   } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
-    //     Alert.alert("Erro", "Erro de conexão. Verifique sua internet");
-    //   } else if (error.code === 'ECONNABORTED') {
-    //     Alert.alert("Erro", "Timeout. Tente novamente");
-    //   } else {
-    //     Alert.alert("Erro", "Erro ao conectar com servidor. Tente novamente");
-    //   }
-    // } finally {
-    //   setLoading(false);
-    // }
   };
 
   return (

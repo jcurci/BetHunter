@@ -1,20 +1,40 @@
-import { User, UserCredentials, UserRegistration } from '../../domain/entities/User';
+import { User, UserCredentials, UserRegistration, LoginResult } from '../../domain/entities/User';
 import { UserDataSource } from '../../data/datasources/UserDataSource';
 import { AuthStorageService } from '../storage/AuthStorageService';
-import { authService } from '../../services/auth/authService';
+import { apiClient } from '../../services/api/apiClient';
 import { decode as base64Decode } from 'base-64';
 
-// Helper function to manually decode JWT (works in React Native)
-const decodeJWT = (token: string): any => {
+/**
+ * Interface para resposta de login da API
+ */
+interface LoginResponse {
+  token: string;
+}
+
+/**
+ * Interface para resposta de registro da API
+ */
+interface RegisterResponse {
+  id: string;
+  email: string;
+  name: string;
+  cellphone: string;
+  betcoins: number;
+  ranking_points: number;
+}
+
+/**
+ * Helper function to decode JWT payload
+ * Works in React Native environment
+ */
+const decodeJWT = (token: string): Record<string, unknown> => {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
       throw new Error('Token JWT inválido');
     }
     
-    // Decodificar a parte do payload (parte 2)
     const payload = parts[1];
-    // Adicionar padding se necessário
     const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
     const decoded = base64Decode(paddedPayload);
     return JSON.parse(decoded);
@@ -24,36 +44,42 @@ const decodeJWT = (token: string): any => {
   }
 };
 
+/**
+ * UserDataSourceImpl - Infrastructure Layer
+ * Implementação concreta do UserDataSource
+ * Responsável por comunicação com API e persistência local
+ */
 export class UserDataSourceImpl implements UserDataSource {
   constructor(private authStorageService: AuthStorageService) {}
 
-  async login(credentials: UserCredentials): Promise<User> {
+  /**
+   * Realiza login via API e salva credenciais localmente
+   * @returns LoginResult com user e token para atualizar estado da UI
+   */
+  async login(credentials: UserCredentials): Promise<LoginResult> {
     try {
-      // Chamar API real para login
-      const response = await authService.login(credentials);
+      const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
       
-      // Verificar se o token existe
-      if (!response?.token) {
+      if (!response.data?.token) {
         throw new Error('Token não retornado pelo servidor');
       }
       
-      // Decodificar JWT para extrair dados do usuário
-      const decoded = decodeJWT(response.token);
-      console.log('Token decodificado:', decoded);
+      const token = response.data.token;
+      const decoded = decodeJWT(token);
+      console.log('✅ Token decodificado');
       
-      // Criar objeto User com dados do token e fallbacks
       const user: User = {
-        id: decoded?.sub || credentials.email,
-        email: decoded?.sub || credentials.email,
-        name: 'Usuário', // temporário até backend retornar dados completos
-        points: 0,
-        betcoins: decoded?.betcoins ?? 0,
+        id: (decoded?.sub as string) || credentials.email,
+        email: (decoded?.sub as string) || credentials.email,
+        name: (decoded?.name as string) || 'Usuário',
+        points: (decoded?.points as number) ?? 0,
+        betcoins: (decoded?.betcoins as number) ?? 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       
-      // Salvar no AuthStorageService (Infrastructure Layer)
-      await this.authStorageService.login(response.token, {
+      // Salvar no storage (persistência)
+      await this.authStorageService.login(token, {
         id: user.id,
         name: user.name,
         email: user.email,
@@ -61,41 +87,43 @@ export class UserDataSourceImpl implements UserDataSource {
         betcoins: user.betcoins,
       });
       
-      return user;
+      // Retorna user E token para a UI atualizar o estado reativo
+      return { user, token };
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('❌ Erro no login:', error);
       throw error;
     }
   }
 
+  /**
+   * Registra novo usuário via API
+   */
   async register(userData: UserRegistration): Promise<User> {
     try {
-      // Chamar API real para registro
-      const response = await authService.register(userData);
+      const response = await apiClient.post<RegisterResponse>('/auth/register', userData);
       
-      console.log('Response do registro:', response);
+      console.log('✅ Registro realizado');
       
-      // Backend não retorna token no registro, apenas confirma criação
-      // Criar objeto User temporário apenas para retornar sucesso
       const user: User = {
-        id: userData.email,
-        email: userData.email,
-        name: userData.name,
-        points: 0,
-        betcoins: 0,
+        id: response.data?.id || userData.email,
+        email: response.data?.email || userData.email,
+        name: response.data?.name || userData.name,
+        points: response.data?.ranking_points ?? 0,
+        betcoins: response.data?.betcoins ?? 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       
-      console.log('User registrado:', user);
-      
       return user;
     } catch (error) {
-      console.error('Erro no registro:', error);
+      console.error('❌ Erro no registro:', error);
       throw error;
     }
   }
 
+  /**
+   * Obtém usuário atual do storage local
+   */
   async getCurrentUser(): Promise<User | null> {
     const user = await this.authStorageService.getUser();
     if (!user) return null;
@@ -111,14 +139,18 @@ export class UserDataSourceImpl implements UserDataSource {
     };
   }
 
+  /**
+   * Atualiza pontos do usuário no storage local
+   */
   async updateUserPoints(userId: string, points: number): Promise<User> {
     const currentUser = await this.getCurrentUser();
-    if (!currentUser) throw new Error('User not found');
+    if (!currentUser) {
+      throw new Error('Usuário não encontrado');
+    }
 
     const updatedUser: User = {
       ...currentUser,
       points,
-      betcoins: currentUser.betcoins,
       updatedAt: new Date(),
     };
 
@@ -126,12 +158,16 @@ export class UserDataSourceImpl implements UserDataSource {
     return updatedUser;
   }
 
+  /**
+   * Realiza logout limpando dados locais
+   */
   async logout(): Promise<void> {
     try {
       await this.authStorageService.logout();
+      console.log('✅ Logout realizado');
     } catch (error) {
-      console.error('Erro no logout:', error);
+      console.error('❌ Erro no logout:', error);
       throw error;
     }
   }
-} 
+}
