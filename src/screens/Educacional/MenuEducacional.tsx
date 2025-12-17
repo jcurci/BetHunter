@@ -157,6 +157,7 @@ const MenuEducacional: React.FC = () => {
                 <IconCard
                   icon={<Image source={bookIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Cursos Salvos"
+                  onPress={() => navigation.navigate("CursosSalvos")}
                 />
                 <IconCard
                   icon={<Image source={savedAbcIcon} style={styles.optionIconImage} resizeMode="contain" />}
@@ -188,28 +189,36 @@ const MenuEducacional: React.FC = () => {
             {/* Course Progress Card */}
             <TouchableOpacity activeOpacity={0.9} style={styles.courseCard}>
               <View style={styles.courseCardContent}>
+                {/* Bloco interno decorativo */}
                 <View style={styles.courseTextContainer}>
-                  <MaskedView
-                    style={styles.courseTitleContainer}
-                    maskElement={
-                      <Text style={[styles.courseTitle, { backgroundColor: 'transparent' }]}>
-                        Fundamentos
-                      </Text>
-                    }
-                  >
-                    <LinearGradient
-                      colors={TEXT_GRADIENT_COLORS}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.courseTitleGradient}
+                  <View style={styles.courseTextInnerContainer}>
+                    <MaskedView
+                      style={styles.courseTitleContainer}
+                      maskElement={
+                        <Text style={[styles.courseTitle, { backgroundColor: "transparent" }]}>
+                          Fundamentos
+                        </Text>
+                      }
                     >
-                      <Text style={[styles.courseTitle, { opacity: 0 }]}>
-                        Fundamentos
-                      </Text>
-                    </LinearGradient>
-                  </MaskedView>
-                  <Text style={styles.courseProgress}>1/4</Text>
+                      <LinearGradient
+                        colors={TEXT_GRADIENT_COLORS}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.courseTitleGradient}
+                      >
+                        <Text style={[styles.courseTitle, { opacity: 0 }]}>
+                          Fundamentos
+                        </Text>
+                      </LinearGradient>
+                    </MaskedView>
+                    <Text style={styles.courseProgress}>1/4</Text>
+                  </View>
                 </View>
+
+                {/* Espaço flexível para distanciar a seta */}
+                <View style={styles.courseSpacer} />
+
+                {/* Seta de navegação com efeito */}
                 <View style={styles.courseArrowContainer}>
                   <Image
                     source={require("../../assets/Icon-seta-efeito.png")}
@@ -401,31 +410,46 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   courseCard: {
+    width: 348,
+    height: 78.93,
     backgroundColor: "#1A1825",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#201F2A",
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: "#3D3A4D",
+    overflow: "hidden",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 8,
   },
   courseCardContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    height: "100%",
   },
   courseTextContainer: {
-    flex: 1,
-    marginRight: 16,
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.36)",
+    borderRadius: 26,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  courseTextInnerContainer: {
+    justifyContent: "center",
   },
   courseTitleContainer: {
     height: 28,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   courseTitleGradient: {
     flex: 1,
     justifyContent: "center",
   },
   courseTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
     lineHeight: 28,
   },
@@ -433,13 +457,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#FFFFFF",
     opacity: 0.9,
-    marginTop: 4,
+    marginTop: 2,
+  },
+  courseSpacer: {
+    flex: 1,
   },
   courseArrowContainer: {
     width: 48,
     height: 48,
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 16,
   },
   courseArrowEffect: {
     position: "absolute",

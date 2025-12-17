@@ -367,7 +367,7 @@ const Home: React.FC = () => {
               <IconCard 
                 icon={<JornadaIcon width={24} height={24} />} 
                 title="Minha  Jornada" 
-                onPress={() => navigation.navigate("EmConstrucao")}
+                onPress={() => navigation.navigate("MinhaJornada")}
               />
             </View>
 

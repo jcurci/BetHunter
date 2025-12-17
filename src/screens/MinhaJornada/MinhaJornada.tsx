@@ -1,0 +1,473 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { useNavigation } from "@react-navigation/native";
+import { Footer, Avatar, BackIconButton } from "../../components";
+import { Container } from "../../infrastructure/di/Container";
+import { User } from "../../domain/entities/User";
+import { NavigationProp } from "../../types/navigation";
+
+// Constants
+const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+const HEATMAP_COLORS = ["#1A1825", "#3D2B5A", "#6B4D8A", "#9B6FB8", "#D783D8"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAYS = ["S", "Q", "S"];
+
+// Generate mock heatmap data (52 weeks x 7 days)
+const generateHeatmapData = () => {
+  const data: number[][] = [];
+  for (let week = 0; week < 52; week++) {
+    const weekData: number[] = [];
+    for (let day = 0; day < 7; day++) {
+      // Random activity level 0-4
+      weekData.push(Math.floor(Math.random() * 5));
+    }
+    data.push(weekData);
+  }
+  return data;
+};
+
+const MinhaJornada: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const [user, setUser] = useState<User | null>(null);
+  const [heatmapData] = useState(generateHeatmapData());
+  const container = Container.getInstance();
+
+  // Mock data
+  const stats = {
+    diasLivreApostas: 36,
+    modulosCompletos: 84,
+    valorTotal: 220701.24,
+    ratingMedio: 2.7,
+    ratings: {
+      treseEstrelas: 65,
+      duasEstrelas: 45,
+      umaEstrela: 20,
+    },
+  };
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const userUseCase = container.getUserUseCase();
+      const currentUser = await userUseCase.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error("Error loading user:", error);
+    }
+  };
+
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return "JD";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const formatCurrency = (value: number): string => {
+    const formatted = value.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const [intPart, decPart] = formatted.split(",");
+    return `R$ ${intPart},${decPart}`;
+  };
+
+  const renderGradientText = (text: string, style: any) => (
+    <MaskedView
+      maskElement={
+        <Text style={[style, { backgroundColor: "transparent" }]}>{text}</Text>
+      }
+    >
+      <LinearGradient
+        colors={TEXT_GRADIENT_COLORS}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <Text style={[style, { opacity: 0 }]}>{text}</Text>
+      </LinearGradient>
+    </MaskedView>
+  );
+
+  const renderHeatmapCell = (level: number, weekIndex: number, dayIndex: number) => (
+    <View
+      key={`${weekIndex}-${dayIndex}`}
+      style={[
+        styles.heatmapCell,
+        { backgroundColor: HEATMAP_COLORS[level] },
+      ]}
+    />
+  );
+
+  const renderRatingBar = (label: string, percentage: number) => (
+    <View style={styles.ratingBarContainer}>
+      <Text style={styles.ratingBarLabel}>{label}</Text>
+      <View style={styles.ratingBarBackground}>
+        <LinearGradient
+          colors={TEXT_GRADIENT_COLORS}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.ratingBarFill, { width: `${percentage}%` }]}
+        />
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <BackIconButton onPress={() => navigation.goBack()} size={42} />
+          <Text style={styles.headerTitle}>Minha{"\n"}Jornada</Text>
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Profile Section */}
+          <View style={styles.profileSection}>
+            <Avatar initials={getInitials(user?.name)} size={80} />
+            <Text style={styles.userName}>{user?.name || "Jhon Doe"}</Text>
+            <Text style={styles.userHandle}>@{user?.name?.toLowerCase().replace(/\s+/g, "") || "jhondoe"}</Text>
+          </View>
+
+          {/* Stats Cards Row */}
+          <View style={styles.statsRow}>
+            {/* Days Card */}
+            <View style={styles.statCard}>
+              {renderGradientText(`${stats.diasLivreApostas}`, styles.statValueLarge)}
+              {renderGradientText("Dias", styles.statValueSmall)}
+              <Text style={styles.statDescription}>
+                Recorde atual de dias respectivos usando o app
+              </Text>
+            </View>
+
+            {/* Modules Card */}
+            <View style={styles.statCard}>
+              {renderGradientText(`${stats.modulosCompletos}`, styles.statValueLarge)}
+              <Text style={styles.statDescription}>
+                Módulos completos na trilha de aprendizado
+              </Text>
+            </View>
+          </View>
+
+          {/* Value Card */}
+          <View style={styles.valueCard}>
+            <View style={styles.valueRow}>
+              {renderGradientText(formatCurrency(stats.valorTotal).split(",")[0] + ",", styles.valueText)}
+              <Text style={styles.valueCents}>
+                {formatCurrency(stats.valorTotal).split(",")[1]}
+              </Text>
+            </View>
+            <Text style={styles.valueDescription}>
+              Valor de todas as entradas e saídas já cadastradas no Meu Acessor
+            </Text>
+          </View>
+
+          {/* Rating Card */}
+          <View style={styles.ratingCard}>
+            {renderGradientText(`${stats.ratingMedio}`, styles.ratingValue)}
+            <Text style={styles.ratingDescription}>
+              O seu rating médio nos quizzes e cursos do Bethunter
+            </Text>
+            <View style={styles.ratingBarsContainer}>
+              {renderRatingBar("3 estrelas", stats.ratings.treseEstrelas)}
+              {renderRatingBar("2 estrelas", stats.ratings.duasEstrelas)}
+              {renderRatingBar("1 estrela", stats.ratings.umaEstrela)}
+            </View>
+          </View>
+
+          {/* Heatmap Card */}
+          <View style={styles.heatmapCard}>
+            {renderGradientText("Heatmap", styles.heatmapTitle)}
+            <Text style={styles.heatmapDescription}>
+              O seu mapa de atividade no último ano dentro do Bethunter
+            </Text>
+
+            {/* Month Labels */}
+            <View style={styles.monthLabelsContainer}>
+              {MONTHS.map((month, index) => (
+                <Text key={month} style={styles.monthLabel}>
+                  {month}
+                </Text>
+              ))}
+            </View>
+
+            {/* Heatmap Grid */}
+            <View style={styles.heatmapGridContainer}>
+              {/* Day Labels */}
+              <View style={styles.dayLabelsContainer}>
+                {DAYS.map((day, index) => (
+                  <Text key={`day-${index}`} style={styles.dayLabel}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
+
+              {/* Grid */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.heatmapScrollView}
+              >
+                <View style={styles.heatmapGrid}>
+                  {[0, 2, 4].map((dayOffset) => (
+                    <View key={`row-${dayOffset}`} style={styles.heatmapRow}>
+                      {heatmapData.map((week, weekIndex) => (
+                        renderHeatmapCell(week[dayOffset] || 0, weekIndex, dayOffset)
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            {/* Legend */}
+            <View style={styles.legendContainer}>
+              <Text style={styles.legendText}>Menos</Text>
+              {HEATMAP_COLORS.map((color, index) => (
+                <View
+                  key={`legend-${index}`}
+                  style={[styles.legendCell, { backgroundColor: color }]}
+                />
+              ))}
+              <Text style={styles.legendText}>Mais</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+      <Footer />
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  container: {
+    flex: 1,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    marginTop: 8,
+    gap: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    lineHeight: 28,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  profileSection: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginTop: 12,
+  },
+  userHandle: {
+    fontSize: 14,
+    color: "#A09CAB",
+    marginTop: 4,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#1A1825",
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 120,
+  },
+  statValueLarge: {
+    fontSize: 48,
+    fontWeight: "bold",
+    lineHeight: 52,
+  },
+  statValueSmall: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: -8,
+  },
+  statDescription: {
+    fontSize: 12,
+    color: "#A09CAB",
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  valueCard: {
+    backgroundColor: "#1A1825",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  valueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  valueText: {
+    fontSize: 32,
+    fontWeight: "bold",
+  },
+  valueCents: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#A09CAB",
+  },
+  valueDescription: {
+    fontSize: 12,
+    color: "#A09CAB",
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  ratingCard: {
+    backgroundColor: "#1A1825",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  ratingValue: {
+    fontSize: 48,
+    fontWeight: "bold",
+    fontStyle: "italic",
+  },
+  ratingDescription: {
+    fontSize: 12,
+    color: "#A09CAB",
+    marginTop: 4,
+    marginBottom: 16,
+    lineHeight: 16,
+  },
+  ratingBarsContainer: {
+    gap: 12,
+  },
+  ratingBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  ratingBarLabel: {
+    fontSize: 12,
+    color: "#A09CAB",
+    width: 60,
+  },
+  ratingBarBackground: {
+    flex: 1,
+    height: 8,
+    backgroundColor: "#2B2935",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  ratingBarFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  heatmapCard: {
+    backgroundColor: "#1A1825",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  heatmapTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    fontStyle: "italic",
+  },
+  heatmapDescription: {
+    fontSize: 12,
+    color: "#A09CAB",
+    marginTop: 4,
+    marginBottom: 16,
+    lineHeight: 16,
+  },
+  monthLabelsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    paddingLeft: 24,
+  },
+  monthLabel: {
+    fontSize: 10,
+    color: "#A09CAB",
+  },
+  heatmapGridContainer: {
+    flexDirection: "row",
+  },
+  dayLabelsContainer: {
+    justifyContent: "space-around",
+    marginRight: 8,
+    height: 54,
+  },
+  dayLabel: {
+    fontSize: 10,
+    color: "#A09CAB",
+  },
+  heatmapScrollView: {
+    flex: 1,
+  },
+  heatmapGrid: {
+    gap: 3,
+  },
+  heatmapRow: {
+    flexDirection: "row",
+    gap: 3,
+  },
+  heatmapCell: {
+    width: 12,
+    height: 12,
+    borderRadius: 2,
+  },
+  legendContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+    gap: 4,
+  },
+  legendText: {
+    fontSize: 10,
+    color: "#A09CAB",
+    marginHorizontal: 4,
+  },
+  legendCell: {
+    width: 12,
+    height: 12,
+    borderRadius: 2,
+  },
+});
+
+export default MinhaJornada;
+
