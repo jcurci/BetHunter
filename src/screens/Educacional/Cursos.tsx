@@ -7,16 +7,23 @@ import {
   SafeAreaView,
   ScrollView,
   TextInput,
+  Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import IconMaterial from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Footer, StatsDisplay, Avatar, BackIconButton } from "../../components";
+import { Footer, StatsDisplay, Avatar, BackIconButton, Modal } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import { User } from "../../domain/entities/User";
 import { NavigationProp } from "../../types/navigation";
 
 import MaskedView from "@react-native-masked-view/masked-view";
+import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
+
+// Assets
+const IconBook = require("../../assets/icon-book.png");
+const IconFire = require("../../assets/icon-fire.png");
 
 interface LearningModule {
   id: string;
@@ -25,6 +32,9 @@ interface LearningModule {
   percentage: number;
   gradientColors: string[];
   hasProgress: boolean;
+  description?: string;
+  stars?: string;
+  points?: number;
 }
 
 const MOCK_LEARNING_MODULES: LearningModule[] = [
@@ -35,6 +45,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 25,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: true,
+    description: "Curso sobre os fundamentos da educação financeira",
+    stars: "3/12",
+    points: 10,
   },
   {
     id: "pratica-dinheiro",
@@ -43,6 +56,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Aprenda a gerenciar seu dinheiro na prática",
+    stars: "0/30",
+    points: 25,
   },
   {
     id: "conhecimento-aplicado",
@@ -51,6 +67,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Aplicação prática dos conhecimentos adquiridos",
+    stars: "0/45",
+    points: 30,
   },
   {
     id: "objetivos-planejamento",
@@ -59,6 +78,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Defina metas e planeje seu futuro financeiro",
+    stars: "0/24",
+    points: 20,
   },
   {
     id: "investimentos-baixo-risco",
@@ -67,6 +89,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Investimentos seguros para iniciantes",
+    stars: "0/90",
+    points: 50,
   },
   {
     id: "investimentos-alto-risco",
@@ -75,6 +100,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Investimentos avançados e de maior retorno",
+    stars: "0/132",
+    points: 75,
   },
   {
     id: "criptomoedas-basico",
@@ -83,6 +111,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Introdução ao mundo das criptomoedas",
+    stars: "0/36",
+    points: 30,
   },
   {
     id: "criptomoedas-intermediario",
@@ -91,6 +122,9 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
     percentage: 0,
     gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
     hasProgress: false,
+    description: "Aprofunde seus conhecimentos em cripto",
+    stars: "0/54",
+    points: 45,
   },
 ];
 
@@ -101,11 +135,19 @@ const Cursos = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const { isSaved, toggleSave } = useSavedCoursesStore();
   const container = Container.getInstance();
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Filtrar módulos baseado na pesquisa
+  const filteredModules = learningModules.filter((module) =>
+    module.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const loadData = async () => {
     try {
@@ -156,8 +198,27 @@ const Cursos = () => {
   };
 
   const handleModulePress = (module: LearningModule) => {
-    const moduleTitle = module.title.toLowerCase().replace(/\s+/g, "-");
-    navigation.navigate("Quiz", { title: moduleTitle, moduleData: module });
+    setSelectedModule(module);
+    setIsModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setSelectedModule(null);
+  };
+
+  const handleConfirmCourse = () => {
+    if (selectedModule) {
+      const moduleTitle = selectedModule.title.toLowerCase().replace(/\s+/g, "-");
+      setIsModalVisible(false);
+      navigation.navigate("Quiz", { title: moduleTitle, moduleData: selectedModule });
+    }
+  };
+
+  const handleToggleSave = () => {
+    if (selectedModule) {
+      toggleSave(selectedModule);
+    }
   };
 
   const getInitials = (name: string | undefined): string => {
@@ -264,8 +325,14 @@ const Cursos = () => {
               <View style={styles.loadingContainer}>
                 <Text style={styles.loadingText}>Carregando lições...</Text>
               </View>
+            ) : filteredModules.length > 0 ? (
+              filteredModules.map(renderModuleCard)
             ) : (
-              learningModules.map(renderModuleCard)
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  Nenhum curso encontrado para "{searchQuery}"
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -273,6 +340,46 @@ const Cursos = () => {
 
       {/* Footer */}
       <Footer />
+
+      {/* Course Preview Modal */}
+      <Modal
+        visible={isModalVisible}
+        onClose={handleCloseModal}
+        size="small"
+        title={selectedModule?.title || ""}
+        subtitle={selectedModule?.description || ""}
+        headerActions={{
+          right: [
+            {
+              icon: selectedModule && isSaved(selectedModule.id) ? "bookmark" : "bookmark-outline",
+              onPress: handleToggleSave,
+            },
+          ],
+        }}
+      >
+        <View style={styles.modalContent}>
+          {/* Stats Row */}
+          <View style={styles.modalStatsRow}>
+            <View style={styles.modalStatItem}>
+              <Text style={styles.modalStatValue}>{selectedModule?.progress || "0/0"}</Text>
+              <Image source={IconBook} style={styles.modalStatIcon} resizeMode="contain" />
+            </View>
+            <View style={styles.modalStatItem}>
+              <Text style={styles.modalStatValue}>{selectedModule?.stars || "0/0"}</Text>
+              <IconMaterial name="star" size={24} color="#FFD700" />
+            </View>
+            <View style={styles.modalStatItem}>
+              <Text style={styles.modalStatValue}>{selectedModule?.points || 0}</Text>
+              <Image source={IconFire} style={styles.modalStatIcon} resizeMode="contain" />
+            </View>
+          </View>
+
+          {/* Confirm Button */}
+          <TouchableOpacity style={styles.modalConfirmButton} onPress={handleConfirmCourse}>
+            <Text style={styles.modalConfirmButtonText}>Conferir!</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -430,6 +537,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#A09CAB",
   },
+  emptyContainer: {
+    width: "100%",
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#A09CAB",
+    textAlign: "center",
+  },
   errorContainer: {
     backgroundColor: "#FF3B30",
     marginHorizontal: 20,
@@ -464,6 +582,44 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     alignItems: "flex-start",
     alignSelf: "center",
+  },
+  modalContent: {
+    paddingTop: 20,
+  },
+  modalStatsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 32,
+    marginBottom: 32,
+  },
+  modalStatItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalStatValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+  modalStatIcon: {
+    width: 24,
+    height: 24,
+  },
+  modalConfirmButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    borderRadius: 28,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalConfirmButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
 

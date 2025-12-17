@@ -23,6 +23,8 @@ import TransactionForm from "./src/screens/Account/TransactionForm";
 import EmConstrucao from "./src/screens/EmConstrucao/EmConstrucao";
 import Acessor from "./src/screens/Acessor/Acessor";
 import HistoryList from "./src/screens/Acessor/HistoryList";
+import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
+import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -175,6 +177,20 @@ const App: React.FC = () => {
         <Stack.Screen
           name="HistoryList"
           component={HistoryList}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="MinhaJornada"
+          component={MinhaJornada}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CursosSalvos"
+          component={CursosSalvos}
           options={{
             headerShown: false,
           }}

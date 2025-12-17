@@ -30,8 +30,11 @@ const QuizPage = () => {
   const [isTipVisible, setIsTipVisible] = useState(false);
   const [isTipLoading, setIsTipLoading] = useState(false);
   const [tipText, setTipText] = useState("");
+  const [displayedTipText, setDisplayedTipText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const tipTimeoutRef = useRef(null);
   const tipLoadingTimeoutRef = useRef(null);
+  const typewriterIntervalRef = useRef(null);
   const tipOpacity = useRef(new Animated.Value(0)).current;
   const tipTranslate = useRef(new Animated.Value(40)).current;
 
@@ -315,11 +318,16 @@ const QuizPage = () => {
     if (tipLoadingTimeoutRef.current) {
       clearTimeout(tipLoadingTimeoutRef.current);
     }
+    if (typewriterIntervalRef.current) {
+      clearInterval(typewriterIntervalRef.current);
+    }
     if (instant) {
       tipOpacity.setValue(0);
       tipTranslate.setValue(40);
       setIsTipVisible(false);
       setIsTipLoading(false);
+      setDisplayedTipText("");
+      setIsTyping(false);
       return;
     }
     Animated.parallel([
@@ -337,8 +345,26 @@ const QuizPage = () => {
       if (finished) {
         setIsTipVisible(false);
         setIsTipLoading(false);
+        setDisplayedTipText("");
+        setIsTyping(false);
       }
     });
+  };
+
+  const startTypewriter = (text) => {
+    setIsTyping(true);
+    setDisplayedTipText("");
+    let currentIndex = 0;
+    
+    typewriterIntervalRef.current = setInterval(() => {
+      if (currentIndex < text.length) {
+        setDisplayedTipText(text.substring(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        clearInterval(typewriterIntervalRef.current);
+        setIsTyping(false);
+      }
+    }, 25); // Velocidade da digitação (25ms por caractere)
   };
 
   const handleBettyPress = () => {
@@ -351,6 +377,7 @@ const QuizPage = () => {
     setTipText(hint);
     setIsTipVisible(true);
     setIsTipLoading(true);
+    setDisplayedTipText("");
 
     tipOpacity.setValue(0);
     tipTranslate.setValue(40);
@@ -368,13 +395,17 @@ const QuizPage = () => {
       }),
     ]).start();
 
+    // Primeiro mostra "Pensando em uma resposta..." por 1.5s
     tipLoadingTimeoutRef.current = setTimeout(() => {
       setIsTipLoading(false);
-    }, 700);
+      // Depois inicia o efeito typewriter
+      startTypewriter(hint);
+    }, 1500);
 
+    // Fecha automaticamente após 15s (mais tempo para ler o texto completo)
     tipTimeoutRef.current = setTimeout(() => {
       closeTip();
-    }, 8000);
+    }, 15000);
   };
 
   useEffect(() => {
@@ -382,6 +413,7 @@ const QuizPage = () => {
       if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
       if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current);
       if (tipLoadingTimeoutRef.current) clearTimeout(tipLoadingTimeoutRef.current);
+      if (typewriterIntervalRef.current) clearInterval(typewriterIntervalRef.current);
     };
   }, []);
 
@@ -531,9 +563,14 @@ const QuizPage = () => {
               </TouchableOpacity>
               <View style={styles.tipContentRow}>
                 <Image source={BettyIcon} style={styles.tipAvatarImage} resizeMode="contain" />
-                <Text style={styles.tipTextContent}>
-                  {isTipLoading ? "Pensando em uma resposta..." : tipText}
-                </Text>
+                {isTipLoading ? (
+                  <Text style={styles.tipTextContent}>Pensando em uma resposta...</Text>
+                ) : (
+                  <Text style={styles.tipTextContent}>
+                    {displayedTipText}
+                    {isTyping && <Text style={styles.typingCursor}>|</Text>}
+                  </Text>
+                )}
               </View>
             </View>
           </LinearGradient>
@@ -568,54 +605,58 @@ const styles = StyleSheet.create({
   },
   tipModalWrapper: {
     position: "absolute",
-    left: -10,
-    right: -10,
-    bottom: -10,
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingBottom: 10,
+    left: -20,
+    right: -20,
+    bottom: 0,
   },
   tipGradientBorder: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 3,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 2,
+    paddingTop: 2,
+    paddingBottom: 0,
   },
   tipInnerContent: {
-    backgroundColor: "#1F1D28",
-    borderTopLeftRadius: 29,
-    borderTopRightRadius: 29,
-    paddingTop: 20,
-    paddingBottom: 48,
-    paddingHorizontal: 24,
+    backgroundColor: "#0D0B12",
+    borderTopLeftRadius: 38,
+    borderTopRightRadius: 38,
+    paddingTop: 16,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    minHeight: 180,
   },
   tipHandleWrapper: {
     alignSelf: "center",
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 40,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   tipHandleBar: {
-    width: 64,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.25)",
   },
   tipContentRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 16,
+    gap: 12,
   },
   tipAvatarImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   tipTextContent: {
     flex: 1,
     color: "#FFFFFF",
-    fontSize: 16,
-    lineHeight: 24,
-    paddingTop: 4,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingTop: 2,
+  },
+  typingCursor: {
+    color: "#D783D8",
+    fontWeight: "bold",
   },
   questionProgress: {
     paddingHorizontal: 20,

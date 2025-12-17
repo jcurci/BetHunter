@@ -22,6 +22,8 @@ export type RootStackParamList = {
   EmConstrucao: undefined;
   Acessor: undefined;
   HistoryList: undefined;
+  MinhaJornada: undefined;
+  CursosSalvos: undefined;
 };
 
 export type NavigationProp = RNNavigationProp<RootStackParamList>;
