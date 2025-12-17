@@ -3,24 +3,26 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   Alert,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { Container } from "../../infrastructure/di/Container";
+import { CircularIconButton, GradientButton } from "../../components/common";
 
 const SignUpPassword: React.FC = () => {
   const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpPassword">>();
-  const { name, email, phone } = route.params;
+  const { name, username, email, phone } = route.params;
   const container = Container.getInstance();
 
   const validatePassword = (pass: string): { valid: boolean; message: string } => {
@@ -44,6 +46,11 @@ const SignUpPassword: React.FC = () => {
       return;
     }
 
+    if (password !== confirmPassword) {
+      Alert.alert("Erro", "As senhas não coincidem");
+      return;
+    }
+
     setLoading(true);
     try {
       const userUseCase = container.getUserUseCase();
@@ -59,7 +66,6 @@ const SignUpPassword: React.FC = () => {
         {
           text: "OK",
           onPress: () => {
-            // Reset navigation stack para voltar ao Login
             navigation.reset({
               index: 0,
               routes: [{ name: "Login" }],
@@ -84,24 +90,48 @@ const SignUpPassword: React.FC = () => {
     }
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.welcomeText}>Crie sua senha</Text>
-          <Text style={styles.subtitle}>Proteja sua conta</Text>
+          <View style={styles.header}>
+            <CircularIconButton
+              onPress={() => navigation.goBack()}
+              size={50}
+            >
+              <Icon name="arrow-back" size={24} color="#FFFFFF" />
+            </CircularIconButton>
+            <Text style={styles.title}>
+              <Text style={styles.titleBold}>Última etapa!</Text>
+            </Text>
+          </View>
+          <Text style={styles.subtitle}>
+            Cadastre uma senha para continuar.
+          </Text>
 
           <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Digite sua senha"
+                secureTextEntry={!showPassword}
+                placeholderTextColor="#6B6B6B"
+                value={password}
+                onChangeText={setPassword}
+              />
+              <CircularIconButton
+                onPress={() => setShowPassword(!showPassword)}
+                size={40}
+                containerStyle={styles.eyeButton}
+              >
+                <Icon
+                  name={showPassword ? "visibility" : "visibility-off"}
+                  size={20}
+                  color="#FFFFFF"
+                />
+              </CircularIconButton>
+            </View>
+
             <View style={styles.passwordRequirements}>
               <Text style={styles.requirementsTitle}>A senha:</Text>
               <Text style={styles.requirementItem}>• Deve conter no mínimo 8 caracteres</Text>
@@ -111,34 +141,33 @@ const SignUpPassword: React.FC = () => {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Digite sua senha"
-                secureTextEntry={!showPassword}
-                placeholderTextColor="#A0A0A0"
-                value={password}
-                onChangeText={setPassword}
+                placeholder="Confirme sua senha"
+                secureTextEntry={!showConfirmPassword}
+                placeholderTextColor="#6B6B6B"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
               />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={toggleShowPassword}
+              <CircularIconButton
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                size={40}
+                containerStyle={styles.eyeButton}
               >
                 <Icon
-                  name={showPassword ? "eye" : "eye-off"}
+                  name={showConfirmPassword ? "visibility" : "visibility-off"}
                   size={20}
-                  color="#A0A0A0"
+                  color="#FFFFFF"
                 />
-              </TouchableOpacity>
+              </CircularIconButton>
             </View>
-
-            <TouchableOpacity 
-              style={[styles.registerButton, loading && styles.disabledButton]} 
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? "Cadastrando..." : "Cadastrar"}
-              </Text>
-            </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={styles.bottomContainer}>
+          <GradientButton 
+            title={loading ? "Cadastrando..." : "Próximo"} 
+            onPress={handleRegister}
+            disabled={loading}
+          />
         </View>
       </SafeAreaView>
     </View>
@@ -148,7 +177,7 @@ const SignUpPassword: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#0A0A0A",
   },
   safeArea: {
     flex: 1,
@@ -156,35 +185,50 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    paddingTop: 80,
+    paddingTop: 20,
   },
-  backButton: {
-    position: "absolute",
-    top: 15,
-    left: 15,
-    zIndex: 1,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
   },
-  welcomeText: {
+  title: {
     fontSize: 32,
+    marginLeft: 15,
+  },
+  titleBold: {
     fontWeight: "bold",
-    color: "#7456C8",
-    marginBottom: 5,
+    color: "#FFFFFF",
   },
   subtitle: {
     fontSize: 16,
-    color: "#A09CAB",
+    color: "#8A8A8A",
     marginBottom: 30,
   },
   form: {
     width: "100%",
+  },
+  inputContainer: {
+    width: "100%",
+    marginBottom: 15,
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#1C1C1C",
+    borderRadius: 25,
+    paddingRight: 8,
+  },
+  input: {
+    flex: 1,
+    padding: 18,
+    color: "#FFFFFF",
+    fontSize: 16,
+  },
+  eyeButton: {
+    marginLeft: 8,
   },
   passwordRequirements: {
     width: "100%",
-    backgroundColor: "#1C1C1C",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   requirementsTitle: {
     fontSize: 16,
@@ -194,43 +238,12 @@ const styles = StyleSheet.create({
   },
   requirementItem: {
     fontSize: 14,
-    color: "#A09CAB",
+    color: "#8A8A8A",
     marginBottom: 5,
   },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 20,
-    position: "relative",
-  },
-  input: {
-    backgroundColor: "#1C1C1C",
-    padding: 15,
-    paddingRight: 50,
-    borderRadius: 10,
-    color: "#FFFFFF",
-    fontSize: 16,
-  },
-  eyeIcon: {
-    position: "absolute",
-    right: 16,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-  },
-  registerButton: {
-    width: "100%",
-    backgroundColor: "#7456C8",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  disabledButton: {
-    backgroundColor: "#A0A0A0",
-    opacity: 0.7,
+  bottomContainer: {
+    padding: 20,
+    paddingBottom: 30,
   },
 });
 

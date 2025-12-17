@@ -1,11 +1,11 @@
-import { User, UserCredentials, UserRegistration } from '../../domain/entities/User';
+import { User, UserCredentials, UserRegistration, LoginResult } from '../../domain/entities/User';
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { UserDataSource } from '../datasources/UserDataSource';
 
 export class UserRepositoryImpl implements UserRepository {
   constructor(private userDataSource: UserDataSource) {}
 
-  async login(credentials: UserCredentials): Promise<User> {
+  async login(credentials: UserCredentials): Promise<LoginResult> {
     return await this.userDataSource.login(credentials);
   }
 
@@ -24,4 +24,4 @@ export class UserRepositoryImpl implements UserRepository {
   async logout(): Promise<void> {
     return await this.userDataSource.logout();
   }
-} 
+}

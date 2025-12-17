@@ -2,8 +2,10 @@ import { NavigationProp as RNNavigationProp } from '@react-navigation/native';
 
 export type RootStackParamList = {
   Login: undefined;
-  SiginUp: undefined;
-  SignUpPassword: { name: string; email: string; phone: string };
+  SignUpName: undefined;
+  SignUpContact: { name: string; username: string };
+  SignUpVerification: { name: string; username: string; email: string; phone: string };
+  SignUpPassword: { name: string; username: string; email: string; phone: string };
   Home: undefined;
   Roulette: undefined;
   MenuEducacional: undefined;
