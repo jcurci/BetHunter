@@ -47,9 +47,7 @@ import VideosIcon from "../../assets/home/videos.svg";
 import BetcoinIcon from "../../assets/home/betcoin.svg";
 
 // Domain & Infrastructure
-import { Container } from "../../infrastructure/di/Container";
-import { Article } from "../../domain/entities/Article";
-import { User } from "../../domain/entities/User";
+
 import { NavigationProp } from "../../types/navigation";
 
 // Constants
@@ -63,8 +61,8 @@ type TabType = "conta" | "parceiros" | "social";
 
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  const [articles, setArticles] = useState<any[]>([]);
+  const [user, setUser] = useState<string | null>(null);
   const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>("conta");
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
@@ -72,7 +70,7 @@ const Home: React.FC = () => {
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
   const carouselRef = useRef<ScrollView>(null);
-  const container = Container.getInstance();
+  
 
   useEffect(() => {
     loadData();
@@ -99,23 +97,10 @@ const Home: React.FC = () => {
   }, [showBlockSuccessModal]);
 
   const loadData = async () => {
-    try {
-      const articleUseCase = container.getArticleUseCase();
-      const userUseCase = container.getUserUseCase();
-
-      const [articlesData, currentUser] = await Promise.all([
-        articleUseCase.getArticles(),
-        userUseCase.getCurrentUser(),
-      ]);
-
-      setArticles(articlesData);
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    }
+  
   };
 
-  const getArticleImage = (article: Article): ReactElement | null => {
+  const getArticleImage = (article: any): ReactElement | null => {
     const imageMap: Record<string, ReactElement> = {
       bitcoin: <ImageBitcoin width="100%" height={90} />,
       moeda: <ImageMoeda width="100%" height={90} />,
@@ -211,7 +196,7 @@ const Home: React.FC = () => {
             style={{ flex: 1 }}
           >
             <Text style={[styles.greetingText, { opacity: 0 }]}>
-              {user?.name || "Usuário"}
+              "John Doe"
             </Text>
           </LinearGradient>
         </MaskedView>

@@ -11,8 +11,6 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { Footer, StatsDisplay, Avatar, DayCounter, IconCard } from "../../components";
-import { Container } from "../../infrastructure/di/Container";
-import { User } from "../../domain/entities/User";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 
@@ -29,23 +27,15 @@ const XP_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#14121B"] as const
 const XP_GRADIENT_LOCATIONS = [0.0, 0.15, 0.32, 0.62] as const;
 
 const MenuEducacional: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const container = Container.getInstance();
+  const [user, setUser] = useState< | null>(null);
+  
   const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
-    loadUser();
+   
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const userUseCase = container.getUserUseCase();
-      const currentUser = await userUseCase.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading user:", error);
-    }
-  };
+ 
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";
@@ -62,7 +52,7 @@ const MenuEducacional: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Avatar initials={getInitials(user?.name)} size={48} style={styles.avatar} />
+            <Avatar initials={getInitials("John Doe")} size={48} style={styles.avatar} />
             <View style={styles.titleContainer}>
               <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit={false}>
                 Menu{"\n"}Educacional

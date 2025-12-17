@@ -15,8 +15,6 @@ import IconMaterial from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Footer, StatsDisplay, Avatar, BackIconButton, Modal, GradientBorderButton } from "../../components";
-import { Container } from "../../infrastructure/di/Container";
-import { User } from "../../domain/entities/User";
 import { NavigationProp } from "../../types/navigation";
 import {
   BUTTON_BORDER_GRADIENT_COLORS,
@@ -28,6 +26,8 @@ import {
 
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
+import { useAuthStore } from "../../storage/authStore";
+import { AuthUser } from "../../domain/entities/User";
 
 // Assets
 const IconBook = require("../../assets/icon-book.png");
@@ -138,7 +138,8 @@ const MOCK_LEARNING_MODULES: LearningModule[] = [
 
 const Cursos = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
+  const authStore = useAuthStore();
+  const user = authStore.user;
   const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,8 +147,6 @@ const Cursos = () => {
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const { isSaved, toggleSave } = useSavedCoursesStore();
-  const container = Container.getInstance();
-  
 
   useEffect(() => {
     loadData();
@@ -162,10 +161,7 @@ const Cursos = () => {
     try {
       setLoading(true);
 
-      // Carregar dados do usuário
-      const userUseCase = container.getUserUseCase();
-      const currentUser = await userUseCase.getCurrentUser();
-      setUser(currentUser);
+      // Usuário já vem do authStore, não precisa mais buscar
 
       // Serviço de lições temporariamente offline.
       // Quando estiver disponível novamente, reative as linhas abaixo para utilizar os dados reais:

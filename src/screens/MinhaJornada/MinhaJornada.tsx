@@ -10,8 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from "@react-navigation/native";
 import { Footer, Avatar, BackIconButton, RadialGradientBackground } from "../../components";
-import { Container } from "../../infrastructure/di/Container";
-import { User } from "../../domain/entities/User";
+
 import { NavigationProp } from "../../types/navigation";
 import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
 const HEATMAP_COLORS = ["#1A1825", "#3D2B5A", "#6B4D8A", "#9B6FB8", "#D783D8"];
@@ -53,9 +52,9 @@ const generateHeatmapData = () => {
 
 const MinhaJornada: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<string | null>(null);
   const [heatmapData] = useState(generateHeatmapData());
-  const container = Container.getInstance();
+
 
   // Mock data
   const stats = {
@@ -71,18 +70,10 @@ const MinhaJornada: React.FC = () => {
   };
 
   useEffect(() => {
-    loadUser();
+    
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const userUseCase = container.getUserUseCase();
-      const currentUser = await userUseCase.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading user:", error);
-    }
-  };
+ 
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";

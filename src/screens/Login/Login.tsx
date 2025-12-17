@@ -11,14 +11,13 @@ import {
 import Icon from "react-native-vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import { Container } from "../../infrastructure/di/Container";
 import Logo from "../../assets/logo-img/LogoImgETexto.svg";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { NavigationProp } from "../../types/navigation";
 import { HORIZONTAL_GRADIENT } from "../../config/colors";
 import { RadialGradientBackground } from "../../components";
 import { useAuthStore } from "../../storage/authStore";
-import { toAuthUser } from "../../domain/entities/User";
+import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 
 const Login: React.FC = () => {
@@ -27,16 +26,40 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
-  const container = Container.getInstance();
   const authStore = useAuthStore();
 
   const toggleShowPassword = (): void => {
     setShowPassword(!showPassword);
   };
 
-  const handleLogin = (): void => {
-    // TODO: Restaurar autenticação real após testes
-    navigation.navigate("Home");
+  const handleLogin = async (): Promise<void> => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Erro", "Preencha email e senha");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const container = Container.getInstance();
+      const loginUseCase = container.getLoginUseCase();
+
+      const session = await loginUseCase.execute(email, password);
+
+      // Salvar token no authStore
+      authStore.setToken(session.accessToken);
+
+      // Navegar para Home
+      navigation.navigate("Home");
+    } catch (error: unknown) {
+      console.error("Erro ao fazer login:", error);
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro", error.message);
+      } else {
+        Alert.alert("Erro", "Erro ao fazer login. Verifique suas credenciais e tente novamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,7 +112,7 @@ const Login: React.FC = () => {
                 />
               </TouchableOpacity>
             </View>
-              <TouchableOpacity
+            <TouchableOpacity
               style={styles.forgotPassword}
               onPress={() => navigation.navigate("PasswordResetMethod")}
             >
@@ -139,7 +162,7 @@ const Login: React.FC = () => {
               </View>
             </TouchableOpacity>
 
-         
+
           </View>
         </View>
         <View style={styles.logoContainer}>

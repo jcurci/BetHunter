@@ -24,33 +24,43 @@ import {
   GradientBorderButton,
 } from "../../components";
 import { NavigationProp } from "../../types/navigation";
-import { Container } from "../../infrastructure/di/Container";
-import { User } from "../../domain/entities/User";
+import { useAuthStore } from "../../storage/authStore";
 import { useProfileStore } from "../../storage/profileStore";
 
 type EditableFieldType = "name" | "email" | "phone" | null;
 
 // Extended User type to include phone (will be added to User interface when API supports it)
-interface UserWithPhone extends User {
+interface UserWithPhone {
+  id: string;
+  name: string;
+  email: string;
+  points: number;
+  betcoins: number;
   phone?: string;
 }
 
 const DetalhesPessoais: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [user, setUser] = useState<UserWithPhone | null>(null);
+  const authStore = useAuthStore();
+  const [user, setUser] = useState<UserWithPhone | null>(
+    authStore.user ? { ...authStore.user } : null
+  );
   const [editingField, setEditingField] = useState<EditableFieldType>(null);
   const [confirmingValue, setConfirmingValue] = useState<string>("");
   const [confirmingField, setConfirmingField] = useState<EditableFieldType>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successFieldLabel, setSuccessFieldLabel] = useState<string>("");
   const { profileImageUri, setProfileImage, loadProfileImage } = useProfileStore();
-  const container = Container.getInstance();
+  
 
   useEffect(() => {
-    loadUser();
+    // Carrega usuário do authStore diretamente
+    if (authStore.user) {
+      setUser({ ...authStore.user });
+    }
     loadProfileImage();
     requestImagePickerPermissions();
-  }, [loadProfileImage]);
+  }, [loadProfileImage, authStore.user]);
 
   const requestImagePickerPermissions = async () => {
     if (Platform.OS !== "web") {
@@ -61,16 +71,6 @@ const DetalhesPessoais: React.FC = () => {
           "Precisamos de permissão para acessar suas fotos!"
         );
       }
-    }
-  };
-
-  const loadUser = async () => {
-    try {
-      const userUseCase = container.getUserUseCase();
-      const currentUser = await userUseCase.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading user:", error);
     }
   };
 

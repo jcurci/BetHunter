@@ -11,7 +11,6 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
-import { Container } from "../../infrastructure/di/Container";
 import { CircularIconButton, GradientButton } from "../../components/common";
 
 interface ValidationErrors {
@@ -33,7 +32,7 @@ const SignUpPassword: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpPassword">>();
   const { name, username, email, phone } = route.params;
-  const container = Container.getInstance();
+  
 
   const validatePassword = (pass: string): string | undefined => {
     if (!pass) return undefined;
@@ -102,61 +101,7 @@ const SignUpPassword: React.FC = () => {
     !errors.password &&
     !errors.confirmPassword;
 
-  const handleRegister = async () => {
-    // Marcar todos como touched
-    setTouched({ password: true, confirmPassword: true });
-
-    const passwordError = validatePassword(password);
-    const confirmError = validateConfirmPassword(confirmPassword);
-
-    setErrors({
-      password: passwordError,
-      confirmPassword: confirmError,
-    });
-
-    // Se houver erros, não prosseguir
-    if (passwordError || confirmError) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userUseCase = container.getUserUseCase();
-      const result = await userUseCase.register({
-        name,
-        email,
-        password,
-        cellphone: phone,
-      });
-
-      console.log("Registro bem-sucedido:", result);
-      Alert.alert("Sucesso", "Cadastro realizado com sucesso! Faça login para continuar.", [
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          },
-        },
-      ]);
-    } catch (error: any) {
-      console.error("Erro no registro:", error);
-      
-      if (error.response?.status === 409) {
-        Alert.alert("Erro", "Este email já está cadastrado");
-      } else if (error.response?.status === 400) {
-        Alert.alert("Erro", "Dados inválidos. Verifique as informações");
-      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
-        Alert.alert("Erro", "Erro de conexão. Verifique sua internet");
-      } else {
-        Alert.alert("Erro", "Erro ao cadastrar. Tente novamente");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+ 
 
   return (
     <View style={styles.container}>
@@ -251,7 +196,7 @@ const SignUpPassword: React.FC = () => {
         <View style={styles.bottomContainer}>
           <GradientButton 
             title={loading ? "Cadastrando..." : "Próximo"} 
-            onPress={handleRegister}
+            
             disabled={loading || !isFormValid}
           />
         </View>

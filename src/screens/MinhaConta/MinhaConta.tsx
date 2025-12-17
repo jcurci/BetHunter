@@ -19,8 +19,9 @@ import {
   MenuSection,
 } from "../../components";
 import { NavigationProp } from "../../types/navigation";
-import { Container } from "../../infrastructure/di/Container";
-import { User } from "../../domain/entities/User";
+import { useAuthStore } from "../../storage/authStore";
+import { AuthUser } from "../../domain/entities/User";
+
 import {
   HORIZONTAL_GRADIENT_COLORS,
   BUTTON_BORDER_GRADIENT_COLORS,
@@ -60,22 +61,10 @@ const InviteIcon: React.FC = () => (
 
 const MinhaConta: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
-  const container = Container.getInstance();
+  const authStore = useAuthStore();
+  const user = authStore.user;
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const userUseCase = container.getUserUseCase();
-      const currentUser = await userUseCase.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading user:", error);
-    }
-  };
+  // Não precisa mais de loadUser - o usuário já vem do authStore
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";

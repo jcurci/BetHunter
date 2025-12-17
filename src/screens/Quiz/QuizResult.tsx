@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Container } from "../../infrastructure/di/Container";
 import { NavigationProp, RouteProp, RootStackParamList } from "../../types/navigation";
 
 const QuizResult = () => {
@@ -18,14 +17,8 @@ const QuizResult = () => {
   const [userName, setUserName] = useState("Usuário");
 
   useEffect(() => {
-    const container = Container.getInstance();
-    (async () => {
-      try {
-        const userUseCase = container.getUserUseCase();
-        const current = await userUseCase.getCurrentUser();
-        if (current?.name) setUserName(current.name);
-      } catch (_) {}
-    })();
+  
+    
   }, []);
 
   const passed = score / total >= 0.6; // regra simples: 60%
