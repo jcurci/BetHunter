@@ -27,7 +27,7 @@ export const useSavedCoursesStore = create<SavedCoursesState>()(
   persist(
     (set, get) => ({
       savedCourses: [],
-      
+
       addCourse: (course) => {
         set((state) => ({
           savedCourses: [
@@ -36,17 +36,17 @@ export const useSavedCoursesStore = create<SavedCoursesState>()(
           ],
         }));
       },
-      
+
       removeCourse: (courseId) => {
         set((state) => ({
           savedCourses: state.savedCourses.filter((c) => c.id !== courseId),
         }));
       },
-      
+
       isSaved: (courseId) => {
         return get().savedCourses.some((c) => c.id === courseId);
       },
-      
+
       toggleSave: (course) => {
         const { isSaved, addCourse, removeCourse } = get();
         if (isSaved(course.id)) {
@@ -62,10 +62,5 @@ export const useSavedCoursesStore = create<SavedCoursesState>()(
     }
   )
 );
-
-
-
-
-
 
 

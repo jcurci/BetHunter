@@ -70,10 +70,10 @@ const MinhaJornada: React.FC = () => {
   };
 
   useEffect(() => {
-    
+
   }, []);
 
- 
+
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";
@@ -157,127 +157,127 @@ const MinhaJornada: React.FC = () => {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-          {/* Profile Section */}
-          <View style={styles.profileSection}>
-            <Avatar initials={getInitials(user?.name)} size={80} />
-            <Text style={styles.userName}>{user?.name || "Jhon Doe"}</Text>
-            <Text style={styles.userHandle}>@{user?.name?.toLowerCase().replace(/\s+/g, "") || "jhondoe"}</Text>
-          </View>
-
-          {/* Stats Cards Row */}
-          <View style={styles.statsRow}>
-            {/* Days Card */}
-            <View style={styles.statCard}>
-              {renderGradientText(`${stats.diasLivreApostas}`, styles.statValueLarge)}
-              {renderGradientText("Dias", styles.statValueSmall)}
-              <Text style={styles.statDescription}>
-                Recorde atual de dias respectivos usando o app
-              </Text>
+            {/* Profile Section */}
+            <View style={styles.profileSection}>
+              <Avatar initials={getInitials(user?.name)} size={80} />
+              <Text style={styles.userName}>{user?.name || "Jhon Doe"}</Text>
+              <Text style={styles.userHandle}>@{user?.name?.toLowerCase().replace(/\s+/g, "") || "jhondoe"}</Text>
             </View>
 
-            {/* Modules Card */}
-            <View style={styles.statCard}>
-              {renderGradientText(`${stats.modulosCompletos}`, styles.statValueLarge)}
-              <Text style={styles.statDescription}>
-                Módulos completos na trilha de aprendizado
-              </Text>
-            </View>
-          </View>
-
-          {/* Value Card */}
-          <View style={styles.valueCard}>
-            <View style={styles.valueRow}>
-              {renderGradientText(formatCurrency(stats.valorTotal).split(",")[0] + ",", styles.valueText)}
-              <Text style={styles.valueCents}>
-                {formatCurrency(stats.valorTotal).split(",")[1]}
-              </Text>
-            </View>
-            <Text style={styles.valueDescription}>
-              Valor de todas as entradas e saídas já cadastradas no Meu Acessor
-            </Text>
-          </View>
-
-          {/* Rating Card */}
-          <View style={styles.ratingCard}>
-            {renderGradientText(`${stats.ratingMedio}`, styles.ratingValue)}
-            <Text style={styles.ratingDescription}>
-              O seu rating médio nos quizzes e cursos do Bethunter
-            </Text>
-            <View style={styles.ratingBarsContainer}>
-              {renderRatingBar("3 estrelas", stats.ratings.treseEstrelas)}
-              {renderRatingBar("2 estrelas", stats.ratings.duasEstrelas)}
-              {renderRatingBar("1 estrela", stats.ratings.umaEstrela)}
-            </View>
-          </View>
-
-          {/* Heatmap Card */}
-          <View style={styles.heatmapCard}>
-            {renderGradientText("Heatmap", styles.heatmapTitle)}
-            <Text style={styles.heatmapDescription}>
-              O seu mapa de atividade no último ano dentro do Bethunter
-            </Text>
-
-            {/* Main Heatmap Container */}
-            <View style={styles.heatmapMainContainer}>
-              {/* Fixed Day Labels Column */}
-              <View style={styles.dayLabelsColumn}>
-                {/* Empty space for month labels alignment */}
-                <View style={styles.dayLabelsHeader} />
-                {/* Day labels */}
-                {DAY_LABELS.map((day, index) => (
-                  <View key={`day-${index}`} style={styles.dayLabelCell}>
-                    {index % 2 === 1 && (
-                      <Text style={styles.dayLabel}>{day}</Text>
-                    )}
-                  </View>
-                ))}
+            {/* Stats Cards Row */}
+            <View style={styles.statsRow}>
+              {/* Days Card */}
+              <View style={styles.statCard}>
+                {renderGradientText(`${stats.diasLivreApostas}`, styles.statValueLarge)}
+                {renderGradientText("Dias", styles.statValueSmall)}
+                <Text style={styles.statDescription}>
+                  Recorde atual de dias respectivos usando o app
+                </Text>
               </View>
 
-              {/* Scrollable Grid Area */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.heatmapScrollView}
-                contentContainerStyle={styles.heatmapScrollContent}
-              >
-                <View>
-                  {/* Month Labels Row */}
-                  <View style={styles.monthLabelsRow}>
-                    {monthPositions.map(({ month, weekIndex }, index) => (
-                      <Text
-                        key={`month-${index}`}
-                        style={[
-                          styles.monthLabel,
-                          { left: weekIndex * WEEK_WIDTH },
-                        ]}
-                      >
-                        {month}
-                      </Text>
-                    ))}
-                  </View>
+              {/* Modules Card */}
+              <View style={styles.statCard}>
+                {renderGradientText(`${stats.modulosCompletos}`, styles.statValueLarge)}
+                <Text style={styles.statDescription}>
+                  Módulos completos na trilha de aprendizado
+                </Text>
+              </View>
+            </View>
 
-                  {/* Weeks Grid (columns of days) */}
-                  <View style={styles.weeksGrid}>
-                    {heatmapData.map((weekData, weekIndex) =>
-                      renderWeekColumn(weekData, weekIndex)
-                    )}
-                  </View>
+            {/* Value Card */}
+            <View style={styles.valueCard}>
+              <View style={styles.valueRow}>
+                {renderGradientText(formatCurrency(stats.valorTotal).split(",")[0] + ",", styles.valueText)}
+                <Text style={styles.valueCents}>
+                  {formatCurrency(stats.valorTotal).split(",")[1]}
+                </Text>
+              </View>
+              <Text style={styles.valueDescription}>
+                Valor de todas as entradas e saídas já cadastradas no Meu Acessor
+              </Text>
+            </View>
+
+            {/* Rating Card */}
+            <View style={styles.ratingCard}>
+              {renderGradientText(`${stats.ratingMedio}`, styles.ratingValue)}
+              <Text style={styles.ratingDescription}>
+                O seu rating médio nos quizzes e cursos do Bethunter
+              </Text>
+              <View style={styles.ratingBarsContainer}>
+                {renderRatingBar("3 estrelas", stats.ratings.treseEstrelas)}
+                {renderRatingBar("2 estrelas", stats.ratings.duasEstrelas)}
+                {renderRatingBar("1 estrela", stats.ratings.umaEstrela)}
+              </View>
+            </View>
+
+            {/* Heatmap Card */}
+            <View style={styles.heatmapCard}>
+              {renderGradientText("Heatmap", styles.heatmapTitle)}
+              <Text style={styles.heatmapDescription}>
+                O seu mapa de atividade no último ano dentro do Bethunter
+              </Text>
+
+              {/* Main Heatmap Container */}
+              <View style={styles.heatmapMainContainer}>
+                {/* Fixed Day Labels Column */}
+                <View style={styles.dayLabelsColumn}>
+                  {/* Empty space for month labels alignment */}
+                  <View style={styles.dayLabelsHeader} />
+                  {/* Day labels */}
+                  {DAY_LABELS.map((day, index) => (
+                    <View key={`day-${index}`} style={styles.dayLabelCell}>
+                      {index % 2 === 1 && (
+                        <Text style={styles.dayLabel}>{day}</Text>
+                      )}
+                    </View>
+                  ))}
                 </View>
-              </ScrollView>
-            </View>
 
-            {/* Legend */}
-            <View style={styles.legendContainer}>
-              <Text style={styles.legendText}>Menos</Text>
-              {HEATMAP_COLORS.map((color, index) => (
-                <View
-                  key={`legend-${index}`}
-                  style={[styles.legendCell, { backgroundColor: color }]}
-                />
-              ))}
-              <Text style={styles.legendText}>Mais</Text>
+                {/* Scrollable Grid Area */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.heatmapScrollView}
+                  contentContainerStyle={styles.heatmapScrollContent}
+                >
+                  <View>
+                    {/* Month Labels Row */}
+                    <View style={styles.monthLabelsRow}>
+                      {monthPositions.map(({ month, weekIndex }, index) => (
+                        <Text
+                          key={`month-${index}`}
+                          style={[
+                            styles.monthLabel,
+                            { left: weekIndex * WEEK_WIDTH },
+                          ]}
+                        >
+                          {month}
+                        </Text>
+                      ))}
+                    </View>
+
+                    {/* Weeks Grid (columns of days) */}
+                    <View style={styles.weeksGrid}>
+                      {heatmapData.map((weekData, weekIndex) =>
+                        renderWeekColumn(weekData, weekIndex)
+                      )}
+                    </View>
+                  </View>
+                </ScrollView>
+              </View>
+
+              {/* Legend */}
+              <View style={styles.legendContainer}>
+                <Text style={styles.legendText}>Menos</Text>
+                {HEATMAP_COLORS.map((color, index) => (
+                  <View
+                    key={`legend-${index}`}
+                    style={[styles.legendCell, { backgroundColor: color }]}
+                  />
+                ))}
+                <Text style={styles.legendText}>Mais</Text>
+              </View>
             </View>
-          </View>
           </ScrollView>
         </View>
       </RadialGradientBackground>
@@ -513,6 +513,5 @@ const styles = StyleSheet.create({
 });
 
 export default MinhaJornada;
-
 
 
