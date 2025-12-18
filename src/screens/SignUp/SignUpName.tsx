@@ -53,17 +53,41 @@ const SignUpName: React.FC = () => {
 
   const handleNameChange = (value: string) => {
     setName(value);
-    if (touched.name) {
-      setErrors((prev) => ({ ...prev, name: validateName(value) }));
+    
+    // Marca como touched quando começar a digitar
+    if (value.length > 0 && !touched.name) {
+      setTouched((prev) => ({ ...prev, name: true }));
+    }
+
+    if (touched.name || value.length > 0) {
+      // Se o campo estiver vazio, limpa o erro
+      if (!value.trim()) {
+        setErrors((prev) => ({ ...prev, name: undefined }));
+      } else {
+        setErrors((prev) => ({ ...prev, name: validateName(value) }));
+      }
     }
   };
 
   const handleUsernameChange = (value: string) => {
-    // Remove espaços e caracteres especiais ao digitar
+    // Remove espaços ao digitar
     const cleanValue = value.toLowerCase().replace(/\s/g, "");
     setUsername(cleanValue);
-    if (touched.username) {
-      setErrors((prev) => ({ ...prev, username: validateUsername(cleanValue) }));
+
+    // Marca como touched quando começar a digitar
+    if (cleanValue.length > 0 && !touched.username) {
+      setTouched((prev) => ({ ...prev, username: true }));
+    }
+
+    if (touched.username || cleanValue.length > 0) {
+      // Se campo vazio, limpa o erro
+      if (!cleanValue.trim()) {
+        setErrors((prev) => ({ ...prev, username: undefined }));
+      } else {
+        // Usa a função de validação completa para ser consistente
+        const error = validateUsername(cleanValue);
+        setErrors((prev) => ({ ...prev, username: error }));
+      }
     }
   };
 
@@ -76,6 +100,15 @@ const SignUpName: React.FC = () => {
     setTouched((prev) => ({ ...prev, username: true }));
     setErrors((prev) => ({ ...prev, username: validateUsername(username) }));
   };
+
+  // Verifica se o formulário é válido para habilitar o botão
+  const isFormValid = 
+    name.trim().length >= 3 && 
+    username.length >= 3 && 
+    username.length <= 32 &&
+    /^[a-zA-Z0-9_]+$/.test(username) &&
+    !errors.name && 
+    !errors.username;
 
   const handleNext = () => {
     // Marcar todos como touched
@@ -169,7 +202,7 @@ const SignUpName: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} />
+          <GradientButton title="Próximo" onPress={handleNext} disabled={!isFormValid} />
         </View>
       </SafeAreaView>
     </View>

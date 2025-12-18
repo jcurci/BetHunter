@@ -20,7 +20,7 @@ const SignUpVerification: React.FC = () => {
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [countdown, setCountdown] = useState<number>(30);
   const [canResend, setCanResend] = useState<boolean>(false);
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const inputRefs = useRef<(TextInput | null)[]>(Array(CODE_LENGTH).fill(null));
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpVerification">>();
   const { name, username, email, phone } = route.params;
@@ -64,6 +64,9 @@ const SignUpVerification: React.FC = () => {
     }
   };
 
+  // Verifica se o código está completo
+  const isCodeComplete = code.every(digit => digit !== "");
+
   const handleNext = () => {
     const fullCode = code.join("");
     
@@ -98,7 +101,7 @@ const SignUpVerification: React.FC = () => {
             {code.map((digit, index) => (
               <View key={index} style={styles.codeInputWrapper}>
                 <TextInput
-                  ref={(ref) => (inputRefs.current[index] = ref)}
+                  ref={(ref) => { inputRefs.current[index] = ref; }}
                   style={styles.codeInput}
                   value={digit}
                   onChangeText={(text) => handleCodeChange(text, index)}
@@ -123,7 +126,7 @@ const SignUpVerification: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} />
+          <GradientButton title="Próximo" onPress={handleNext} disabled={!isCodeComplete} />
         </View>
       </SafeAreaView>
     </View>

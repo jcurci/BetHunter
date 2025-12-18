@@ -26,7 +26,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
       colors={gradientColors}
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}
-      style={[styles.gradient, containerStyle]}
+      style={[styles.gradient, containerStyle, disabled && styles.disabledGradient]}
     >
       <TouchableOpacity
         onPress={onPress}
@@ -57,6 +57,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  disabledGradient: {
+    opacity: 0.5,
   },
 });
 

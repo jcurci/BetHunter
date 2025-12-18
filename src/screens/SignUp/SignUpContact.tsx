@@ -17,6 +17,10 @@ const SignUpContact: React.FC = () => {
   const [phone, setPhone] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
   const [phoneError, setPhoneError] = useState<string>("");
+  const [touched, setTouched] = useState<{ email: boolean; phone: boolean }>({
+    email: false,
+    phone: false,
+  });
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpContact">>();
   const { name, username } = route.params;
@@ -41,49 +45,75 @@ const SignUpContact: React.FC = () => {
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    // Limpa o erro enquanto digita (se já estava válido)
-    if (emailError && !validateEmail(value)) {
-      setEmailError("");
+    
+    // Marca como touched quando começar a digitar
+    if (value.length > 0 && !touched.email) {
+      setTouched((prev) => ({ ...prev, email: true }));
+    }
+
+    if (touched.email || value.length > 0) {
+      // Se campo vazio, limpa o erro
+      if (!value.trim()) {
+        setEmailError("");
+      } else {
+        // Valida em tempo real
+        setEmailError(validateEmail(value));
+      }
     }
   };
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
-    // Limpa o erro enquanto digita (se já estava válido)
-    if (phoneError && !validatePhone(value)) {
-      setPhoneError("");
+    
+    // Marca como touched quando começar a digitar
+    if (value.length > 0 && !touched.phone) {
+      setTouched((prev) => ({ ...prev, phone: true }));
+    }
+
+    if (touched.phone || value.length > 0) {
+      // Se campo vazio, limpa o erro
+      if (!value.trim()) {
+        setPhoneError("");
+      } else {
+        // Valida em tempo real
+        setPhoneError(validatePhone(value));
+      }
     }
   };
 
   const handleEmailBlur = () => {
+    setTouched((prev) => ({ ...prev, email: true }));
     setEmailError(validateEmail(email));
   };
 
   const handlePhoneBlur = () => {
+    setTouched((prev) => ({ ...prev, phone: true }));
     setPhoneError(validatePhone(phone));
   };
 
+  // Verifica se o formulário é válido para habilitar o botão
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneDigits = phone.replace(/\D/g, "");
+  const isFormValid = 
+    email.trim() !== "" && 
+    emailRegex.test(email) &&
+    phoneDigits.length === 11 &&
+    !emailError && 
+    !phoneError;
+
   const handleNext = () => {
-    // Validar campos vazios
-    if (!email.trim()) {
-      setEmailError("Digite um endereço de email válido");
-      return;
-    }
-    if (!phone.trim()) {
-      setPhoneError("Digite um número de telefone válido");
-      return;
-    }
+    // Marcar todos como touched
+    setTouched({ email: true, phone: true });
 
     // Validar formato
     const emailValidation = validateEmail(email);
     const phoneValidation = validatePhone(phone);
 
-    if (emailValidation) {
-      setEmailError(emailValidation);
-      return;
-    }
-    if (phoneValidation) {
-      setPhoneError(phoneValidation);
+    setEmailError(emailValidation || (!email.trim() ? "Digite um endereço de email válido" : ""));
+    setPhoneError(phoneValidation || (!phone.trim() ? "Digite um número de telefone válido" : ""));
+
+    // Se houver erros, não prosseguir
+    if (emailValidation || phoneValidation || !email.trim() || !phone.trim()) {
       return;
     }
 
@@ -160,7 +190,7 @@ const SignUpContact: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} />
+          <GradientButton title="Próximo" onPress={handleNext} disabled={!isFormValid} />
         </View>
       </SafeAreaView>
     </View>
