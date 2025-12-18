@@ -407,3 +407,4 @@ async login(credentials: UserCredentials): Promise<LoginResult> {
 6. **Tela** recebe `{ user, token }`, atualiza Zustand, navega para Home
 
 
+

@@ -208,11 +208,11 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   input: {
-    backgroundColor: "#2B2935",
+    backgroundColor: "#14121B",
     padding: 16,
     paddingRight: 50,
     borderRadius: 10,
-    color: "#FFFFFF",
+    color: "#4F4C56",
     fontSize: 16,
     marginBottom: 2,
   },
