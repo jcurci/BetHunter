@@ -22,11 +22,11 @@ const abcIcon = require("../../assets/icon-abc.png");
 const diceIcon = require("../../assets/icon-dados.png");
 const savedAbcIcon = require("../../assets/icon-saves-abc.png");
 import EmojiHappy from "../../assets/emoji-happy.svg";
+import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
 
 // Constants
-const XP_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#14121B"];
-const XP_GRADIENT_LOCATIONS = [0.0, 0.15, 0.32, 0.62];
-const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+const XP_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#14121B"] as const;
+const XP_GRADIENT_LOCATIONS = [0.0, 0.15, 0.32, 0.62] as const;
 
 const MenuEducacional: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -192,27 +192,27 @@ const MenuEducacional: React.FC = () => {
                 {/* Bloco interno decorativo */}
                 <View style={styles.courseTextContainer}>
                   <View style={styles.courseTextInnerContainer}>
-                    <MaskedView
-                      style={styles.courseTitleContainer}
-                      maskElement={
+                  <MaskedView
+                    style={styles.courseTitleContainer}
+                    maskElement={
                         <Text style={[styles.courseTitle, { backgroundColor: "transparent" }]}>
-                          Fundamentos
-                        </Text>
-                      }
+                        Fundamentos
+                      </Text>
+                    }
+                  >
+                    <LinearGradient
+                        colors={HORIZONTAL_GRADIENT_COLORS}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.courseTitleGradient}
                     >
-                      <LinearGradient
-                        colors={TEXT_GRADIENT_COLORS}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.courseTitleGradient}
-                      >
-                        <Text style={[styles.courseTitle, { opacity: 0 }]}>
-                          Fundamentos
-                        </Text>
-                      </LinearGradient>
-                    </MaskedView>
-                    <Text style={styles.courseProgress}>1/4</Text>
-                  </View>
+                      <Text style={[styles.courseTitle, { opacity: 0 }]}>
+                        Fundamentos
+                      </Text>
+                    </LinearGradient>
+                  </MaskedView>
+                  <Text style={styles.courseProgress}>1/4</Text>
+                </View>
                 </View>
 
                 {/* Espaço flexível para distanciar a seta */}

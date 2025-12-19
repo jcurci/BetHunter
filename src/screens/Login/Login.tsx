@@ -16,13 +16,10 @@ import Logo from "../../assets/logo-img/LogoImgETexto.svg";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { NavigationProp } from "../../types/navigation";
 import { HORIZONTAL_GRADIENT } from "../../config/colors";
+import { RadialGradientBackground } from "../../components";
 import { useAuthStore } from "../../storage/authStore";
 import { toAuthUser } from "../../domain/entities/User";
 import { ValidationError } from "../../domain/errors/CustomErrors";
-
-// Constants
-const BACKGROUND_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#0F0E11", "#000000"] as const;
-const BACKGROUND_GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62, 1] as const;
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -45,14 +42,8 @@ const Login: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Background Gradient - Top to Bottom */}
-        <LinearGradient
-          colors={BACKGROUND_GRADIENT_COLORS}
-          locations={BACKGROUND_GRADIENT_LOCATIONS}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.backgroundGradient}
-        />
+        {/* Background Gradient - Radial Effect */}
+        <RadialGradientBackground style={styles.backgroundGradient} />
 
         <View style={styles.content}>
           <MaskedView

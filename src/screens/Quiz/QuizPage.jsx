@@ -566,10 +566,10 @@ const QuizPage = () => {
                 {isTipLoading ? (
                   <Text style={styles.tipTextContent}>Pensando em uma resposta...</Text>
                 ) : (
-                  <Text style={styles.tipTextContent}>
+                <Text style={styles.tipTextContent}>
                     {displayedTipText}
                     {isTyping && <Text style={styles.typingCursor}>|</Text>}
-                  </Text>
+                </Text>
                 )}
               </View>
             </View>

@@ -1,6 +1,6 @@
 import { ViewStyle, TextStyle } from 'react-native';
 
-export type ModalSize = 'bigger' | 'big' | 'medium' | 'small';
+export type ModalSize = 'bigger' | 'big' | 'medium' | 'small' | 'smaller';
 export type AnimationType = 'slide' | 'fade';
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 

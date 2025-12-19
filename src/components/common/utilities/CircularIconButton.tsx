@@ -1,6 +1,14 @@
 import React from "react";
 import { TouchableOpacity, View, StyleSheet, ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import {
+  BUTTON_BORDER_GRADIENT_COLORS,
+  BUTTON_BORDER_GRADIENT_LOCATIONS,
+  BUTTON_BORDER_GRADIENT,
+  BUTTON_HIGHLIGHT_COLORS,
+  BUTTON_INNER_BACKGROUND,
+  BUTTON_INNER_BORDER_COLOR,
+} from "../../../config/colors";
 
 interface CircularIconButtonProps {
   onPress?: () => void;
@@ -14,39 +22,62 @@ const CircularIconButton: React.FC<CircularIconButtonProps> = ({
   onPress,
   children,
   size = 42,
-  gradientColors = ["rgba(255,255,255,0.35)", "rgba(255,255,255,0.05)", "rgba(0,0,0,0.2)"] as const,
+  gradientColors = BUTTON_BORDER_GRADIENT_COLORS,
   containerStyle,
 }) => {
   return (
+    <View style={[styles.wrapper, { width: size, height: size, borderRadius: size / 2 }, containerStyle]}>
     <LinearGradient
       colors={gradientColors}
-      start={{ x: 0.2, y: 0 }}
-      end={{ x: 0.8, y: 1 }}
-      style={[styles.outerRing, { width: size, height: size, borderRadius: size / 2 }, containerStyle]}
-    >
+        locations={BUTTON_BORDER_GRADIENT_LOCATIONS}
+        start={BUTTON_BORDER_GRADIENT.start}
+        end={BUTTON_BORDER_GRADIENT.end}
+        style={[styles.outerRing, { width: size, height: size, borderRadius: size / 2 }]}
+      >
+        {/* Highlight no topo */}
+        <LinearGradient
+          colors={BUTTON_HIGHLIGHT_COLORS}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[styles.highlight, { borderRadius: size / 2 }]}
+          pointerEvents="none"
+        />
+        
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
-        style={[styles.innerButton, { width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }]}
+          style={[styles.innerButton, { width: size - 4, height: size - 4, borderRadius: (size - 4) / 2 }]}
       >
         <View style={styles.iconWrapper}>{children}</View>
       </TouchableOpacity>
     </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    overflow: "hidden",
+  },
   outerRing: {
-    padding: 3,
+    padding: 2,
     justifyContent: "center",
     alignItems: "center",
   },
+  highlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "60%",
+    opacity: 0.9,
+  },
   innerButton: {
-    backgroundColor: "rgba(19, 18, 30, 0.85)",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: BUTTON_INNER_BORDER_COLOR,
   },
   iconWrapper: {
     justifyContent: "center",

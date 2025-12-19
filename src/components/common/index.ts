@@ -10,4 +10,6 @@ export { CloseIconButton, HelpIconButton, BackIconButton } from './utilities/Ico
 export { QuizPrimaryButton, QuizDisabledButton } from './utilities/QuizButtons';
 export { default as CircularIconButton } from './utilities/CircularIconButton';
 export { default as GradientButton } from './utilities/GradientButton';
+export { default as RadialGradientBackground } from './RadialGradientBackground';
+export { default as GradientBorderButton } from './GradientBorderButton';
 
