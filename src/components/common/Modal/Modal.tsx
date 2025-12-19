@@ -13,6 +13,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ModalProps, ButtonConfig, HeaderAction } from './Modal.types';
+import {
+  BACKGROUND_GRADIENT_COLORS,
+  BACKGROUND_GRADIENT_LOCATIONS,
+  SHADOW_OVERLAY_COLORS,
+} from '../../../config/colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -21,10 +26,8 @@ const SIZE_HEIGHTS = {
   big: SCREEN_HEIGHT * 0.7,
   medium: SCREEN_HEIGHT * 0.5,
   small: SCREEN_HEIGHT * 0.3,
+  smaller: SCREEN_HEIGHT * 0.2,
 };
-
-const GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#1A1923", "#000000"];
-const GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62, 1];
 
 const CustomModal: React.FC<ModalProps> = ({
   visible,
@@ -117,17 +120,42 @@ const CustomModal: React.FC<ModalProps> = ({
             : { opacity: fadeAnim },
         ]}
       >
-        {/* Background Gradient */}
+        {/* Background Base - Dark */}
+        <View style={[styles.backgroundGradient, { backgroundColor: '#000000' }]} />
+        
+        {/* Radial Effect - Simulated with overlapping gradients */}
+        {/* Vertical gradient from top center */}
         <LinearGradient
-          colors={GRADIENT_COLORS}
-          locations={GRADIENT_LOCATIONS}
-          start={{ x: 0.25, y: 0 }}
-          end={{ x: 0.75, y: 1 }}
+          colors={BACKGROUND_GRADIENT_COLORS}
+          locations={BACKGROUND_GRADIENT_LOCATIONS}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.backgroundGradient}
+        />
+        
+        {/* Left shadow overlay */}
+        <LinearGradient
+          colors={SHADOW_OVERLAY_COLORS}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.5, y: 0 }}
+          style={styles.backgroundGradient}
+        />
+        
+        {/* Right shadow overlay */}
+        <LinearGradient
+          colors={SHADOW_OVERLAY_COLORS}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0.5, y: 0 }}
           style={styles.backgroundGradient}
         />
 
+        {/* Handle Bar for smaller modals */}
+        {size === 'smaller' && (
+          <View style={styles.handleBar} />
+        )}
+
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, size === 'smaller' && styles.headerSmaller]}>
           {/* Left Actions */}
           <View style={styles.headerLeft}>
             {showCloseButton && (
@@ -143,7 +171,7 @@ const CustomModal: React.FC<ModalProps> = ({
           </View>
 
           {/* Center - Title and Subtitle */}
-          <View style={styles.headerCenter}>
+          <View style={[styles.headerCenter, size === 'smaller' && styles.headerCenterSmaller]}>
             {title && <Text style={styles.title}>{title}</Text>}
             {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
           </View>
@@ -203,6 +231,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     overflow: 'hidden',
   },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+  },
   backgroundGradient: {
     position: 'absolute',
     top: 0,
@@ -234,6 +270,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 80,
+  },
+  headerCenterSmaller: {
+    position: 'relative',
+    top: 0,
+    paddingHorizontal: 20,
+    flex: 1,
+  },
+  headerSmaller: {
+    paddingTop: 16,
+    paddingBottom: 12,
+    justifyContent: 'center',
   },
   headerRight: {
     flexDirection: 'row',

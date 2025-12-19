@@ -10,7 +10,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import { Avatar, CloseIconButton, HelpIconButton } from "../../components";
+import { Avatar, CloseIconButton, HelpIconButton, RadialGradientBackground } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 
 const LEAGUES = [
@@ -102,13 +102,7 @@ const Ranking: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={["#443570", "#443045", "#2F2229", "#14121B", "#050407"]}
-        locations={[0, 0.22, 0.45, 0.7, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.background}
-      >
+      <RadialGradientBackground style={styles.background}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.modalHeader}>
             <CloseIconButton onPress={() => navigation.goBack()} size={42} />
@@ -169,7 +163,7 @@ const Ranking: React.FC = () => {
             ))}
           </View>
         </ScrollView>
-      </LinearGradient>
+      </RadialGradientBackground>
     </SafeAreaView>
   );
 };

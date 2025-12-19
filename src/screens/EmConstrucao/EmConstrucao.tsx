@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -15,10 +14,9 @@ import EmConstrucaoIcon from "../../assets/em-construcao.svg";
 // Types
 import { NavigationProp } from "../../types/navigation";
 
-// Constants
-const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
-const BACKGROUND_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#0F0E11", "#000000"];
-const BACKGROUND_GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62, 1];
+// Config
+import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
+import { RadialGradientBackground, GradientBorderButton } from "../../components";
 
 const EmConstrucao: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -26,14 +24,8 @@ const EmConstrucao: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Background Gradient - Top to Bottom */}
-        <LinearGradient
-          colors={BACKGROUND_GRADIENT_COLORS}
-          locations={BACKGROUND_GRADIENT_LOCATIONS}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.backgroundGradient}
-        />
+        {/* Background Gradient - Radial Effect */}
+        <RadialGradientBackground style={styles.backgroundGradient} />
 
         <View style={styles.content}>
           <Text style={styles.title}>Em Construção!</Text>
@@ -43,7 +35,7 @@ const EmConstrucao: React.FC = () => {
 
           <View style={styles.iconContainer}>
             <LinearGradient
-              colors={TEXT_GRADIENT_COLORS}
+              colors={HORIZONTAL_GRADIENT_COLORS}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.gradientCircle}
@@ -54,13 +46,10 @@ const EmConstrucao: React.FC = () => {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
+        <GradientBorderButton
+          label="Voltar"
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>Voltar</Text>
-        </TouchableOpacity>
+        />
       </View>
     </SafeAreaView>
   );
@@ -120,19 +109,6 @@ const styles = StyleSheet.create({
   iconWrapper: {
     position: "relative",
     zIndex: 1,
-  },
-  button: {
-    backgroundColor: "#1C1C1C",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#2C2C2C",
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
 

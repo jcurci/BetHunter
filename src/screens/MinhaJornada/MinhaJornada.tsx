@@ -9,18 +9,35 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from "@react-navigation/native";
-import { Footer, Avatar, BackIconButton } from "../../components";
+import { Footer, Avatar, BackIconButton, RadialGradientBackground } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import { User } from "../../domain/entities/User";
 import { NavigationProp } from "../../types/navigation";
-
-// Constants
-const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
 const HEATMAP_COLORS = ["#1A1825", "#3D2B5A", "#6B4D8A", "#9B6FB8", "#D783D8"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS = ["S", "Q", "S"];
+const MONTHS_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+// Cell dimensions
+const CELL_SIZE = 11;
+const CELL_GAP = 3;
+const WEEK_WIDTH = CELL_SIZE + CELL_GAP;
+
+// Calculate which weeks correspond to which months (approximate)
+const getMonthPositions = () => {
+  const positions: { month: string; weekIndex: number }[] = [];
+  const weeksPerMonth = 52 / 12;
+  MONTHS_LABELS.forEach((month, index) => {
+    positions.push({
+      month,
+      weekIndex: Math.floor(index * weeksPerMonth),
+    });
+  });
+  return positions;
+};
 
 // Generate mock heatmap data (52 weeks x 7 days)
+// Structure: data[weekIndex][dayIndex] where dayIndex 0 = Sunday, 6 = Saturday
 const generateHeatmapData = () => {
   const data: number[][] = [];
   for (let week = 0; week < 52; week++) {
@@ -92,7 +109,7 @@ const MinhaJornada: React.FC = () => {
       }
     >
       <LinearGradient
-        colors={TEXT_GRADIENT_COLORS}
+        colors={HORIZONTAL_GRADIENT_COLORS}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
@@ -100,6 +117,8 @@ const MinhaJornada: React.FC = () => {
       </LinearGradient>
     </MaskedView>
   );
+
+  const monthPositions = getMonthPositions();
 
   const renderHeatmapCell = (level: number, weekIndex: number, dayIndex: number) => (
     <View
@@ -111,12 +130,19 @@ const MinhaJornada: React.FC = () => {
     />
   );
 
+  // Render a single week column (7 days vertically)
+  const renderWeekColumn = (weekData: number[], weekIndex: number) => (
+    <View key={`week-${weekIndex}`} style={styles.weekColumn}>
+      {weekData.map((level, dayIndex) => renderHeatmapCell(level, weekIndex, dayIndex))}
+    </View>
+  );
+
   const renderRatingBar = (label: string, percentage: number) => (
     <View style={styles.ratingBarContainer}>
       <Text style={styles.ratingBarLabel}>{label}</Text>
       <View style={styles.ratingBarBackground}>
         <LinearGradient
-          colors={TEXT_GRADIENT_COLORS}
+          colors={HORIZONTAL_GRADIENT_COLORS}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.ratingBarFill, { width: `${percentage}%` }]}
@@ -127,18 +153,19 @@ const MinhaJornada: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <BackIconButton onPress={() => navigation.goBack()} size={42} />
-          <Text style={styles.headerTitle}>Minha{"\n"}Jornada</Text>
-        </View>
+      <RadialGradientBackground style={styles.backgroundGradient}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <BackIconButton onPress={() => navigation.goBack()} size={42} />
+            <Text style={styles.headerTitle}>Minha{"\n"}Jornada</Text>
+          </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
           {/* Profile Section */}
           <View style={styles.profileSection}>
             <Avatar initials={getInitials(user?.name)} size={80} />
@@ -199,40 +226,51 @@ const MinhaJornada: React.FC = () => {
               O seu mapa de atividade no último ano dentro do Bethunter
             </Text>
 
-            {/* Month Labels */}
-            <View style={styles.monthLabelsContainer}>
-              {MONTHS.map((month, index) => (
-                <Text key={month} style={styles.monthLabel}>
-                  {month}
-                </Text>
-              ))}
-            </View>
-
-            {/* Heatmap Grid */}
-            <View style={styles.heatmapGridContainer}>
-              {/* Day Labels */}
-              <View style={styles.dayLabelsContainer}>
-                {DAYS.map((day, index) => (
-                  <Text key={`day-${index}`} style={styles.dayLabel}>
-                    {day}
-                  </Text>
+            {/* Main Heatmap Container */}
+            <View style={styles.heatmapMainContainer}>
+              {/* Fixed Day Labels Column */}
+              <View style={styles.dayLabelsColumn}>
+                {/* Empty space for month labels alignment */}
+                <View style={styles.dayLabelsHeader} />
+                {/* Day labels */}
+                {DAY_LABELS.map((day, index) => (
+                  <View key={`day-${index}`} style={styles.dayLabelCell}>
+                    {index % 2 === 1 && (
+                      <Text style={styles.dayLabel}>{day}</Text>
+                    )}
+                  </View>
                 ))}
               </View>
 
-              {/* Grid */}
+              {/* Scrollable Grid Area */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.heatmapScrollView}
+                contentContainerStyle={styles.heatmapScrollContent}
               >
-                <View style={styles.heatmapGrid}>
-                  {[0, 2, 4].map((dayOffset) => (
-                    <View key={`row-${dayOffset}`} style={styles.heatmapRow}>
-                      {heatmapData.map((week, weekIndex) => (
-                        renderHeatmapCell(week[dayOffset] || 0, weekIndex, dayOffset)
-                      ))}
-                    </View>
-                  ))}
+                <View>
+                  {/* Month Labels Row */}
+                  <View style={styles.monthLabelsRow}>
+                    {monthPositions.map(({ month, weekIndex }, index) => (
+                      <Text
+                        key={`month-${index}`}
+                        style={[
+                          styles.monthLabel,
+                          { left: weekIndex * WEEK_WIDTH },
+                        ]}
+                      >
+                        {month}
+                      </Text>
+                    ))}
+                  </View>
+
+                  {/* Weeks Grid (columns of days) */}
+                  <View style={styles.weeksGrid}>
+                    {heatmapData.map((weekData, weekIndex) =>
+                      renderWeekColumn(weekData, weekIndex)
+                    )}
+                  </View>
                 </View>
               </ScrollView>
             </View>
@@ -249,8 +287,9 @@ const MinhaJornada: React.FC = () => {
               <Text style={styles.legendText}>Mais</Text>
             </View>
           </View>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      </RadialGradientBackground>
       <Footer />
     </SafeAreaView>
   );
@@ -260,6 +299,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  backgroundGradient: {
+    flex: 1,
   },
   container: {
     flex: 1,
@@ -413,58 +455,68 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 16,
   },
-  monthLabelsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    paddingLeft: 24,
-  },
-  monthLabel: {
-    fontSize: 10,
-    color: "#A09CAB",
-  },
-  heatmapGridContainer: {
+  heatmapMainContainer: {
     flexDirection: "row",
   },
-  dayLabelsContainer: {
-    justifyContent: "space-around",
-    marginRight: 8,
-    height: 54,
+  dayLabelsColumn: {
+    marginRight: 6,
+  },
+  dayLabelsHeader: {
+    height: 16,
+  },
+  dayLabelCell: {
+    height: 11,
+    marginBottom: 3,
+    justifyContent: "center",
   },
   dayLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#A09CAB",
   },
   heatmapScrollView: {
     flex: 1,
   },
-  heatmapGrid: {
-    gap: 3,
+  heatmapScrollContent: {
+    paddingRight: 16,
   },
-  heatmapRow: {
+  monthLabelsRow: {
+    height: 16,
+    flexDirection: "row",
+    position: "relative",
+    width: 52 * 14, // 52 weeks * (cell + gap)
+  },
+  monthLabel: {
+    fontSize: 9,
+    color: "#A09CAB",
+    position: "absolute",
+  },
+  weeksGrid: {
     flexDirection: "row",
     gap: 3,
   },
+  weekColumn: {
+    gap: 3,
+  },
   heatmapCell: {
-    width: 12,
-    height: 12,
+    width: 11,
+    height: 11,
     borderRadius: 2,
   },
   legendContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 16,
-    gap: 4,
+    justifyContent: "flex-end",
+    marginTop: 12,
+    gap: 3,
   },
   legendText: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#A09CAB",
     marginHorizontal: 4,
   },
   legendCell: {
-    width: 12,
-    height: 12,
+    width: 11,
+    height: 11,
     borderRadius: 2,
   },
 });

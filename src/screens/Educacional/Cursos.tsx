@@ -9,14 +9,22 @@ import {
   TextInput,
   Image,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import Icon from "react-native-vector-icons/Feather";
 import IconMaterial from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Footer, StatsDisplay, Avatar, BackIconButton, Modal } from "../../components";
+import { Footer, StatsDisplay, Avatar, BackIconButton, Modal, GradientBorderButton } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
 import { User } from "../../domain/entities/User";
 import { NavigationProp } from "../../types/navigation";
+import {
+  BUTTON_BORDER_GRADIENT_COLORS,
+  BUTTON_BORDER_GRADIENT_LOCATIONS,
+  BUTTON_HIGHLIGHT_COLORS,
+  BUTTON_INNER_BACKGROUND,
+  BUTTON_INNER_BORDER_COLOR,
+} from "../../config/colors";
 
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
@@ -139,6 +147,7 @@ const Cursos = () => {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const { isSaved, toggleSave } = useSavedCoursesStore();
   const container = Container.getInstance();
+  
 
   useEffect(() => {
     loadData();
@@ -263,47 +272,6 @@ const Cursos = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerContainer}>
-        {/* Header */}
-        <View style={styles.headerTop}>
-          <View style={styles.headerTopLeft}>
-            <BackIconButton onPress={() => navigation.goBack()} size={42} />
-            <Text style={styles.headerTitle}>Cursos</Text>
-          </View>
-          <StatsDisplay energy={10} streak="3d" />
-        </View>
-
-        <View style={styles.headerBottom}>
-          <Avatar initials={getInitials(user?.name)} size={48} style={styles.headerAvatar} />
-          <View style={styles.searchWrapper}>
-            <LinearGradient
-              colors={["#373344", "#1A1825", "#373344"]}
-              locations={[0, 0.5, 1]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={styles.searchGradient}
-            >
-              <LinearGradient
-                colors={["rgba(255,255,255,0.35)", "rgba(255,255,255,0)"]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={styles.searchHighlight}
-                pointerEvents="none"
-              />
-              <View style={styles.searchContainer}>
-                <Icon name="search" size={18} color="#A09CAB" style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Pesquisar"
-                  placeholderTextColor="#A09CAB"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-              </View>
-            </LinearGradient>
-          </View>
-        </View>
-      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -338,6 +306,56 @@ const Cursos = () => {
         </View>
       </ScrollView>
 
+      {/* Floating Header - positioned above ScrollView */}
+      <View style={styles.headerContainer}>
+        {/* Header Background with Blur - always visible with low opacity */}
+        <BlurView
+          intensity={50}
+          tint="dark"
+          style={styles.headerBlur}
+        />
+        
+        {/* Header */}
+        <View style={styles.headerTop}>
+          <View style={styles.headerTopLeft}>
+            <BackIconButton onPress={() => navigation.goBack()} size={42} />
+            <Text style={styles.headerTitle}>Cursos</Text>
+          </View>
+          <StatsDisplay energy={10} streak="3d" />
+        </View>
+
+        <View style={styles.headerBottom}>
+          <Avatar initials={getInitials(user?.name)} size={48} style={styles.headerAvatar} />
+          <View style={styles.searchWrapper}>
+            <LinearGradient
+              colors={BUTTON_BORDER_GRADIENT_COLORS}
+              locations={BUTTON_BORDER_GRADIENT_LOCATIONS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.searchGradient}
+            >
+              <LinearGradient
+                colors={BUTTON_HIGHLIGHT_COLORS}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.searchHighlight}
+                pointerEvents="none"
+              />
+              <View style={styles.searchContainer}>
+                <Icon name="search" size={18} color="#A09CAB" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Pesquisar"
+                  placeholderTextColor="#A09CAB"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      </View>
+
       {/* Footer */}
       <Footer />
 
@@ -367,17 +385,15 @@ const Cursos = () => {
             <View style={styles.modalStatItem}>
               <Text style={styles.modalStatValue}>{selectedModule?.stars || "0/0"}</Text>
               <IconMaterial name="star" size={24} color="#FFD700" />
-            </View>
+          </View>
             <View style={styles.modalStatItem}>
               <Text style={styles.modalStatValue}>{selectedModule?.points || 0}</Text>
               <Image source={IconFire} style={styles.modalStatIcon} resizeMode="contain" />
-            </View>
+              </View>
           </View>
 
           {/* Confirm Button */}
-          <TouchableOpacity style={styles.modalConfirmButton} onPress={handleConfirmCourse}>
-            <Text style={styles.modalConfirmButtonText}>Conferir!</Text>
-          </TouchableOpacity>
+          <GradientBorderButton label="Conferir!" onPress={handleConfirmCourse} />
         </View>
       </Modal>
     </SafeAreaView>
@@ -390,9 +406,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   headerContainer: {
-    paddingTop: 10,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 0,
+    paddingBottom: 16,
+    zIndex: 10,
+  },
+  headerBlur: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   headerTop: {
     flexDirection: "row",
@@ -465,7 +493,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-    paddingTop: 12,
+    paddingTop: 180, // Espaço para o header flutuante
   },
   modulesContainer: {
     paddingTop: 12,
@@ -606,20 +634,6 @@ const styles = StyleSheet.create({
   modalStatIcon: {
     width: 24,
     height: 24,
-  },
-  modalConfirmButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: "#FFFFFF",
-    borderRadius: 28,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalConfirmButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
 });
 

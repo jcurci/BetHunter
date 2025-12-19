@@ -17,7 +17,16 @@ import Icon from "react-native-vector-icons/Entypo";
 import MaskedView from "@react-native-masked-view/masked-view";
 
 // Components
-import { Footer, StatsDisplay, IconCard } from "../../components";
+import { Footer, StatsDisplay, IconCard, RadialGradientBackground, GradientBorderButton } from "../../components";
+import Modal from "../../components/common/Modal/Modal";
+
+// Config
+import {
+  BACKGROUND_GRADIENT_COLORS,
+  BACKGROUND_GRADIENT_LOCATIONS,
+  SHADOW_OVERLAY_COLORS,
+  HORIZONTAL_GRADIENT_COLORS,
+} from "../../config/colors";
 
 // Assets
 import ImageBitcoin from "../../assets/image-bitcoin.svg";
@@ -44,12 +53,9 @@ import { User } from "../../domain/entities/User";
 import { NavigationProp } from "../../types/navigation";
 
 // Constants
-const GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#1A1923"] as const;
-const GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62] as const;
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 const DAYS_IN_MONTH = 30;
-const TEXT_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"] as const;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CAROUSEL_WIDTH = SCREEN_WIDTH - 40; // 20px padding em cada lado
 
@@ -61,12 +67,36 @@ const Home: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>("conta");
+  const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
+  const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
+  const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
   const carouselRef = useRef<ScrollView>(null);
   const container = Container.getInstance();
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-close reset confirm modal after 3 seconds
+  useEffect(() => {
+    if (showResetConfirmModal) {
+      const timer = setTimeout(() => {
+        setShowResetConfirmModal(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showResetConfirmModal]);
+
+  // Auto-close block success modal after 3 seconds
+  useEffect(() => {
+    if (showBlockSuccessModal) {
+      const timer = setTimeout(() => {
+        setShowBlockSuccessModal(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showBlockSuccessModal]);
 
   const loadData = async () => {
     try {
@@ -138,7 +168,7 @@ const Home: React.FC = () => {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={TEXT_GRADIENT_COLORS}
+            colors={HORIZONTAL_GRADIENT_COLORS}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.tabButtonGradient}
@@ -175,7 +205,7 @@ const Home: React.FC = () => {
           }
         >
           <LinearGradient
-            colors={TEXT_GRADIENT_COLORS}
+            colors={HORIZONTAL_GRADIENT_COLORS}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ flex: 1 }}
@@ -254,7 +284,7 @@ const Home: React.FC = () => {
             
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => navigation.navigate("EmConstrucao")}
+              onPress={() => setShowResetModal(true)}
               activeOpacity={0.85}
             >
               <View style={styles.actionIconCircle}>
@@ -265,7 +295,7 @@ const Home: React.FC = () => {
             
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => navigation.navigate("EmConstrucao")}
+              onPress={() => setShowBlockModal(true)}
               activeOpacity={0.85}
             >
               <View style={styles.actionIconCircle}>
@@ -300,21 +330,43 @@ const Home: React.FC = () => {
           style={styles.container}
           showsVerticalScrollIndicator={false}
         >
-          {/* Background Gradient */}
-          <LinearGradient
-            colors={GRADIENT_COLORS}
-            locations={GRADIENT_LOCATIONS}
-            start={{ x: 0.25, y: 0 }}
-            end={{ x: 0.75, y: 1 }}
+          {/* Background Gradient - Radial Effect */}
+          <View
             style={[
               styles.backgroundGradient,
               {
                 height: showFreeOfBetBox
                   ? GRADIENT_HEIGHT_EXPANDED
                   : GRADIENT_HEIGHT_COLLAPSED,
+                backgroundColor: '#000000',
               },
             ]}
-          />
+          >
+            {/* Vertical gradient from top center */}
+            <LinearGradient
+              colors={BACKGROUND_GRADIENT_COLORS}
+              locations={BACKGROUND_GRADIENT_LOCATIONS}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            
+            {/* Left shadow overlay */}
+            <LinearGradient
+              colors={SHADOW_OVERLAY_COLORS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.5, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+            
+            {/* Right shadow overlay */}
+            <LinearGradient
+              colors={SHADOW_OVERLAY_COLORS}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0.5, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
 
           {renderHeader()}
           
@@ -328,7 +380,12 @@ const Home: React.FC = () => {
             onPress={toggleFreeOfBetBox}
             style={styles.dividerTouchable}
           >
-            <View style={styles.divider} />
+            <LinearGradient
+              colors={HORIZONTAL_GRADIENT_COLORS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.divider}
+            />
           </TouchableOpacity>
 
           {/* Seção Conta, Parceiros, Social - Tabs */}
@@ -423,13 +480,32 @@ const Home: React.FC = () => {
             onPress={() => navigation.navigate("Roulette")}
             style={styles.rouletteBoxContainer}
           >
-            <LinearGradient
-              colors={GRADIENT_COLORS}
-              locations={GRADIENT_LOCATIONS}
-              start={{ x: 0.25, y: 0 }}
-              end={{ x: 0.75, y: 1 }}
-              style={styles.rouletteBox}
-            >
+            <View style={styles.rouletteBox}>
+              {/* Vertical gradient from top center */}
+              <LinearGradient
+                colors={BACKGROUND_GRADIENT_COLORS}
+                locations={BACKGROUND_GRADIENT_LOCATIONS}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              
+              {/* Left shadow overlay */}
+              <LinearGradient
+                colors={SHADOW_OVERLAY_COLORS}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.5, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+              
+              {/* Right shadow overlay */}
+              <LinearGradient
+                colors={SHADOW_OVERLAY_COLORS}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0.5, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+              
               <View style={styles.rouletteContent}>
                 <View style={styles.rouletteTextContainer}>
                   <View style={styles.rouletteTextInner}>
@@ -447,7 +523,7 @@ const Home: React.FC = () => {
                         }
                       >
                         <LinearGradient
-                          colors={TEXT_GRADIENT_COLORS}
+                          colors={HORIZONTAL_GRADIENT_COLORS}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={styles.betcoinsGradient}
@@ -467,7 +543,7 @@ const Home: React.FC = () => {
                   <BetcoinIcon width={93} height={67} />
                 </View>
               </View>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           {/* Seção Para Você */}
@@ -490,6 +566,70 @@ const Home: React.FC = () => {
       </View>
       
       <Footer />
+
+      {/* Modal de Confirmação de Reset */}
+      <Modal
+        visible={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        size="small"
+        title="Tem certeza?"
+        subtitle="Seu contador será completamente reinicializado."
+      >
+        <View style={styles.resetModalContent}>
+          <GradientBorderButton
+            label="Continuar"
+            onPress={() => {
+              // TODO: Implementar lógica de reset do contador
+              setShowResetModal(false);
+              setShowResetConfirmModal(true);
+            }}
+          />
+        </View>
+      </Modal>
+
+      {/* Modal de Reset Confirmado - Menor */}
+      <Modal
+        visible={showResetConfirmModal}
+        onClose={() => setShowResetConfirmModal(false)}
+        size="smaller"
+        title="Poxa, que pena!"
+        subtitle="Sentimos muito. Vamos recomeçar!"
+        showCloseButton={false}
+      >
+        <View style={styles.resetConfirmModalContent} />
+      </Modal>
+
+      {/* Modal de Bloqueio - Permissões */}
+      <Modal
+        visible={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        size="small"
+        title="Habilite permissoes!"
+        subtitle='Para o funcionamento do bloqueio do Bethunter, necessitamos da instalação de um perfil VPN para redirecionar e filtrar o tráfego. Esse bloqueio funcionará em todos os sites e apps que consideramos como "apostas".'
+      >
+        <View style={styles.blockModalContent}>
+          <GradientBorderButton
+            label="Continuar"
+            onPress={() => {
+              // TODO: Implementar lógica de bloqueio VPN
+              setShowBlockModal(false);
+              setShowBlockSuccessModal(true);
+            }}
+          />
+        </View>
+      </Modal>
+
+      {/* Modal de Bloqueio Sucesso - Menor */}
+      <Modal
+        visible={showBlockSuccessModal}
+        onClose={() => setShowBlockSuccessModal(false)}
+        size="smaller"
+        title="Sucesso!"
+        subtitle="Bloqueamos apps e sites de aposta, para você usar seu dispositivo tranquilo."
+        showCloseButton={false}
+      >
+        <View style={styles.resetConfirmModalContent} />
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -661,7 +801,6 @@ const styles = StyleSheet.create({
   divider: {
     width: "100%",
     height: 5,
-    backgroundColor: "#A19DAA",
     borderRadius: 20,
   },
 
@@ -799,6 +938,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     minHeight: 140,
     justifyContent: "flex-end",
+    overflow: "hidden",
+    backgroundColor: "#000000",
   },
   rouletteContent: {
     flexDirection: "row",
@@ -859,6 +1000,18 @@ const styles = StyleSheet.create({
   },
   chevronIcon: {
     marginLeft: 4,
+  },
+  // Reset Modal Styles
+  resetModalContent: {
+    alignItems: "center",
+    paddingTop: 20,
+  },
+  blockModalContent: {
+    alignItems: "center",
+    paddingTop: 10,
+  },
+  resetConfirmModalContent: {
+    display: "none",
   },
 });
 
