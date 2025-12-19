@@ -33,6 +33,8 @@ export type RootStackParamList = {
   MinhaJornada: undefined;
   CursosSalvos: undefined;
   Meditacao: undefined;
+  PersonalityTestIntro: undefined;
+  PersonalityTestQuestion: undefined;
 };
 
 export type NavigationProp = RNNavigationProp<RootStackParamList>;
