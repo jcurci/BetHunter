@@ -144,12 +144,27 @@ const SignUpPassword: React.FC = () => {
     } catch (error: any) {
       console.error("Erro no registro:", error);
       
-      if (error.response?.status === 409) {
-        Alert.alert("Erro", "Este email já está cadastrado");
-      } else if (error.response?.status === 400) {
-        Alert.alert("Erro", "Dados inválidos. Verifique as informações");
-      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error')) {
+      // Extrair mensagem de erro do backend
+      const errorMessage = error.message || error.response?.data?.message || '';
+      const statusCode = error.response?.status;
+      
+      // Verificar se é erro de email ou telefone já cadastrado
+      if (statusCode === 400 || statusCode === 409) {
+        if (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('e-mail')) {
+          Alert.alert("Erro", "Este email já está cadastrado");
+        } else if (errorMessage.toLowerCase().includes('telefone') || errorMessage.toLowerCase().includes('phone') || errorMessage.toLowerCase().includes('cellphone')) {
+          Alert.alert("Erro", "Este telefone já está cadastrado");
+        } else if (errorMessage) {
+          // Usar mensagem específica do backend se disponível
+          Alert.alert("Erro", errorMessage);
+        } else {
+          Alert.alert("Erro", "Dados inválidos. Verifique as informações");
+        }
+      } else if (error.code === 'NETWORK_ERROR' || error.message?.includes('Network Error') || error.code === 'ECONNABORTED') {
         Alert.alert("Erro", "Erro de conexão. Verifique sua internet");
+      } else if (error.message) {
+        // Mostrar mensagem de erro específica se disponível
+        Alert.alert("Erro", error.message);
       } else {
         Alert.alert("Erro", "Erro ao cadastrar. Tente novamente");
       }

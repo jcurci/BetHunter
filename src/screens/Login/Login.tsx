@@ -37,9 +37,75 @@ const Login: React.FC = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleLogin = (): void => {
-    // TODO: Restaurar autenticação real após testes
-    navigation.navigate("Home");
+  const handleLogin = async (): Promise<void> => {
+    // Validação básica
+    if (!email.trim()) {
+      Alert.alert("Erro", "Por favor, digite seu email");
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert("Erro", "Por favor, digite sua senha");
+      return;
+    }
+
+    // Validação de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert("Erro", "Digite um endereço de email válido");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const userUseCase = container.getUserUseCase();
+      const result = await userUseCase.login({
+        email: email.trim().toLowerCase(),
+        password: password,
+      });
+
+      // Atualizar authStore com token e usuário
+      await authStore.login(result.token, toAuthUser(result.user));
+
+      console.log("Login bem-sucedido:", result.user.email);
+      
+      // Navegar para Home após login bem-sucedido
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    } catch (error: any) {
+      console.error("Erro no login:", error);
+      
+      // Extrair mensagem de erro
+      const errorMessage = error.message || error.response?.data?.message || '';
+      const statusCode = error.response?.status;
+
+      // Tratar diferentes tipos de erro
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro de Validação", error.message);
+      } else if (statusCode === 401 || statusCode === 400) {
+        // Credenciais inválidas
+        if (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('password') || errorMessage.toLowerCase().includes('senha')) {
+          Alert.alert("Erro", "Email ou senha incorretos");
+        } else if (errorMessage) {
+          Alert.alert("Erro", errorMessage);
+        } else {
+          Alert.alert("Erro", "Email ou senha incorretos");
+        }
+      } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.code === 'ECONNABORTED') {
+        Alert.alert(
+          "Erro de Conexão",
+          "Não foi possível conectar ao servidor.\n\nVerifique se:\n• O backend está rodando\n• A URL está correta\n• Sua conexão com a internet está ativa"
+        );
+      } else if (errorMessage) {
+        Alert.alert("Erro", errorMessage);
+      } else {
+        Alert.alert("Erro", "Erro ao fazer login. Tente novamente");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

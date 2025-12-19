@@ -58,7 +58,13 @@ export class UserDataSourceImpl implements UserDataSource {
    */
   async login(credentials: UserCredentials): Promise<LoginResult> {
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
+      // Normalizar email (trim e lowercase)
+      const normalizedCredentials = {
+        email: credentials.email.trim().toLowerCase(),
+        password: credentials.password,
+      };
+
+      const response = await apiClient.post<LoginResponse>('/auth/login', normalizedCredentials);
       
       if (!response.data?.token) {
         throw new Error('Token não retornado pelo servidor');
@@ -69,8 +75,8 @@ export class UserDataSourceImpl implements UserDataSource {
       console.log('✅ Token decodificado');
       
       const user: User = {
-        id: (decoded?.sub as string) || credentials.email,
-        email: (decoded?.sub as string) || credentials.email,
+        id: (decoded?.sub as string) || normalizedCredentials.email,
+        email: (decoded?.sub as string) || normalizedCredentials.email,
         name: (decoded?.name as string) || 'Usuário',
         points: (decoded?.points as number) ?? 0,
         betcoins: (decoded?.betcoins as number) ?? 0,
@@ -89,8 +95,20 @@ export class UserDataSourceImpl implements UserDataSource {
       
       // Retorna user E token para a UI atualizar o estado reativo
       return { user, token };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro no login:', error);
+      
+      // Extrair mensagem de erro do backend se disponível
+      if (error.response?.data?.message) {
+        const errorMessage = error.response.data.message;
+        
+        // Criar erro customizado com mensagem do backend
+        const customError = new Error(errorMessage);
+        (customError as any).response = error.response;
+        (customError as any).status = error.response?.status;
+        throw customError;
+      }
+      
       throw error;
     }
   }
@@ -100,7 +118,19 @@ export class UserDataSourceImpl implements UserDataSource {
    */
   async register(userData: UserRegistration): Promise<User> {
     try {
-      const response = await apiClient.post<RegisterResponse>('/auth/register', userData);
+      // Formatar telefone: remover todos os caracteres não numéricos
+      // O backend espera apenas dígitos (sem formatação)
+      const formattedCellphone = userData.cellphone.replace(/\D/g, '');
+      
+      // Preparar dados para envio
+      const registrationData = {
+        name: userData.name.trim(),
+        email: userData.email.trim().toLowerCase(),
+        password: userData.password,
+        cellphone: formattedCellphone,
+      };
+
+      const response = await apiClient.post<RegisterResponse>('/auth/register', registrationData);
       
       console.log('✅ Registro realizado');
       
@@ -115,8 +145,20 @@ export class UserDataSourceImpl implements UserDataSource {
       };
       
       return user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro no registro:', error);
+      
+      // Extrair mensagem de erro do backend se disponível
+      if (error.response?.data?.message) {
+        const errorMessage = error.response.data.message;
+        
+        // Criar erro customizado com mensagem do backend
+        const customError = new Error(errorMessage);
+        (customError as any).response = error.response;
+        (customError as any).status = error.response?.status;
+        throw customError;
+      }
+      
       throw error;
     }
   }
