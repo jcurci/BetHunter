@@ -27,7 +27,6 @@ import {
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
 import { useAuthStore } from "../../storage/authStore";
-import { AuthUser } from "../../domain/entities/User";
 
 // Assets
 const IconBook = require("../../assets/icon-book.png");
@@ -191,7 +190,7 @@ const Cursos = () => {
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBar}>
           <LinearGradient
-            colors={gradientColors}
+            colors={gradientColors as any}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: `${percentage}%` }]}
@@ -246,7 +245,7 @@ const Cursos = () => {
           maskElement={<Text style={styles.moduleTitle}>{module.title}</Text>}
         >
           <LinearGradient
-            colors={module.gradientColors}
+            colors={module.gradientColors as any}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >

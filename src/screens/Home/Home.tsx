@@ -96,6 +96,26 @@ const Home: React.FC = () => {
     }
   }, [showBlockSuccessModal]);
 
+  // Auto-close reset confirm modal after 3 seconds
+  useEffect(() => {
+    if (showResetConfirmModal) {
+      const timer = setTimeout(() => {
+        setShowResetConfirmModal(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showResetConfirmModal]);
+
+  // Auto-close block success modal after 3 seconds
+  useEffect(() => {
+    if (showBlockSuccessModal) {
+      const timer = setTimeout(() => {
+        setShowBlockSuccessModal(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showBlockSuccessModal]);
+
   const loadData = async () => {
   
   };
