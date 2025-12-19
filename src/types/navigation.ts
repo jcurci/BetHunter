@@ -6,6 +6,10 @@ export type RootStackParamList = {
   SignUpContact: { name: string; username: string };
   SignUpVerification: { name: string; username: string; email: string; phone: string };
   SignUpPassword: { name: string; username: string; email: string; phone: string };
+  PasswordResetMethod: undefined;
+  PasswordResetEmail: { method: 'email' | 'username' | 'phone' };
+  PasswordResetVerification: { method: 'email' | 'username' | 'phone'; value: string };
+  PasswordResetNewPassword: { method: 'email' | 'username' | 'phone'; value: string; code: string };
   Home: undefined;
   Roulette: undefined;
   MenuEducacional: undefined;
@@ -27,6 +31,8 @@ export type RootStackParamList = {
   MinhaJornada: undefined;
   CursosSalvos: undefined;
   Meditacao: undefined;
+  PersonalityTestIntro: undefined;
+  PersonalityTestQuestion: undefined;
 };
 
 export type NavigationProp = RNNavigationProp<RootStackParamList>;
