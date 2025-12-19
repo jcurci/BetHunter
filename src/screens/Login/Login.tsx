@@ -98,8 +98,11 @@ const Login: React.FC = () => {
                 />
               </TouchableOpacity>
             </View>
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
+              <TouchableOpacity
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate("PasswordResetMethod")}
+            >
+              <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

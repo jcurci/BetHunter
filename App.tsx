@@ -9,6 +9,7 @@ import {
   SignUpVerification,
   SignUpPassword,
 } from "./src/screens/SignUp";
+import { PasswordResetMethod, PasswordResetEmail, PasswordResetVerification, PasswordResetNewPassword } from "./src/screens/PasswordReset";
 import Home from "./src/screens/Home/Home";
 import Config from "./src/screens/Config/Config";
 import Profile from "./src/screens/Profile/Profile";
@@ -67,6 +68,34 @@ const App: React.FC = () => {
         <Stack.Screen
           name="SignUpPassword"
           component={SignUpPassword}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PasswordResetMethod"
+          component={PasswordResetMethod}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PasswordResetEmail"
+          component={PasswordResetEmail}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PasswordResetVerification"
+          component={PasswordResetVerification}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="PasswordResetNewPassword"
+          component={PasswordResetNewPassword}
           options={{
             headerShown: false,
           }}
