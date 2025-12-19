@@ -243,7 +243,7 @@ const Home: React.FC = () => {
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => navigation.navigate("EmConstrucao")}
+              onPress={() => navigation.navigate("Meditacao")}
               activeOpacity={0.85}
             >
               <View style={styles.actionIconCircle}>

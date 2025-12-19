@@ -29,6 +29,7 @@ import Acessor from "./src/screens/Acessor/Acessor";
 import HistoryList from "./src/screens/Acessor/HistoryList";
 import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
+import Meditacao from "./src/screens/Meditacao/Meditacao";
 import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -209,6 +210,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="CursosSalvos"
           component={CursosSalvos}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Meditacao"
+          component={Meditacao}
           options={{
             headerShown: false,
           }}
