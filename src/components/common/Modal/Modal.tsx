@@ -41,6 +41,7 @@ const CustomModal: React.FC<ModalProps> = ({
   buttons,
   showCloseButton = true,
   backdropOpacity = 0.5,
+  scrollEnabled = true,
 }) => {
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -183,13 +184,19 @@ const CustomModal: React.FC<ModalProps> = ({
         </View>
 
         {/* Content */}
-        <ScrollView
-          style={styles.contentContainer}
-          contentContainerStyle={styles.contentInner}
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
+        {scrollEnabled ? (
+          <ScrollView
+            style={styles.contentContainer}
+            contentContainerStyle={styles.contentInner}
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={[styles.contentContainer, styles.contentInner]}>
+            {children}
+          </View>
+        )}
 
         {/* Buttons */}
         {/* TODO: Implementar com componente Button comum

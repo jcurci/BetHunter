@@ -40,6 +40,7 @@ export interface ModalProps {
   buttons?: ButtonConfig[];
   showCloseButton?: boolean;
   backdropOpacity?: number;
+  scrollEnabled?: boolean;
 }
 
 

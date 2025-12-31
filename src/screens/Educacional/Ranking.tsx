@@ -14,10 +14,9 @@ import { Avatar, CloseIconButton, HelpIconButton, RadialGradientBackground } fro
 import { NavigationProp } from "../../types/navigation";
 
 const LEAGUES = [
-  { id: "bronze", label: "Bronze", colors: ["#443437", "#2A1F21"] },
-  { id: "prata", label: "Prata", colors: ["#4C4F5C", "#2A2C35"] },
-  { id: "campeao", label: "Campeão", colors: ["#9254FF", "#FF7A9E"] },
-  { id: "diamante", label: "Diamante", colors: ["#5AD0FF", "#3F5AFF"] },
+  { id: "bronze", label: "Bronze", colors: ["#4C4F5C", "#2A2C35"] },
+  { id: "prata", label: "Prata", colors: ["#9254FF", "#6B4D8A"] },
+  { id: "campeao", label: "Campeão", colors: ["#FF7A9E", "#9254FF"] },
 ];
 
 const RANKING_DATA = [
@@ -41,10 +40,11 @@ const RANKING_DATA = [
     xp: 530,
     initials: "RQ",
     avatarGradient: ["#A164FF", "#FF9DE6"],
+    promotion: true,
   },
   {
     position: 4,
-    name: "Você",
+    name: "JD Você",
     xp: 410,
     initials: "JD",
     highlight: true,
@@ -77,6 +77,161 @@ const RANKING_DATA = [
     xp: 180,
     initials: "FS",
     avatarGradient: ["#80FFDB", "#5390D9"],
+  },
+  {
+    position: 9,
+    name: "Guilherme Matheus",
+    xp: 150,
+    initials: "GM",
+    avatarGradient: ["#4C4F5C", "#2A2C35"],
+  },
+  {
+    position: 10,
+    name: "Pedro Silva",
+    xp: 140,
+    initials: "PS",
+    avatarGradient: ["#6B4D8A", "#3D2B5A"],
+  },
+  {
+    position: 11,
+    name: "Ana Costa",
+    xp: 130,
+    initials: "AC",
+    avatarGradient: ["#9B6FB8", "#6B4D8A"],
+  },
+  {
+    position: 12,
+    name: "Lucas Oliveira",
+    xp: 120,
+    initials: "LO",
+    avatarGradient: ["#D783D8", "#9B6FB8"],
+  },
+  {
+    position: 13,
+    name: "Maria Santos",
+    xp: 110,
+    initials: "MS",
+    avatarGradient: ["#FFB872", "#FF6F91"],
+  },
+  {
+    position: 14,
+    name: "Carlos Pereira",
+    xp: 100,
+    initials: "CP",
+    avatarGradient: ["#6FC3FF", "#466DF6"],
+  },
+  {
+    position: 15,
+    name: "Fernanda Lima",
+    xp: 90,
+    initials: "FL",
+    avatarGradient: ["#A164FF", "#FF9DE6"],
+  },
+  {
+    position: 16,
+    name: "Rafael Souza",
+    xp: 80,
+    initials: "RS",
+    avatarGradient: ["#5457FF", "#22246B"],
+  },
+  {
+    position: 17,
+    name: "Juliana Alves",
+    xp: 70,
+    initials: "JA",
+    avatarGradient: ["#FFE27A", "#FF9A5F"],
+  },
+  {
+    position: 18,
+    name: "Bruno Ferreira",
+    xp: 60,
+    initials: "BF",
+    avatarGradient: ["#80FFDB", "#5390D9"],
+  },
+  {
+    position: 19,
+    name: "Patricia Rocha",
+    xp: 50,
+    initials: "PR",
+    avatarGradient: ["#4C4F5C", "#2A2C35"],
+  },
+  {
+    position: 20,
+    name: "Thiago Martins",
+    xp: 45,
+    initials: "TM",
+    avatarGradient: ["#6B4D8A", "#3D2B5A"],
+  },
+  {
+    position: 21,
+    name: "Camila Ribeiro",
+    xp: 40,
+    initials: "CR",
+    avatarGradient: ["#9B6FB8", "#6B4D8A"],
+  },
+  {
+    position: 22,
+    name: "Nakahara Misaki",
+    xp: 40,
+    initials: "NM",
+    avatarGradient: ["#D783D8", "#9B6FB8"],
+  },
+  {
+    position: 23,
+    name: "Pietro Manzini",
+    xp: 40,
+    initials: "PM",
+    avatarGradient: ["#FFB872", "#FF6F91"],
+  },
+  {
+    position: 24,
+    name: "Victor Santos",
+    xp: 30,
+    initials: "VS",
+    avatarGradient: ["#6FC3FF", "#466DF6"],
+  },
+  {
+    position: 25,
+    name: "Júlia Zang",
+    xp: 30,
+    initials: "JZ",
+    avatarGradient: ["#A164FF", "#FF9DE6"],
+  },
+  {
+    position: 26,
+    name: "Guilherme Milheiro",
+    xp: 30,
+    initials: "GM",
+    avatarGradient: ["#5457FF", "#22246B"],
+  },
+  {
+    position: 27,
+    name: "Júlia Zang",
+    xp: 20,
+    initials: "JZ",
+    avatarGradient: ["#FFE27A", "#FF9A5F"],
+    relegation: true,
+  },
+  {
+    position: 28,
+    name: "Jhonathan Curci",
+    xp: 0,
+    initials: "JC",
+    avatarGradient: ["#80FFDB", "#5390D9"],
+  },
+  {
+    position: 29,
+    name: "Felipe Santana",
+    xp: 0,
+    initials: "FS",
+    avatarGradient: ["#4C4F5C", "#2A2C35"],
+  },
+  {
+    position: 30,
+    name: "Guilherme Matheus",
+    xp: 0,
+    initials: "GM",
+    avatarGradient: ["#6B4D8A", "#3D2B5A"],
   },
 ];
 
@@ -131,11 +286,6 @@ const Ranking: React.FC = () => {
               ))}
             </View>
 
-            <View style={styles.separatorRow}>
-              <View style={styles.separatorLine} />
-              <Text style={styles.separatorLabel}>Promoção</Text>
-              <View style={styles.separatorLine} />
-            </View>
           </View>
 
           <View style={styles.listContainer}>
@@ -149,11 +299,21 @@ const Ranking: React.FC = () => {
                     {item.position}
                   </Text>
                   {renderAvatar(item)}
-                  <View>
+                  <View style={styles.userInfo}>
                     <Text style={[styles.userName, item.highlight && styles.highlightedName]}>
                       {item.name}
                     </Text>
-                    <Text style={styles.userLeague}>Campeão</Text>
+                    {(item.promotion || item.relegation) && (
+                      <Text
+                        style={[
+                          styles.statusBadge,
+                          item.promotion && styles.promotionBadge,
+                          item.relegation && styles.relegationBadge,
+                        ]}
+                      >
+                        {item.promotion ? "Promoção" : "Rebaixamento"}
+                      </Text>
+                    )}
                   </View>
                 </View>
                 <Text style={[styles.userXP, item.highlight && styles.highlightedXP]}>
@@ -219,7 +379,8 @@ const styles = StyleSheet.create({
   leagueIconsRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-evenly",
+    justifyContent: "center",
+    gap: 16,
     marginBottom: 28,
   },
   leagueIcon: {
@@ -228,18 +389,19 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.45,
+    opacity: 0.4,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.1)",
     overflow: "hidden",
   },
   leagueIconActive: {
     opacity: 1,
-    borderColor: "rgba(255,255,255,0.45)",
+    borderColor: "rgba(255,255,255,0.5)",
     shadowColor: "#FF7A9E",
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.6,
     shadowRadius: 28,
+    elevation: 8,
   },
   leagueGlow: {
     position: "absolute",
@@ -260,25 +422,6 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.2)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
-  },
-  separatorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  separatorLine: {
-    flex: 1,
-    borderBottomWidth: 1,
-    borderColor: "rgba(71, 222, 105, 0.35)",
-    borderStyle: "dashed",
-  },
-  separatorLabel: {
-    color: "#47DE69",
-    fontSize: 12,
-    fontWeight: "600",
-    marginHorizontal: 12,
-    letterSpacing: 1,
-    textTransform: "uppercase",
   },
   listContainer: {
     gap: 12,
@@ -301,6 +444,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+  },
+  userInfo: {
+    flex: 1,
   },
   positionText: {
     fontSize: 16,
@@ -333,10 +480,16 @@ const styles = StyleSheet.create({
   highlightedName: {
     color: "#FFFFFF",
   },
-  userLeague: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.45)",
-    marginTop: 2,
+  statusBadge: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  promotionBadge: {
+    color: "#47DE69",
+  },
+  relegationBadge: {
+    color: "#FF4444",
   },
   userXP: {
     fontSize: 16,
