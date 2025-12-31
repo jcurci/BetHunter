@@ -414,7 +414,7 @@ const Home: React.FC = () => {
               <IconCard 
                 icon={<BetHunterIcon width={24} height={24} />} 
                 title="Minha Conta" 
-                onPress={() => navigation.navigate("Profile")}
+                onPress={() => navigation.navigate("MinhaConta")}
               />
               <IconCard 
                 icon={<AcessorIcon width={24} height={24} />} 

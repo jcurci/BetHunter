@@ -14,6 +14,7 @@ import Home from "./src/screens/Home/Home";
 import Config from "./src/screens/Config/Config";
 import Profile from "./src/screens/Profile/Profile";
 import ChangePassword from "./src/screens/Profile/ChangePassword";
+import DetalhesPessoais from "./src/screens/Profile/DetalhesPessoais";
 import Notifications from "./src/screens/Config/Notifications";
 import Roulette from "./src/screens/Roulette/Roulette";
 import MenuEducacional from "./src/screens/Educacional/MenuEducacional";
@@ -31,6 +32,7 @@ import HistoryList from "./src/screens/Acessor/HistoryList";
 import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
+import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
 import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -120,6 +122,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="Profile"
           component={Profile}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="DetalhesPessoais"
+          component={DetalhesPessoais}
           options={{
             headerShown: false,
           }}
@@ -246,6 +255,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="Meditacao"
           component={Meditacao}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="MinhaConta"
+          component={MinhaConta}
           options={{
             headerShown: false,
           }}
