@@ -64,7 +64,7 @@ const MinhaConta: React.FC = () => {
   const authStore = useAuthStore();
   const user = authStore.user;
 
-  // Não precisa mais de loadUser - o usuário já vem do authStore
+  // Usuário já vem do authStore, não precisa mais de loadUser
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";
