@@ -122,14 +122,9 @@ const SignUpPassword: React.FC = () => {
     setLoading(true);
     try {
       const userUseCase = container.getUserUseCase();
-      const result = await userUseCase.register({
-        name,
-        email,
-        password,
-        cellphone: phone,
-      });
+      const result = await userUseCase.createPassword(email, password);
 
-      console.log("Registro bem-sucedido:", result);
+      console.log("✅ Registro verificado e usuário criado:", result);
       Alert.alert("Sucesso", "Cadastro realizado com sucesso! Faça login para continuar.", [
         {
           text: "OK",
@@ -142,7 +137,7 @@ const SignUpPassword: React.FC = () => {
         },
       ]);
     } catch (error: any) {
-      console.error("Erro no registro:", error);
+      console.error("Erro ao verificar registro:", error);
       
       // Extrair mensagem de erro do backend
       const errorMessage = error.message || error.response?.data?.message || '';
@@ -265,7 +260,7 @@ const SignUpPassword: React.FC = () => {
 
         <View style={styles.bottomContainer}>
           <GradientButton 
-            title={loading ? "Cadastrando..." : "Próximo"} 
+            title={loading ? "Cadastrando..." : "Finalizar Cadastro"} 
             onPress={handleRegister}
             disabled={loading || !isFormValid}
           />

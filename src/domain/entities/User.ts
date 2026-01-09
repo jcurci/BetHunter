@@ -40,6 +40,16 @@ export interface UserRegistration extends UserCredentials {
 }
 
 /**
+ * Dados para envio de código de verificação (sem senha)
+ */
+export interface VerificationCodeRequest {
+  name: string;
+  username: string;
+  email: string;
+  cellphone: string;
+}
+
+/**
  * Resultado do login - retorna user E token
  */
 export interface LoginResult {

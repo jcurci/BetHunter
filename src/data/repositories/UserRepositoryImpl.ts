@@ -9,8 +9,16 @@ export class UserRepositoryImpl implements UserRepository {
     return await this.userDataSource.login(credentials);
   }
 
-  async register(userData: UserRegistration): Promise<User> {
-    return await this.userDataSource.register(userData);
+  async sendVerificationCode(data: VerificationCodeRequest): Promise<void> {
+    return await this.userDataSource.sendVerificationCode(data);
+  }
+
+  async verifyEmail(email: string, code: string): Promise<void> {
+    return await this.userDataSource.verifyEmail(email, code);
+  }
+
+  async createPassword(email: string, password: string): Promise<User> {
+    return await this.userDataSource.createPassword(email, password);
   }
 
   async getCurrentUser(): Promise<User | null> {

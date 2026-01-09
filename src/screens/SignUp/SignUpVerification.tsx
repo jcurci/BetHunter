@@ -13,6 +13,8 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError } from "../../domain/errors/CustomErrors";
 
 const CODE_LENGTH = 6;
 
@@ -20,12 +22,20 @@ const SignUpVerification: React.FC = () => {
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [countdown, setCountdown] = useState<number>(30);
   const [canResend, setCanResend] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [sendingCode, setSendingCode] = useState<boolean>(false);
   const inputRefs = useRef<(TextInput | null)[]>(Array(CODE_LENGTH).fill(null));
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpVerification">>();
   const { name, username, email, phone } = route.params;
+  const container = Container.getInstance();
 
   const firstName = name.split(" ")[0];
+
+  // Enviar código quando o componente montar
+  useEffect(() => {
+    sendVerificationCode();
+  }, []);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -35,6 +45,50 @@ const SignUpVerification: React.FC = () => {
       setCanResend(true);
     }
   }, [countdown]);
+
+  const sendVerificationCode = async () => {
+    setSendingCode(true);
+    try {
+      const userUseCase = container.getUserUseCase();
+      await userUseCase.sendVerificationCode({
+        name,
+        username,
+        email,
+        cellphone: phone,
+      });
+      console.log("✅ Código de verificação enviado");
+      setCountdown(30);
+      setCanResend(false);
+    } catch (error: any) {
+      console.error("❌ Erro ao enviar código:", error);
+      
+      const errorMessage = error.message || error.response?.data?.message || '';
+      const statusCode = error.response?.status;
+      
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro de Validação", error.message);
+      } else if (statusCode === 400 || statusCode === 409) {
+        if (errorMessage.toLowerCase().includes('email')) {
+          Alert.alert("Erro", "Este email já está cadastrado");
+        } else if (errorMessage) {
+          Alert.alert("Erro", errorMessage);
+        } else {
+          Alert.alert("Erro", "Dados inválidos. Verifique as informações");
+        }
+      } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        Alert.alert(
+          "Erro de Conexão",
+          "Não foi possível conectar ao servidor.\n\nVerifique se:\n• O backend está rodando\n• A URL está correta\n• Sua conexão com a internet está ativa"
+        );
+      } else if (errorMessage) {
+        Alert.alert("Erro", errorMessage);
+      } else {
+        Alert.alert("Erro", "Erro ao enviar código de verificação. Tente novamente");
+      }
+    } finally {
+      setSendingCode(false);
+    }
+  };
 
   const handleCodeChange = (text: string, index: number) => {
     const digit = text.replace(/[^0-9]/g, "");
@@ -56,18 +110,17 @@ const SignUpVerification: React.FC = () => {
     }
   };
 
-  const handleResendCode = () => {
-    if (canResend) {
-      setCountdown(30);
-      setCanResend(false);
-      Alert.alert("Código reenviado", "Um novo código foi enviado para seu telefone.");
+  const handleResendCode = async () => {
+    if (canResend && !sendingCode) {
+      await sendVerificationCode();
+      Alert.alert("Código reenviado", "Um novo código foi enviado para seu email.");
     }
   };
 
   // Verifica se o código está completo
   const isCodeComplete = code.every(digit => digit !== "");
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const fullCode = code.join("");
     
     if (fullCode.length !== CODE_LENGTH) {
@@ -75,7 +128,43 @@ const SignUpVerification: React.FC = () => {
       return;
     }
 
-    navigation.navigate("SignUpPassword", { name, username, email, phone });
+    setLoading(true);
+    try {
+      const userUseCase = container.getUserUseCase();
+      await userUseCase.verifyEmail(email, fullCode);
+      
+      console.log("✅ Email verificado");
+      // Navegar para tela de senha após verificação bem-sucedida
+      navigation.navigate("SignUpPassword", { name, username, email, phone });
+    } catch (error: any) {
+      console.error("❌ Erro ao verificar código:", error);
+      
+      const errorMessage = error.message || error.response?.data?.message || '';
+      const statusCode = error.response?.status;
+      
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro de Validação", error.message);
+      } else if (statusCode === 401 || statusCode === 400) {
+        if (errorMessage.toLowerCase().includes('invalid') || errorMessage.toLowerCase().includes('expired') || errorMessage.toLowerCase().includes('inválido') || errorMessage.toLowerCase().includes('expirado')) {
+          Alert.alert("Erro", "Código inválido ou expirado. Solicite um novo código.");
+        } else if (errorMessage) {
+          Alert.alert("Erro", errorMessage);
+        } else {
+          Alert.alert("Erro", "Código inválido ou expirado");
+        }
+      } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        Alert.alert(
+          "Erro de Conexão",
+          "Não foi possível conectar ao servidor.\n\nVerifique se:\n• O backend está rodando\n• A URL está correta\n• Sua conexão com a internet está ativa"
+        );
+      } else if (errorMessage) {
+        Alert.alert("Erro", errorMessage);
+      } else {
+        Alert.alert("Erro", "Erro ao verificar código. Tente novamente");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,7 +183,7 @@ const SignUpVerification: React.FC = () => {
             </Text>
           </View>
           <Text style={styles.subtitle}>
-            Escreva o código que recebeu em seu telefone para continuar.
+            Escreva o código que recebeu em seu email para continuar.
           </Text>
 
           <View style={styles.codeContainer}>
@@ -116,17 +205,21 @@ const SignUpVerification: React.FC = () => {
 
           <TouchableOpacity
             onPress={handleResendCode}
-            disabled={!canResend}
+            disabled={!canResend || sendingCode}
             style={styles.resendButton}
           >
-            <Text style={[styles.resendText, !canResend && styles.resendTextDisabled]}>
-              Reenviar o código de verificação {!canResend && `(${countdown}s)`}
+            <Text style={[styles.resendText, (!canResend || sendingCode) && styles.resendTextDisabled]}>
+              {sendingCode ? "Enviando..." : `Reenviar o código de verificação ${!canResend && !sendingCode ? `(${countdown}s)` : ""}`}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} disabled={!isCodeComplete} />
+          <GradientButton 
+            title={loading ? "Verificando..." : "Próximo"} 
+            onPress={handleNext} 
+            disabled={!isCodeComplete || loading || sendingCode} 
+          />
         </View>
       </SafeAreaView>
     </View>

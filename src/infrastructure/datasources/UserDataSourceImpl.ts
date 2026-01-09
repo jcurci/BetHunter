@@ -1,4 +1,4 @@
-import { User, UserCredentials, UserRegistration, LoginResult } from '../../domain/entities/User';
+import { User, UserCredentials, UserRegistration, LoginResult, VerificationCodeRequest } from '../../domain/entities/User';
 import { UserDataSource } from '../../data/datasources/UserDataSource';
 import { AuthStorageService } from '../storage/AuthStorageService';
 import { apiClient } from '../../services/api/apiClient';
@@ -114,30 +114,87 @@ export class UserDataSourceImpl implements UserDataSource {
   }
 
   /**
-   * Registra novo usuário via API
+   * Envia código de verificação por email (sem senha)
    */
-  async register(userData: UserRegistration): Promise<User> {
+  async sendVerificationCode(data: VerificationCodeRequest): Promise<void> {
     try {
       // Formatar telefone: remover todos os caracteres não numéricos
-      // O backend espera apenas dígitos (sem formatação)
-      const formattedCellphone = userData.cellphone.replace(/\D/g, '');
+      const formattedCellphone = data.cellphone.replace(/\D/g, '');
       
-      // Preparar dados para envio
-      const registrationData = {
-        name: userData.name.trim(),
-        email: userData.email.trim().toLowerCase(),
-        password: userData.password,
+      // Preparar dados para envio (sem senha)
+      const requestData = {
+        name: data.name.trim(),
+        username: data.username.trim(),
+        email: data.email.trim().toLowerCase(),
         cellphone: formattedCellphone,
       };
 
-      const response = await apiClient.post<RegisterResponse>('/auth/register', registrationData);
+      await apiClient.post('/auth/register', requestData);
       
-      console.log('✅ Registro realizado');
+      console.log('✅ Código de verificação enviado');
+    } catch (error: any) {
+      console.error('❌ Erro ao enviar código de verificação:', error);
+      
+      // Extrair mensagem de erro do backend se disponível
+      if (error.response?.data?.message) {
+        const errorMessage = error.response.data.message;
+        
+        // Criar erro customizado com mensagem do backend
+        const customError = new Error(errorMessage);
+        (customError as any).response = error.response;
+        (customError as any).status = error.response?.status;
+        throw customError;
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica email com código de verificação
+   */
+  async verifyEmail(email: string, code: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/register/verify', {
+        email: email.trim().toLowerCase(),
+        code: code.trim(),
+      });
+      
+      console.log('✅ Email verificado');
+    } catch (error: any) {
+      console.error('❌ Erro ao verificar email:', error);
+      
+      // Extrair mensagem de erro do backend se disponível
+      if (error.response?.data?.message) {
+        const errorMessage = error.response.data.message;
+        
+        // Criar erro customizado com mensagem do backend
+        const customError = new Error(errorMessage);
+        (customError as any).response = error.response;
+        (customError as any).status = error.response?.status;
+        throw customError;
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Cria senha e completa registro do usuário
+   */
+  async createPassword(email: string, password: string): Promise<User> {
+    try {
+      const response = await apiClient.post<RegisterResponse>('/auth/register/password', {
+        email: email.trim().toLowerCase(),
+        password: password,
+      });
+      
+      console.log('✅ Senha criada e usuário registrado');
       
       const user: User = {
-        id: response.data?.id || userData.email,
-        email: response.data?.email || userData.email,
-        name: response.data?.name || userData.name,
+        id: response.data?.id || email,
+        email: response.data?.email || email,
+        name: response.data?.name || '',
         points: response.data?.ranking_points ?? 0,
         betcoins: response.data?.betcoins ?? 0,
         createdAt: new Date(),
@@ -146,7 +203,7 @@ export class UserDataSourceImpl implements UserDataSource {
       
       return user;
     } catch (error: any) {
-      console.error('❌ Erro no registro:', error);
+      console.error('❌ Erro ao criar senha:', error);
       
       // Extrair mensagem de erro do backend se disponível
       if (error.response?.data?.message) {

@@ -1,4 +1,4 @@
-import { User, UserCredentials, UserRegistration, LoginResult } from '../entities/User';
+import { User, UserCredentials, UserRegistration, LoginResult, VerificationCodeRequest } from '../entities/User';
 import { UserRepository } from '../repositories/UserRepository';
 import { ValidationError } from '../errors/CustomErrors';
 
@@ -35,49 +35,93 @@ export class UserUseCase {
   }
 
   /**
-   * Registra novo usuário
+   * Envia código de verificação por email (sem senha)
    * @throws ValidationError se campos obrigatórios estiverem vazios
    */
-  async register(userData: UserRegistration): Promise<User> {
+  async sendVerificationCode(data: VerificationCodeRequest): Promise<void> {
     // Validação de campos obrigatórios
-    if (!userData.name || userData.name.trim() === '') {
+    if (!data.name || data.name.trim() === '') {
       throw new ValidationError('Nome é obrigatório');
     }
 
-    if (!userData.email || userData.email.trim() === '') {
+    if (!data.email || data.email.trim() === '') {
       throw new ValidationError('Email é obrigatório');
     }
 
-    if (!userData.password || userData.password.trim() === '') {
-      throw new ValidationError('Senha é obrigatória');
+    if (!data.cellphone || data.cellphone.trim() === '') {
+      throw new ValidationError('Telefone é obrigatório');
     }
 
-    if (!userData.cellphone || userData.cellphone.trim() === '') {
-      throw new ValidationError('Telefone é obrigatório');
+    if (!data.username || data.username.trim() === '') {
+      throw new ValidationError('Nome de usuário é obrigatório');
     }
 
     // Validação de formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(userData.email)) {
+    if (!emailRegex.test(data.email)) {
+      throw new ValidationError('Email inválido');
+    }
+
+    // Validação de nome (mínimo 3 caracteres)
+    if (data.name.length < 3) {
+      throw new ValidationError('Nome deve ter no mínimo 3 caracteres');
+    }
+
+    return await this.userRepository.sendVerificationCode(data);
+  }
+
+  /**
+   * Verifica email com código de verificação
+   * @throws ValidationError se email ou código estiverem vazios
+   */
+  async verifyEmail(email: string, code: string): Promise<void> {
+    if (!email || email.trim() === '') {
+      throw new ValidationError('Email é obrigatório');
+    }
+
+    if (!code || code.trim() === '') {
+      throw new ValidationError('Código de verificação é obrigatório');
+    }
+
+    // Validação de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      throw new ValidationError('Email inválido');
+    }
+
+    return await this.userRepository.verifyEmail(email.trim().toLowerCase(), code.trim());
+  }
+
+  /**
+   * Cria senha e completa registro do usuário
+   * @throws ValidationError se email ou senha estiverem vazios
+   */
+  async createPassword(email: string, password: string): Promise<User> {
+    if (!email || email.trim() === '') {
+      throw new ValidationError('Email é obrigatório');
+    }
+
+    if (!password || password.trim() === '') {
+      throw new ValidationError('Senha é obrigatória');
+    }
+
+    // Validação de formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
       throw new ValidationError('Email inválido');
     }
 
     // Validação de senha (mínimo 8 caracteres, pelo menos 1 caractere especial)
-    if (userData.password.length < 8) {
+    if (password.length < 8) {
       throw new ValidationError('Senha deve ter no mínimo 8 caracteres');
     }
 
     const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
-    if (!specialCharRegex.test(userData.password)) {
+    if (!specialCharRegex.test(password)) {
       throw new ValidationError('Senha deve conter pelo menos 1 caractere especial');
     }
 
-    // Validação de nome (mínimo 3 caracteres)
-    if (userData.name.length < 3) {
-      throw new ValidationError('Nome deve ter no mínimo 3 caracteres');
-    }
-
-    return await this.userRepository.register(userData);
+    return await this.userRepository.createPassword(email.trim().toLowerCase(), password);
   }
 
   async getCurrentUser(): Promise<User | null> {
