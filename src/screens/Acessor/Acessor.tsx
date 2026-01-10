@@ -11,10 +11,31 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LineChart } from "react-native-chart-kit";
+import { Calendar, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { Footer, IconCard, Modal } from "../../components";
+
+// Configuração do calendário em Português
+LocaleConfig.locales['pt-br'] = {
+  monthNames: [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ],
+  monthNamesShort: [
+    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+  ],
+  dayNames: [
+    'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'
+  ],
+  dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+  today: 'Hoje'
+};
+LocaleConfig.defaultLocale = 'pt-br';
+import { Footer, IconCard, Modal, GradientButton } from "../../components";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
+import NovaEntradaIcon from "../../assets/meu-acessor/nova-entrada.svg";
+import NovaCategoriaIcon from "../../assets/meu-acessor/nova-categoria.svg";
 
 // Interfaces
 interface Category {
@@ -31,31 +52,16 @@ interface Entry {
   valor: string;
   descricao: string;
   data: Date;
+  tipo: 'entrada' | 'saida';
   categoria: { id: string; nome: string; icone?: string } | null;
   createdAt: string;
 }
 
-interface DateOption {
-  id: string;
-  date: Date;
-  label: string;
-}
 
 // Constants
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const STORAGE_KEY = "@bethunter:categories";
 const ENTRIES_KEY = "@bethunter:entries";
-
-// Mock data - valores crescentes ao longo do mês
-const chartData = {
-  labels: ["1", "6", "11", "16", "21", "26", "31"],
-  datasets: [
-    {
-      data: [5000, 6500, 7200, 9000, 11000, 13500, 15526.97],
-      strokeWidth: 3,
-    },
-  ],
-};
 
 // Available Icons for Category
 const AVAILABLE_ICONS = [
@@ -116,22 +122,6 @@ const DEFAULT_CATEGORIES: Category[] = [
   },
 ];
 
-const generateDateOptions = (): DateOption[] => {
-  const today = new Date();
-  return Array.from({ length: 14 }, (_, index) => {
-    const optionDate = new Date(today);
-    optionDate.setDate(today.getDate() - index);
-    return {
-      id: `date-${index}`,
-      date: optionDate,
-      label: optionDate.toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-    };
-  });
-};
 
 const Acessor: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<"mensal">("mensal");
@@ -155,7 +145,18 @@ const Acessor: React.FC = () => {
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [dateOptions] = useState(generateDateOptions);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showCategorySuccessModal, setShowCategorySuccessModal] = useState(false);
+
+  // Saída Modal States
+  const [showEntryModalSaida, setShowEntryModalSaida] = useState(false);
+  const [showCategoryDropdownSaida, setShowCategoryDropdownSaida] = useState(false);
+  const [saidaValue, setSaidaValue] = useState("");
+  const [saidaDescription, setSaidaDescription] = useState("");
+  const [saidaDate, setSaidaDate] = useState<Date>(new Date());
+  const [showDateDropdownSaida, setShowDateDropdownSaida] = useState(false);
+  const [selectedCategoryIdSaida, setSelectedCategoryIdSaida] = useState<string>("");
+  const [showSuccessModalSaida, setShowSuccessModalSaida] = useState(false);
 
   const latestEntry = useMemo(() => {
     if (entries.length === 0) {
@@ -164,11 +165,96 @@ const Acessor: React.FC = () => {
     return entries[0];
   }, [entries]);
 
+  // Calcular totais de entradas e saídas
+  const { totalEntradas, totalSaidas } = useMemo(() => {
+    let entradas = 0;
+    let saidas = 0;
+    
+    entries.forEach((entry) => {
+      const valor = parseFloat(entry.valor) || 0;
+      if (entry.tipo === 'entrada') {
+        entradas += valor;
+      } else {
+        saidas += valor;
+      }
+    });
+    
+    return { totalEntradas: entradas, totalSaidas: saidas };
+  }, [entries]);
+
+  // Calcular dados do gráfico dinamicamente
+  const chartData = useMemo(() => {
+    if (entries.length === 0) {
+      // Dados padrão quando não há entradas
+      return {
+        labels: ["1", "6", "11", "16", "21", "26", "31"],
+        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0], strokeWidth: 3 }],
+      };
+    }
+
+    // Ordenar entries por data (mais antiga primeiro)
+    const sortedEntries = [...entries].sort(
+      (a, b) => a.data.getTime() - b.data.getTime()
+    );
+
+    // Calcular saldo acumulado ao longo do tempo
+    const dataPoints: { date: Date; balance: number }[] = [];
+    let runningBalance = 0;
+
+    sortedEntries.forEach((entry) => {
+      const valor = parseFloat(entry.valor) || 0;
+      if (entry.tipo === 'entrada') {
+        runningBalance += valor;
+      } else {
+        runningBalance -= valor;
+      }
+      dataPoints.push({ date: entry.data, balance: runningBalance });
+    });
+
+    // Limitar a 7 pontos para visualização
+    let displayPoints = dataPoints;
+    if (dataPoints.length > 7) {
+      const step = Math.floor(dataPoints.length / 6);
+      displayPoints = [];
+      for (let i = 0; i < dataPoints.length; i += step) {
+        displayPoints.push(dataPoints[i]);
+      }
+      // Sempre incluir o último ponto
+      if (displayPoints[displayPoints.length - 1] !== dataPoints[dataPoints.length - 1]) {
+        displayPoints.push(dataPoints[dataPoints.length - 1]);
+      }
+      displayPoints = displayPoints.slice(0, 7);
+    }
+
+    // Formatar labels (dia do mês)
+    const labels = displayPoints.map((point) =>
+      point.date.getDate().toString()
+    );
+
+    // Valores do gráfico (garantir que tenha pelo menos 2 pontos)
+    let values = displayPoints.map((point) => point.balance);
+    if (values.length === 1) {
+      values = [0, values[0]];
+      labels.unshift("0");
+    }
+
+    return {
+      labels,
+      datasets: [{ data: values, strokeWidth: 3 }],
+    };
+  }, [entries]);
+
   // Load categories from AsyncStorage
   useEffect(() => {
     loadCategories();
-    loadEntries();
   }, []);
+
+  // Load entries after categories are loaded
+  useEffect(() => {
+    if (categories.length > 0) {
+      loadEntries();
+    }
+  }, [categories]);
 
   const loadCategories = async () => {
     try {
@@ -194,13 +280,24 @@ const Acessor: React.FC = () => {
     try {
       const storedEntries = await AsyncStorage.getItem(ENTRIES_KEY);
       if (storedEntries) {
-        type StoredEntry = Omit<Entry, "data"> & { data: string };
+        type StoredEntry = Omit<Entry, "data"> & { data: string; tipo?: 'entrada' | 'saida' };
         const parsedRaw = JSON.parse(storedEntries) as StoredEntry[];
         const parsed: Entry[] = parsedRaw
-          .map((entry) => ({
+          .map((entry) => {
+            // Inferir tipo baseado na categoria se não existir
+            let tipo: 'entrada' | 'saida' = entry.tipo || 'saida';
+            if (!entry.tipo && entry.categoria?.id) {
+              const cat = categories.find((c) => c.id === entry.categoria?.id);
+              if (cat) {
+                tipo = cat.tipo;
+              }
+            }
+            return {
             ...entry,
             data: new Date(entry.data),
-          }))
+              tipo,
+            };
+          })
           .sort((a, b) => b.data.getTime() - a.data.getTime());
         setEntries(parsed);
       }
@@ -236,6 +333,12 @@ const Acessor: React.FC = () => {
       setCategories(updatedCategories);
       setShowCategoryModal(false);
       resetForm();
+      
+      // Mostrar modal de sucesso por 5 segundos
+      setShowCategorySuccessModal(true);
+      setTimeout(() => {
+        setShowCategorySuccessModal(false);
+      }, 5000);
     } catch (error) {
       console.error("Error saving category:", error);
     }
@@ -263,6 +366,7 @@ const Acessor: React.FC = () => {
       valor: entryValue,
       descricao: entryDescription,
       data: entryDate,
+      tipo: 'entrada',
       categoria: selectedCategory
         ? { id: selectedCategory.id, nome: selectedCategory.nome, icone: selectedCategory.icone }
         : null,
@@ -281,6 +385,12 @@ const Acessor: React.FC = () => {
       await AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(serializedEntries));
       setShowEntryModal(false);
       resetEntryForm();
+      
+      // Mostrar modal de sucesso por 5 segundos
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 5000);
     } catch (error) {
       console.error("Error saving entry:", error);
     }
@@ -291,6 +401,62 @@ const Acessor: React.FC = () => {
     month: "short",
     year: "numeric",
   });
+
+  const formattedDateSaida = saidaDate.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const resetSaidaForm = () => {
+    setSaidaValue("");
+    setSaidaDescription("");
+    setSaidaDate(new Date());
+    setSelectedCategoryIdSaida("");
+    setShowCategoryDropdownSaida(false);
+    setShowDateDropdownSaida(false);
+  };
+
+  const handleSaveSaida = async () => {
+    if (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) {
+      return;
+    }
+
+    const selectedCategory = categories.find((cat) => cat.id === selectedCategoryIdSaida);
+    const newEntry: Entry = {
+      id: Date.now().toString(),
+      valor: saidaValue,
+      descricao: saidaDescription,
+      data: saidaDate,
+      tipo: 'saida',
+      categoria: selectedCategory
+        ? { id: selectedCategory.id, nome: selectedCategory.nome, icone: selectedCategory.icone }
+        : null,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const updatedEntries = [...entries, newEntry].sort(
+        (a, b) => b.data.getTime() - a.data.getTime()
+      );
+      setEntries(updatedEntries);
+      const serializedEntries = updatedEntries.map((entry) => ({
+        ...entry,
+        data: entry.data.toISOString(),
+      }));
+      await AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(serializedEntries));
+      setShowEntryModalSaida(false);
+      resetSaidaForm();
+      
+      // Mostrar modal de sucesso por 5 segundos
+      setShowSuccessModalSaida(true);
+      setTimeout(() => {
+        setShowSuccessModalSaida(false);
+      }, 5000);
+    } catch (error) {
+      console.error("Error saving saida:", error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -373,9 +539,13 @@ const Acessor: React.FC = () => {
                 <Icon name="trending-up" size={20} color="#6BCB77" />
               </View>
               <Text style={styles.valueAmount}>
-                <Text style={styles.currencySymbol}>R$</Text>
-               
-                <Text style={styles.cents}>15.526,97</Text>
+                <Text style={styles.currencySymbol}>R$ </Text>
+                <Text style={styles.cents}>
+                  {totalEntradas.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </Text>
               </Text>
             </View>
           </View>
@@ -388,9 +558,13 @@ const Acessor: React.FC = () => {
                 <Icon name="trending-down" size={20} color="#FF6B9D" />
               </View>
               <Text style={[styles.valueAmount, styles.valueAmountExit]}>
-                <Text style={styles.currencySymbol}>R$</Text>
-               
-                <Text style={styles.cents}> 12.357,62</Text>
+                <Text style={styles.currencySymbol}>R$ </Text>
+                <Text style={styles.cents}>
+                  {totalSaidas.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </Text>
               </Text>
             </View>
           </View>
@@ -476,8 +650,11 @@ const Acessor: React.FC = () => {
                     year: "numeric",
                   })}
                 </Text>
-                <Text style={styles.recentAmount}>
-                  {`-R$ ${Number(latestEntry.valor).toLocaleString("pt-BR", {
+                <Text style={[
+                  styles.recentAmount,
+                  latestEntry.tipo === 'entrada' && styles.recentAmountEntrada
+                ]}>
+                  {`${latestEntry.tipo === 'entrada' ? '+' : '-'}R$ ${Number(latestEntry.valor).toLocaleString("pt-BR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}`}
@@ -495,23 +672,21 @@ const Acessor: React.FC = () => {
 
         {/* Botões */}
         <View style={styles.buttonsContainer}>
-          <TouchableOpacity 
-            style={styles.button}
-            activeOpacity={0.8}
-            onPress={() => setShowEntryModal(true)}
-          >
-            <Icon name="tag" size={20} color="#FF6B9D" />
-            <Text style={styles.buttonText}>Nova Entrada</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonWrapper}>
+            <GradientButton 
+              title="Nova Entrada" 
+              onPress={() => setShowEntryModal(true)}
+              icon={<NovaEntradaIcon width={24} height={24} />}
+            />
+          </View>
+          <View style={styles.buttonWrapper}>
+            <GradientButton 
+              title="Nova Saída" 
+              onPress={() => setShowEntryModalSaida(true)}
+              icon={<NovaCategoriaIcon width={24} height={24} />}
+            />
+          </View>
 
-          <TouchableOpacity 
-            style={styles.button}
-            activeOpacity={0.8}
-            onPress={() => setShowCategoryModal(true)}
-          >
-            <Icon name="account-plus" size={20} color="#D783D8" />
-            <Text style={styles.buttonText}>Nova Categoria</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -574,34 +749,41 @@ const Acessor: React.FC = () => {
               <Icon name="calendar" size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          
 
           {showDateDropdown && (
-            <View style={styles.dateDropdown}>
-              {dateOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.dateDropdownItem,
-                    option.date.toDateString() === entryDate.toDateString() &&
-                      styles.dateDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setEntryDate(option.date);
-                    setShowDateDropdown(false);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Text
-                    style={[
-                      styles.dateDropdownText,
-                      option.date.toDateString() === entryDate.toDateString() &&
-                        styles.dateDropdownTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.calendarContainer}>
+              <Calendar
+                onDayPress={(day) => {
+                  setEntryDate(new Date(day.dateString + 'T12:00:00'));
+                  setShowDateDropdown(false);
+                }}
+                markedDates={{
+                  [entryDate.toISOString().split('T')[0]]: {
+                    selected: true,
+                    selectedColor: '#D783D8',
+                  },
+                }}
+                theme={{
+                  backgroundColor: '#14121B',
+                  calendarBackground: '#14121B',
+                  textSectionTitleColor: '#A7A3AE',
+                  selectedDayBackgroundColor: '#D783D8',
+                  selectedDayTextColor: '#FFFFFF',
+                  todayTextColor: '#FF6B9D',
+                  dayTextColor: '#FFFFFF',
+                  textDisabledColor: '#6B6677',
+                  monthTextColor: '#FFFFFF',
+                  arrowColor: '#D783D8',
+                  textDayFontWeight: '500',
+                  textMonthFontWeight: 'bold',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 12,
+                }}
+                style={styles.calendar}
+              />
             </View>
           )}
 
@@ -627,7 +809,7 @@ const Acessor: React.FC = () => {
             {showCategoryDropdown && (
               <View style={styles.categoryDropdown}>
                 <ScrollView style={styles.categoryDropdownList}>
-                  {categories.map((category) => (
+                  {categories.filter((cat) => cat.tipo === 'entrada').map((category) => (
                     <TouchableOpacity
                       key={category.id}
                       style={[
@@ -685,6 +867,184 @@ const Acessor: React.FC = () => {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Modal Nova Saída */}
+      <Modal
+        visible={showEntryModalSaida}
+        onClose={() => {
+          setShowEntryModalSaida(false);
+          resetSaidaForm();
+        }}
+        title="Nova saída"
+        size="bigger"
+      >
+        <View style={styles.entryModalContent}>
+          {/* Valor */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Valor</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.textInput}
+                placeholder='"1235.57"'
+                placeholderTextColor="#6B6677"
+                keyboardType="decimal-pad"
+                value={saidaValue}
+                onChangeText={setSaidaValue}
+              />
+              <Icon name="pencil" size={20} color="#A7A3AE" />
+            </View>
+          </View>
+
+          {/* Descrição */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Descrição</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.textInput}
+                placeholder='"Pagamento da refeição feita no restaurante, comi com minha família"'
+                placeholderTextColor="#6B6677"
+                value={saidaDescription}
+                onChangeText={setSaidaDescription}
+              />
+              <Icon name="pencil" size={20} color="#A7A3AE" />
+            </View>
+          </View>
+
+          {/* Data */}
+          <View style={styles.entryRow}>
+            <View>
+              <Text style={styles.inputLabel}>Data</Text>
+              <Text style={styles.entryDate}>{formattedDateSaida}</Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.dateButton,
+                showDateDropdownSaida && styles.dateButtonActive,
+              ]}
+              onPress={() => setShowDateDropdownSaida((prev) => !prev)}
+              activeOpacity={0.8}
+            >
+              <Icon name="calendar" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          {showDateDropdownSaida && (
+            <View style={styles.calendarContainer}>
+              <Calendar
+                onDayPress={(day) => {
+                  setSaidaDate(new Date(day.dateString + 'T12:00:00'));
+                  setShowDateDropdownSaida(false);
+                }}
+                markedDates={{
+                  [saidaDate.toISOString().split('T')[0]]: {
+                    selected: true,
+                    selectedColor: '#D783D8',
+                  },
+                }}
+                theme={{
+                  backgroundColor: '#14121B',
+                  calendarBackground: '#14121B',
+                  textSectionTitleColor: '#A7A3AE',
+                  selectedDayBackgroundColor: '#D783D8',
+                  selectedDayTextColor: '#FFFFFF',
+                  todayTextColor: '#FF6B9D',
+                  dayTextColor: '#FFFFFF',
+                  textDisabledColor: '#6B6677',
+                  monthTextColor: '#FFFFFF',
+                  arrowColor: '#D783D8',
+                  textDayFontWeight: '500',
+                  textMonthFontWeight: 'bold',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 12,
+                }}
+                style={styles.calendar}
+              />
+            </View>
+          )}
+
+          {/* Categoria */}
+          <View>
+            <Text style={styles.inputLabel}>Categoria</Text>
+            <TouchableOpacity
+              style={[
+                styles.categorySelectButton,
+                showCategoryDropdownSaida && styles.categorySelectButtonActive,
+              ]}
+              activeOpacity={0.85}
+              onPress={() => setShowCategoryDropdownSaida((prev) => !prev)}
+            >
+              <Text style={styles.categorySelectText}>
+                {selectedCategoryIdSaida
+                  ? categories.find((cat) => cat.id === selectedCategoryIdSaida)?.nome
+                  : "Selecione a categoria"}
+              </Text>
+              <Icon name="account-multiple-plus" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            {showCategoryDropdownSaida && (
+              <View style={styles.categoryDropdown}>
+                <ScrollView style={styles.categoryDropdownList}>
+                  {categories.filter((cat) => cat.tipo === 'saida').map((category) => (
+                    <TouchableOpacity
+                      key={category.id}
+                      style={[
+                        styles.categoryDropdownItem,
+                        selectedCategoryIdSaida === category.id &&
+                          styles.categoryDropdownItemActive,
+                      ]}
+                      onPress={() => {
+                        setSelectedCategoryIdSaida(category.id);
+                        setShowCategoryDropdownSaida(false);
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Icon
+                        name={category.icone}
+                        size={22}
+                        color={selectedCategoryIdSaida === category.id ? "#D783D8" : "#A7A3AE"}
+                        style={styles.categoryDropdownIcon}
+                      />
+                      <Text
+                        style={[
+                          styles.categoryDropdownText,
+                          selectedCategoryIdSaida === category.id &&
+                            styles.categoryDropdownTextActive,
+                        ]}
+                      >
+                        {category.nome}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          <TouchableOpacity
+            onPress={handleSaveSaida}
+            disabled={!saidaValue || !saidaDescription || !selectedCategoryIdSaida}
+            activeOpacity={0.85}
+            style={[
+              styles.modalSaveButton,
+              (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
+                styles.modalSaveButtonDisabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.modalSaveButtonText,
+                (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
+                  styles.modalSaveButtonTextDisabled,
+              ]}
+            >
+              Salvar
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {/* Modal Nova Categoria */}
       <Modal
         visible={showCategoryModal}
@@ -820,6 +1180,46 @@ const Acessor: React.FC = () => {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* Modal de Sucesso - Entrada */}
+      <Modal
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        size="smaller"
+        showCloseButton={false}
+      >
+        <View style={styles.successModalContent}>
+          <Text style={styles.successTitle}>Sucesso!</Text>
+          <Text style={styles.successMessage}>Entrada adicionada com sucesso.</Text>
+        </View>
+      </Modal>
+
+      {/* Modal de Sucesso - Categoria */}
+      <Modal
+        visible={showCategorySuccessModal}
+        onClose={() => setShowCategorySuccessModal(false)}
+        size="smaller"
+        showCloseButton={false}
+      >
+        <View style={styles.successModalContent}>
+          <Text style={styles.successTitle}>Sucesso!</Text>
+          <Text style={styles.successMessage}>Categoria adicionada com sucesso.</Text>
+        </View>
+      </Modal>
+
+      {/* Modal de Sucesso - Saída */}
+      <Modal
+        visible={showSuccessModalSaida}
+        onClose={() => setShowSuccessModalSaida(false)}
+        size="smaller"
+        showCloseButton={false}
+      >
+        <View style={styles.successModalContent}>
+          <Text style={styles.successTitle}>Sucesso!</Text>
+          <Text style={styles.successMessage}>Saída adicionada com sucesso.</Text>
+        </View>
+      </Modal>
+
       <Footer />
     </SafeAreaView>
   );
@@ -963,6 +1363,7 @@ const styles = StyleSheet.create({
   },
   categoriesCards: {
     flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
   },
 
@@ -1047,6 +1448,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FF6B9D",
   },
+  recentAmountEntrada: {
+    color: "#6BCB77",
+  },
 
   // Buttons
   buttonsContainer: {
@@ -1054,23 +1458,8 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 160,
   },
-  button: {
+  buttonWrapper: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#14121B",
-    borderWidth: 1,
-    borderColor: "#2C2A35",
-    borderRadius: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
 
   // Modal Styles
@@ -1178,28 +1567,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#D783D8",
   },
-  dateDropdown: {
+  calendarContainer: {
     marginTop: 16,
-    borderRadius: 24,
-    backgroundColor: "#131019",
+    borderRadius: 16,
+    backgroundColor: "#14121B",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     overflow: "hidden",
   },
-  dateDropdownItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  dateDropdownItemActive: {
-    backgroundColor: "rgba(215, 131, 216, 0.12)",
-  },
-  dateDropdownText: {
-    fontSize: 16,
-    color: "#A7A3AE",
-    fontWeight: "500",
-  },
-  dateDropdownTextActive: {
-    color: "#FFFFFF",
+  calendar: {
+    borderRadius: 16,
   },
   categorySelectButton: {
     marginTop: 12,
@@ -1298,6 +1675,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#3D3A48",
     borderWidth: 2,
     borderColor: "#D783D8",
+  },
+  successModalContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 12,
+  },
+  successMessage: {
+    fontSize: 16,
+    color: "#A7A3AE",
+    textAlign: "center",
   },
 });
 
