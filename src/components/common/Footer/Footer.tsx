@@ -1,9 +1,102 @@
-import React from "react";
-import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
+import React, { useRef, useCallback } from "react";
+import { View, StyleSheet, Pressable, Text, Animated } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import MaskedView from "@react-native-masked-view/masked-view";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import IconHome from "../../../assets/icon-home.svg";
+import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
 import { RootStackParamList, NavigationProp } from "../../../types/navigation";
+import { HORIZONTAL_GRADIENT_COLORS, HORIZONTAL_GRADIENT_LOCATIONS } from "../../../config/colors";
+
+interface TabButtonProps {
+  routeName: keyof RootStackParamList;
+  iconName: string;
+  iconNameOutline: string;
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({
+  iconName,
+  iconNameOutline,
+  label,
+  isActive,
+  onPress,
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.85,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 8,
+    }).start();
+  }, [scaleAnim]);
+
+  const name = isActive ? iconName : iconNameOutline;
+  const size = 28;
+
+  const renderIcon = () => {
+    if (isActive) {
+      return (
+        <MaskedView
+          maskElement={
+            <View style={styles.iconMask}>
+              <Icon name={name} size={size} color="#FFFFFF" />
+            </View>
+          }
+        >
+          <LinearGradient
+            colors={HORIZONTAL_GRADIENT_COLORS}
+            locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.iconGradient}
+          >
+            <Icon name={name} size={size} color="transparent" />
+          </LinearGradient>
+        </MaskedView>
+      );
+    }
+    return <Icon name={name} size={size} color="#A09CAB" />;
+  };
+
+  return (
+    <Pressable
+      style={styles.tabButton}
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View
+        style={[
+          styles.iconWrapper,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        {renderIcon()}
+      </Animated.View>
+      <Animated.Text
+        style={[
+          isActive ? styles.activeIconText : styles.iconText,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        {label}
+      </Animated.Text>
+    </Pressable>
+  );
+};
 
 const Footer: React.FC = () => {
   const route = useRoute();
@@ -13,102 +106,42 @@ const Footer: React.FC = () => {
   const isActive = (tabName: keyof RootStackParamList): boolean => 
     currentRouteName === tabName;
 
+  const handleNavigate = useCallback(
+    (routeName: keyof RootStackParamList) => {
+      if (currentRouteName !== routeName) {
+        // Usa replace para transição mais suave entre tabs principais
+        navigation.dispatch(StackActions.replace(routeName));
+      }
+    },
+    [currentRouteName, navigation]
+  );
+
   return (
     <View style={styles.footerContainer}>
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => navigation.navigate("Home")}
-      >
-        <View
-          style={
-            isActive("Home")
-              ? styles.activeIconWrapper
-              : styles.inactiveIconWrapper
-          }
-        >
-          <Icon
-            name={isActive("Home") ? "home" : "home-outline"}
-            size={24}
-            color={isActive("Home") ? "#FFFFFF" : "#A09CAB"}
-          />
-        </View>
-        <Text
-          style={isActive("Home") ? styles.activeIconText : styles.iconText}
-        >
-          Home
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => navigation.navigate("MenuEducacional")}
-      >
-        <View
-          style={
-            isActive("MenuEducacional")
-              ? styles.activeIconWrapper
-              : styles.inactiveIconWrapper
-          }
-        >
-          <Icon
-            name={isActive("MenuEducacional") ? "book" : "book-outline"}
-            size={24}
-            color={isActive("MenuEducacional") ? "#FFFFFF" : "#A09CAB"}
-          />
-        </View>
-        <Text
-          style={isActive("MenuEducacional") ? styles.activeIconText : styles.iconText}
-        >
-          Aprender
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => navigation.navigate("EmConstrucao")}
-      >
-        <View
-          style={
-            isActive("Graficos")
-              ? styles.activeIconWrapper
-              : styles.inactiveIconWrapper
-          }
-        >
-          <Icon
-            name={isActive("Graficos") ? "stats-chart" : "stats-chart-outline"}
-            size={24}
-            color={isActive("Graficos") ? "#FFFFFF" : "#A09CAB"}
-          />
-        </View>
-        <Text
-          style={isActive("Graficos") ? styles.activeIconText : styles.iconText}
-        >
-          Gráficos
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.tabButton}
-        onPress={() => navigation.navigate("Roulette")}
-      >
-        <View
-          style={
-            isActive("Roulette")
-              ? styles.activeIconWrapper
-              : styles.inactiveIconWrapper
-          }
-        >
-          <Icon
-            name={
-              isActive("Roulette") ? "game-controller" : "game-controller-outline"
-            }
-            size={24}
-            color={isActive("Roulette") ? "#FFFFFF" : "#A09CAB"}
-          />
-        </View>
-        <Text
-          style={isActive("Roulette") ? styles.activeIconText : styles.iconText}
-        >
-          Jogar
-        </Text>
-      </TouchableOpacity>
+      <TabButton
+        routeName="Home"
+        iconName="home"
+        iconNameOutline="home-outline"
+        label="Home"
+        isActive={isActive("Home")}
+        onPress={() => handleNavigate("Home")}
+      />
+      <TabButton
+        routeName="MenuEducacional"
+        iconName="book"
+        iconNameOutline="book-outline"
+        label="Aprender"
+        isActive={isActive("MenuEducacional")}
+        onPress={() => handleNavigate("MenuEducacional")}
+      />
+      <TabButton
+        routeName="Acessor"
+        iconName="wallet"
+        iconNameOutline="wallet-outline"
+        label="Acessor"
+        isActive={isActive("Acessor")}
+        onPress={() => handleNavigate("Acessor")}
+      />
     </View>
   );
 };
@@ -118,8 +151,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: "#1C1C1C",
-    paddingVertical: 8,
+    backgroundColor: "#05040A",
+    paddingVertical: 12,
     paddingHorizontal: 0,
     borderTopWidth: 1,
     borderTopColor: "#333",
@@ -135,21 +168,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
-  activeIconWrapper: {
-    backgroundColor: "#7456C8",
-    borderRadius: 50,
+  iconWrapper: {
     width: 50,
     height: 50,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 0,
   },
-  inactiveIconWrapper: {
-    width: 50,
-    height: 50,
+  iconMask: {
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 0,
+  },
+  iconGradient: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   iconText: {
     fontSize: 12,
@@ -164,6 +196,3 @@ const styles = StyleSheet.create({
 });
 
 export default Footer;
-
-
-
