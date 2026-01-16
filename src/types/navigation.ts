@@ -33,8 +33,6 @@ export type RootStackParamList = {
   MinhaJornada: undefined;
   CursosSalvos: undefined;
   Meditacao: undefined;
-  PersonalityTestIntro: undefined;
-  PersonalityTestQuestion: undefined;
   MinhaConta: undefined;
   DetalhesPessoais: undefined;
 };
