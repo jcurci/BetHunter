@@ -51,7 +51,7 @@ const DetalhesPessoais: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successFieldLabel, setSuccessFieldLabel] = useState<string>("");
   const { profileImageUri, setProfileImage, loadProfileImage } = useProfileStore();
-  
+
 
   useEffect(() => {
     // Carrega usuário do authStore diretamente
@@ -148,7 +148,7 @@ const DetalhesPessoais: React.FC = () => {
       // TODO: Implementar chamada à API para atualizar o campo
       // const userUseCase = container.getUserUseCase();
       // await userUseCase.updateUserField(field, value);
-      
+
       // Atualizar estado local temporariamente
       // Se user não estiver carregado, criar um objeto temporário
       if (user) {
@@ -169,30 +169,28 @@ const DetalhesPessoais: React.FC = () => {
           email: field === "email" ? value : "jhondoe@gmail.com",
           points: 0,
           betcoins: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          phone: field === "phone" ? value : undefined,
+
         };
         setUser(tempUser);
       }
-      
+
       // Prepare success message
-      const fieldLabel = 
-        field === "name" 
+      const fieldLabel =
+        field === "name"
           ? "Nome completo alterado"
           : field === "email"
-          ? "Endereço de email alterado"
-          : "Número de telefone alterado";
-      
+            ? "Endereço de email alterado"
+            : "Número de telefone alterado";
+
       // Close confirmation modal
       setConfirmingField(null);
       setConfirmingValue("");
-      
+
       // Show success modal after a short delay to ensure smooth transition
       setTimeout(() => {
         setSuccessFieldLabel(fieldLabel);
         setShowSuccessModal(true);
-        
+
         // Auto close success modal after 2 seconds
         setTimeout(() => {
           setShowSuccessModal(false);
@@ -270,11 +268,11 @@ const DetalhesPessoais: React.FC = () => {
             {/* Profile Section */}
             <View style={styles.profileSection}>
               <View style={styles.avatarContainer}>
-                <Avatar 
-                  initials={getInitials(user?.name)} 
+                <Avatar
+                  initials={getInitials(user?.name)}
                   size={100}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.cameraButton}
                   onPress={handlePickImage}
                   activeOpacity={0.8}
@@ -308,7 +306,7 @@ const DetalhesPessoais: React.FC = () => {
               <View style={styles.separator} />
               <EditableField
                 label="Número de telefone"
-                value={user?.phone ? formatPhoneForDisplay(user.phone) : "+55 11 99999-9999"}
+                value={user?.phone ? user.phone : "+55 11 99999-9999"}
                 onEdit={() => setEditingField("phone")}
               />
             </MenuSection>
@@ -334,10 +332,10 @@ const DetalhesPessoais: React.FC = () => {
             editingField === "name"
               ? "Nome completo"
               : editingField === "email"
-              ? "Endereço de email"
-              : editingField === "phone"
-              ? "Número de telefone"
-              : ""
+                ? "Endereço de email"
+                : editingField === "phone"
+                  ? "Número de telefone"
+                  : ""
           }
           initialValue={editingField ? getFieldValue(editingField) : ""}
           onConfirm={(value) => {
@@ -349,18 +347,18 @@ const DetalhesPessoais: React.FC = () => {
             editingField === "name"
               ? "Digite o seu nome completo"
               : editingField === "email"
-              ? "Digite o seu endereço de email"
-              : editingField === "phone"
-              ? "Digite o seu número de telefone"
-              : ""
+                ? "Digite o seu endereço de email"
+                : editingField === "phone"
+                  ? "Digite o seu número de telefone"
+                  : ""
           }
           validate={editingField ? getFieldValidate(editingField) : undefined}
           keyboardType={
             editingField === "email"
               ? "email-address"
               : editingField === "phone"
-              ? "phone-pad"
-              : "default"
+                ? "phone-pad"
+                : "default"
           }
           autoCapitalize={
             editingField === "name" ? "words" : editingField === "email" || editingField === "phone" ? "none" : "sentences"
@@ -381,10 +379,10 @@ const DetalhesPessoais: React.FC = () => {
             confirmingField === "name"
               ? "Nome completo"
               : confirmingField === "email"
-              ? "Endereço de email"
-              : confirmingField === "phone"
-              ? "Número de telefone"
-              : ""
+                ? "Endereço de email"
+                : confirmingField === "phone"
+                  ? "Número de telefone"
+                  : ""
           }
           showCloseButton={true}
           scrollEnabled={false}
@@ -393,7 +391,7 @@ const DetalhesPessoais: React.FC = () => {
             <View style={styles.confirmationInputContainer}>
               <Text style={styles.confirmationValue}>
                 {confirmingField === "phone" && confirmingValue
-                  ? formatPhoneForDisplay(confirmingValue)
+                  ? confirmingValue
                   : confirmingValue}
               </Text>
               <TouchableOpacity
@@ -414,8 +412,8 @@ const DetalhesPessoais: React.FC = () => {
               {confirmingField === "name"
                 ? "Esse nome está correto?"
                 : confirmingField === "email"
-                ? "Esse email está correto?"
-                : "Esse telefone está correto?"}
+                  ? "Esse email está correto?"
+                  : "Esse telefone está correto?"}
             </Text>
             <View style={styles.buttonContainer}>
               <GradientBorderButton

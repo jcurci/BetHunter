@@ -16,13 +16,10 @@ import { Audio } from "expo-av";
 import Icon from "react-native-vector-icons/Feather";
 import { BackIconButton } from "../../components";
 import { NavigationProp } from "../../types/navigation";
-<<<<<<< HEAD
 import {
   BACKGROUND_GRADIENT_COLORS,
   BACKGROUND_GRADIENT_LOCATIONS,
 } from "../../config/colors";
-=======
->>>>>>> 4676db33 (tela de meditacao)
 
 // Meditation audio (local file)
 const MEDITATION_AUDIO = require("./mixkit-relaxation-2-253.mp3");
@@ -30,13 +27,6 @@ const MEDITATION_AUDIO = require("./mixkit-relaxation-2-253.mp3");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CIRCLE_SIZE = SCREEN_WIDTH * 0.7;
 
-<<<<<<< HEAD
-=======
-// Background gradient
-const BACKGROUND_GRADIENT_COLORS = ["#443570", "#443045", "#2F2229", "#0F0E11", "#000000"] as const;
-const BACKGROUND_GRADIENT_LOCATIONS = [0, 0.15, 0.32, 0.62, 1] as const;
-
->>>>>>> 4676db33 (tela de meditacao)
 // Morphism color palette - limited, soft, organic
 const CIRCLE_OUTER_COLORS = ["#7B5BAF", "#9B6BB8", "#C87BA0", "#E08B8B"] as const;
 const CIRCLE_INNER_COLORS = ["#A890D0", "#C4A0D8", "#D8B0C8", "#E8C0B8", "#F0D0C0"] as const;
