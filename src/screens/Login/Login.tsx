@@ -45,8 +45,8 @@ const Login: React.FC = () => {
 
       const session = await loginUseCase.execute(email, password);
 
-      // Salvar token no authStore
-      authStore.setToken(session.accessToken);
+      // Salvar token no authStore (persiste no AsyncStorage)
+      await authStore.setToken(session.accessToken);
 
       // Navegar para Home
       navigation.navigate("Home");

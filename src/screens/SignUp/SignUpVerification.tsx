@@ -13,6 +13,8 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError } from "../../domain/errors/CustomErrors";
 
 const CODE_LENGTH = 6;
 
@@ -20,6 +22,7 @@ const SignUpVerification: React.FC = () => {
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [countdown, setCountdown] = useState<number>(30);
   const [canResend, setCanResend] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const inputRefs = useRef<(TextInput | null)[]>(Array(CODE_LENGTH).fill(null));
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpVerification">>();
@@ -38,7 +41,7 @@ const SignUpVerification: React.FC = () => {
 
   const handleCodeChange = (text: string, index: number) => {
     const digit = text.replace(/[^0-9]/g, "");
-    
+
     if (digit.length <= 1) {
       const newCode = [...code];
       newCode[index] = digit;
@@ -56,26 +59,66 @@ const SignUpVerification: React.FC = () => {
     }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     if (canResend) {
-      setCountdown(30);
-      setCanResend(false);
-      Alert.alert("Código reenviado", "Um novo código foi enviado para seu telefone.");
+      setLoading(true);
+      try {
+        const container = Container.getInstance();
+        const startRegistrationUseCase = container.getStartRegistrationUseCase();
+
+        await startRegistrationUseCase.execute({
+          email,
+          name,
+          username,
+          cellphone: phone,
+        });
+
+        setCountdown(30);
+        setCanResend(false);
+        Alert.alert("Código reenviado", "Um novo código foi enviado para seu telefone.");
+      } catch (error: unknown) {
+        console.error("Erro ao reenviar código:", error);
+        if (error instanceof ValidationError) {
+          Alert.alert("Erro", error.message);
+        } else {
+          Alert.alert("Erro", "Erro ao reenviar código. Tente novamente.");
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   // Verifica se o código está completo
   const isCodeComplete = code.every(digit => digit !== "");
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const fullCode = code.join("");
-    
+
     if (fullCode.length !== CODE_LENGTH) {
       Alert.alert("Erro", "Por favor, preencha o código completo");
       return;
     }
 
-    navigation.navigate("SignUpPassword", { name, username, email, phone });
+    setLoading(true);
+    try {
+      const container = Container.getInstance();
+      const verifyRegistrationCodeUseCase = container.getVerifyRegistrationCodeUseCase();
+
+      await verifyRegistrationCodeUseCase.execute(email, fullCode);
+
+      // Navegar para tela de senha
+      navigation.navigate("SignUpPassword", { name, username, email, phone });
+    } catch (error: unknown) {
+      console.error("Erro ao verificar código:", error);
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro", error.message);
+      } else {
+        Alert.alert("Erro", "Código inválido ou expirado. Tente novamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -126,7 +169,11 @@ const SignUpVerification: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} disabled={!isCodeComplete} />
+          <GradientButton
+            title={loading ? "Verificando..." : "Próximo"}
+            onPress={handleNext}
+            disabled={!isCodeComplete || loading}
+          />
         </View>
       </SafeAreaView>
     </View>

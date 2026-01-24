@@ -5,18 +5,22 @@ import {
   TextInput,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError } from "../../domain/errors/CustomErrors";
 
 const SignUpContact: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
   const [phoneError, setPhoneError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
   const [touched, setTouched] = useState<{ email: boolean; phone: boolean }>({
     email: false,
     phone: false,
@@ -101,7 +105,7 @@ const SignUpContact: React.FC = () => {
     !emailError && 
     !phoneError;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     // Marcar todos como touched
     setTouched({ email: true, phone: true });
 
@@ -117,7 +121,33 @@ const SignUpContact: React.FC = () => {
       return;
     }
 
-    navigation.navigate("SignUpVerification", { name, username, email, phone });
+    setLoading(true);
+    try {
+      const container = Container.getInstance();
+      const startRegistrationUseCase = container.getStartRegistrationUseCase();
+
+      // Remove caracteres não numéricos do telefone
+      const phoneDigits = phone.replace(/\D/g, "");
+
+      await startRegistrationUseCase.execute({
+        email: email.trim(),
+        name,
+        username,
+        cellphone: phoneDigits,
+      });
+
+      // Navegar para tela de verificação
+      navigation.navigate("SignUpVerification", { name, username, email: email.trim(), phone: phoneDigits });
+    } catch (error: unknown) {
+      console.error("Erro ao iniciar cadastro:", error);
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro", error.message);
+      } else {
+        Alert.alert("Erro", "Erro ao iniciar cadastro. Verifique os dados e tente novamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -190,7 +220,11 @@ const SignUpContact: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} disabled={!isFormValid} />
+          <GradientButton 
+            title={loading ? "Enviando..." : "Próximo"} 
+            onPress={handleNext} 
+            disabled={!isFormValid || loading} 
+          />
         </View>
       </SafeAreaView>
     </View>

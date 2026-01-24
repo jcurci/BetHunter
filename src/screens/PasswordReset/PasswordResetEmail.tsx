@@ -154,7 +154,7 @@ const PasswordResetEmail: React.FC = () => {
     // TODO: Chamar API para verificar se a conta existe
     // Em caso de erro da API, descomentar a linha abaixo:
     // setApiError(config.apiError);
-    
+
     // Navegar para tela de verificação de código
     navigation.navigate("PasswordResetVerification", { method, value });
   };
@@ -254,7 +254,7 @@ const PasswordResetEmail: React.FC = () => {
               <Text style={styles.titleBold}>conta!</Text>
             </Text>
           </View>
-          
+
           <Text style={styles.subtitle}>
             {config.subtitle}
           </Text>

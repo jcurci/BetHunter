@@ -1,7 +1,10 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStorageService } from '../infrastructure/storage/AuthStorageService';
 import { setOnTokenExpired, clearOnTokenExpired } from '../services/api/apiClient';
 import { AuthUser } from '../domain/entities/User';
+
+const TOKEN_KEY = '@BetHunter:token';
 
 /**
  * Interface do AuthStore
@@ -13,7 +16,7 @@ interface AuthStore {
   isInitialized: boolean;
   
   // Actions
-  setToken: (token: string) => void;
+  setToken: (token: string) => Promise<void>;
   setUser: (user: AuthUser) => void;
   login: (token: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
@@ -35,7 +38,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isAuthenticated: false,
   isInitialized: false,
 
-  setToken: (token: string) => {
+  setToken: async (token: string) => {
+    try {
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+      console.log('✅ [AuthStore] Token salvo no AsyncStorage');
+    } catch (error) {
+      console.error('❌ [AuthStore] Erro ao salvar token no AsyncStorage:', error);
+    }
     set({ token, isAuthenticated: true });
   },
 

@@ -92,8 +92,8 @@ const PasswordResetNewPassword: React.FC = () => {
 
   // Verifica se o formulário é válido para habilitar o botão
   const specialChars = /[!@#$%]/;
-  const isFormValid = 
-    password.length >= 8 && 
+  const isFormValid =
+    password.length >= 8 &&
     specialChars.test(password) &&
     confirmPassword !== "" &&
     password === confirmPassword &&
@@ -121,7 +121,7 @@ const PasswordResetNewPassword: React.FC = () => {
     try {
       // TODO: Chamar API para resetar a senha
       console.log("Reset de senha:", { method, value, code, password });
-      
+
       Alert.alert("Sucesso", "Sua senha foi alterada com sucesso! Faça login para continuar.", [
         {
           text: "OK",
@@ -234,8 +234,8 @@ const PasswordResetNewPassword: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton 
-            title={loading ? "Salvando..." : "Próximo"} 
+          <GradientButton
+            title={loading ? "Salvando..." : "Próximo"}
             onPress={handleResetPassword}
             disabled={loading || !isFormValid}
           />

@@ -126,7 +126,7 @@ const MinhaConta: React.FC = () => {
                   style={styles.statusCardHighlight}
                   pointerEvents="none"
                 />
-                
+
                 <View style={styles.statusCard}>
                   <Text style={styles.statusText}>
                     Seu perfil é: <Text style={styles.statusBold}>Apostador</Text>
@@ -169,12 +169,12 @@ const MinhaConta: React.FC = () => {
               <MenuItem
                 icon="help-circle"
                 label="Ajuda"
-                onPress={() => {}}
+                onPress={() => { }}
               />
               <MenuItem
                 icon="mail"
                 label="Inbox"
-                onPress={() => {}}
+                onPress={() => { }}
                 showSeparator={false}
               />
             </MenuSection>
@@ -183,23 +183,23 @@ const MinhaConta: React.FC = () => {
               <MenuItem
                 icon="shield"
                 label="Segurança"
-                onPress={() => {}}
+                onPress={() => { }}
               />
               <MenuItem
                 icon="bell"
                 label="Configurações de Notificação"
                 onPress={() => navigation.navigate("Notifications")}
               />
-              <MenuItem icon="palette" label="Aparência" onPress={() => {}} />
+              <MenuItem icon="palette" label="Aparência" onPress={() => { }} />
               <MenuItem
                 icon="accessibility"
                 label="Acessibilidade"
-                onPress={() => {}}
+                onPress={() => { }}
               />
               <MenuItem
                 icon="gamepad-2"
                 label="Novas Features"
-                onPress={() => {}}
+                onPress={() => { }}
                 showSeparator={false}
               />
             </MenuSection>
@@ -208,7 +208,7 @@ const MinhaConta: React.FC = () => {
               <MenuItem
                 icon="info"
                 label="Sobre Nós"
-                onPress={() => {}}
+                onPress={() => { }}
               />
               <MenuItem
                 icon="log-out"

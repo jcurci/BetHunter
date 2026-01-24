@@ -309,7 +309,7 @@ const Cursos = () => {
           tint="dark"
           style={styles.headerBlur}
         />
-        
+
         {/* Header */}
         <View style={styles.headerTop}>
           <View style={styles.headerTopLeft}>
@@ -380,11 +380,11 @@ const Cursos = () => {
             <View style={styles.modalStatItem}>
               <Text style={styles.modalStatValue}>{selectedModule?.stars || "0/0"}</Text>
               <IconMaterial name="star" size={24} color="#FFD700" />
-          </View>
+            </View>
             <View style={styles.modalStatItem}>
               <Text style={styles.modalStatValue}>{selectedModule?.points || 0}</Text>
               <Image source={IconFire} style={styles.modalStatIcon} resizeMode="contain" />
-              </View>
+            </View>
           </View>
 
           {/* Confirm Button */}

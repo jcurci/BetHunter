@@ -36,7 +36,7 @@ const PasswordResetVerification: React.FC = () => {
 
   const handleCodeChange = (text: string, index: number) => {
     const digit = text.replace(/[^0-9]/g, "");
-    
+
     if (digit.length <= 1) {
       const newCode = [...code];
       newCode[index] = digit;
@@ -72,7 +72,7 @@ const PasswordResetVerification: React.FC = () => {
 
   const handleNext = () => {
     const fullCode = code.join("");
-    
+
     if (fullCode.length !== CODE_LENGTH) {
       Alert.alert("Erro", "Por favor, preencha o código completo");
       return;

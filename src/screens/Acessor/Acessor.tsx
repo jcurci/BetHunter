@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   TouchableOpacity,
   Dimensions,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LineChart } from "react-native-chart-kit";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -37,7 +38,12 @@ import { NavigationProp } from "../../types/navigation";
 import NovaEntradaIcon from "../../assets/meu-acessor/nova-entrada.svg";
 import NovaCategoriaIcon from "../../assets/meu-acessor/nova-categoria.svg";
 
-// Interfaces
+// Import Clean Architecture dependencies
+import { Container } from "../../infrastructure/di/Container";
+import { FinancialCategory } from "../../domain/entities/FinancialCategory";
+import { FinancialEntry } from "../../domain/entities/FinancialEntry";
+
+// Interfaces (mantendo compatibilidade com estrutura local)
 interface Category {
   id: string;
   nome: string;
@@ -60,10 +66,8 @@ interface Entry {
 
 // Constants
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const STORAGE_KEY = "@bethunter:categories";
-const ENTRIES_KEY = "@bethunter:entries";
 
-// Available Icons for Category
+// Available Icons for Category (usado no modal de criar categoria)
 const AVAILABLE_ICONS = [
   "school", "dumbbell", "bitcoin", "palette", "pot", "pizza",
   "silverware-fork-knife", "dog", "hammer-wrench", "puzzle-outline", "gamepad-variant",
@@ -71,62 +75,50 @@ const AVAILABLE_ICONS = [
   "credit-card", "trending-up", "trending-down", "weather-sunny", "cup", "medical-bag",
 ];
 
-const DEFAULT_CATEGORIES: Category[] = [
-  {
-    id: "default-1",
-    nome: "Compras Online",
-    descricao: "Gastos com compras virtuais",
-    tipo: "saida",
-    icone: "cart-outline",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "default-2",
-    nome: "Educação",
-    descricao: "Cursos e mensalidades",
-    tipo: "saida",
-    icone: "school",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "default-3",
-    nome: "Entradas Diversas",
-    descricao: "Recebimentos variados",
-    tipo: "entrada",
-    icone: "cash-100",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "default-4",
-    nome: "Pagamento Digital",
-    descricao: "Apps de pagamento",
-    tipo: "entrada",
-    icone: "cellphone-nfc",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "default-5",
-    nome: "Saídas Diversas",
-    descricao: "Despesas imprevistas",
-    tipo: "saida",
-    icone: "cash-minus",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "default-6",
-    nome: "Transporte",
-    descricao: "Combustível, passagens, etc.",
-    tipo: "saida",
-    icone: "bus",
-    createdAt: new Date().toISOString(),
-  },
-];
+// Helper para converter FinancialCategory para Category
+const mapFinancialCategoryToCategory = (fc: FinancialCategory): Category => ({
+  id: fc.id,
+  nome: fc.nome,
+  descricao: fc.descricao,
+  tipo: fc.tipo,
+  icone: fc.icone,
+  createdAt: new Date().toISOString(),
+});
+
+// Helper para converter FinancialEntry para Entry
+const mapFinancialEntryToEntry = (fe: FinancialEntry): Entry => ({
+  id: fe.id,
+  valor: fe.valor,
+  descricao: fe.descricao,
+  data: fe.data,
+  tipo: fe.tipo,
+  categoria: fe.categoria,
+  createdAt: fe.createdAt,
+});
+
+// Helper para calcular datas do mês atual
+const getMonthDateRange = () => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  return {
+    start_date: startOfMonth.toISOString().split('T')[0],
+    end_date: endOfMonth.toISOString().split('T')[0],
+  };
+};
 
 
 const Acessor: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<"mensal">("mensal");
-  
+
   const navigation = useNavigation<NavigationProp>();
+
+  // Loading and error states
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Category Modal States
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -158,6 +150,12 @@ const Acessor: React.FC = () => {
   const [selectedCategoryIdSaida, setSelectedCategoryIdSaida] = useState<string>("");
   const [showSuccessModalSaida, setShowSuccessModalSaida] = useState(false);
 
+  // Use Cases from Container
+  const container = Container.getInstance();
+  const getCategoriesUseCase = container.getGetFinancialCategoriesUseCase();
+  const getEntriesUseCase = container.getGetFinancialEntriesUseCase();
+  const createEntryUseCase = container.getCreateFinancialEntryUseCase();
+
   const latestEntry = useMemo(() => {
     if (entries.length === 0) {
       return null;
@@ -169,7 +167,7 @@ const Acessor: React.FC = () => {
   const { totalEntradas, totalSaidas } = useMemo(() => {
     let entradas = 0;
     let saidas = 0;
-    
+
     entries.forEach((entry) => {
       const valor = parseFloat(entry.valor) || 0;
       if (entry.tipo === 'entrada') {
@@ -178,7 +176,7 @@ const Acessor: React.FC = () => {
         saidas += valor;
       }
     });
-    
+
     return { totalEntradas: entradas, totalSaidas: saidas };
   }, [entries]);
 
@@ -244,67 +242,75 @@ const Acessor: React.FC = () => {
     };
   }, [entries]);
 
-  // Load categories from AsyncStorage
+  // Load categories from API
+  const loadCategories = useCallback(async () => {
+    setIsLoadingCategories(true);
+    setErrorMessage(null);
+
+    try {
+      console.log('🔄 Carregando categorias da API...');
+      const apiCategories = await getCategoriesUseCase.execute();
+
+      if (apiCategories && apiCategories.length > 0) {
+        console.log('✅ Categorias carregadas da API:', apiCategories.length);
+        const mappedCategories = apiCategories.map(mapFinancialCategoryToCategory);
+        setCategories(mappedCategories);
+      } else {
+        // Sem categorias na API - usuário precisa criar pelo backend
+        console.log('⚠️ Nenhuma categoria na API');
+        setCategories([]);
+      }
+    } catch (error: any) {
+      console.error("❌ Erro ao carregar categorias:", error);
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, [getCategoriesUseCase]);
+
+  // Load entries from API
+  const loadEntries = useCallback(async () => {
+    setIsLoadingEntries(true);
+    setErrorMessage(null);
+
+    try {
+      console.log('🔄 Carregando transações da API...');
+      const dateRange = getMonthDateRange();
+
+      const apiEntries = await getEntriesUseCase.execute({
+        start_date: dateRange.start_date,
+        end_date: dateRange.end_date,
+      });
+
+      if (apiEntries && apiEntries.length > 0) {
+        console.log('✅ Transações carregadas da API:', apiEntries.length);
+        const mappedEntries = apiEntries
+          .map(mapFinancialEntryToEntry)
+          .sort((a, b) => b.data.getTime() - a.data.getTime());
+        setEntries(mappedEntries);
+      } else {
+        console.log('⚠️ Nenhuma transação encontrada');
+        setEntries([]);
+      }
+    } catch (error: any) {
+      console.error("❌ Erro ao carregar transações:", error);
+      setEntries([]);
+    } finally {
+      setIsLoadingEntries(false);
+    }
+  }, [getEntriesUseCase]);
+
+  // Load categories on mount
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [loadCategories]);
 
   // Load entries after categories are loaded
   useEffect(() => {
     if (categories.length > 0) {
       loadEntries();
     }
-  }, [categories]);
-
-  const loadCategories = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed: Category[] = JSON.parse(stored);
-        if (parsed.length > 0) {
-          setCategories(parsed);
-        } else {
-          setCategories(DEFAULT_CATEGORIES);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_CATEGORIES));
-        }
-      } else {
-        setCategories(DEFAULT_CATEGORIES);
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_CATEGORIES));
-      }
-    } catch (error) {
-      console.error("Error loading categories:", error);
-    }
-  };
-  
-  const loadEntries = async () => {
-    try {
-      const storedEntries = await AsyncStorage.getItem(ENTRIES_KEY);
-      if (storedEntries) {
-        type StoredEntry = Omit<Entry, "data"> & { data: string; tipo?: 'entrada' | 'saida' };
-        const parsedRaw = JSON.parse(storedEntries) as StoredEntry[];
-        const parsed: Entry[] = parsedRaw
-          .map((entry) => {
-            // Inferir tipo baseado na categoria se não existir
-            let tipo: 'entrada' | 'saida' = entry.tipo || 'saida';
-            if (!entry.tipo && entry.categoria?.id) {
-              const cat = categories.find((c) => c.id === entry.categoria?.id);
-              if (cat) {
-                tipo = cat.tipo;
-              }
-            }
-            return {
-            ...entry,
-            data: new Date(entry.data),
-              tipo,
-            };
-          })
-          .sort((a, b) => b.data.getTime() - a.data.getTime());
-        setEntries(parsed);
-      }
-    } catch (error) {
-      console.error("Error loading entries:", error);
-    }
-  };
+  }, [categories, loadEntries]);
 
   const resetForm = () => {
     setCategoryName("");
@@ -313,35 +319,15 @@ const Acessor: React.FC = () => {
     setSelectedIcon("");
   };
 
-  const handleSaveCategory = async () => {
-    if (!categoryName || !categoryDescription || !categoryType || !selectedIcon) {
-      return;
-    }
-
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      nome: categoryName,
-      descricao: categoryDescription,
-      tipo: categoryType as 'entrada' | 'saida',
-      icone: selectedIcon,
-      createdAt: new Date().toISOString(),
-    };
-
-    try {
-      const updatedCategories = [...categories, newCategory];
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCategories));
-      setCategories(updatedCategories);
-      setShowCategoryModal(false);
-      resetForm();
-      
-      // Mostrar modal de sucesso por 5 segundos
-      setShowCategorySuccessModal(true);
-      setTimeout(() => {
-        setShowCategorySuccessModal(false);
-      }, 5000);
-    } catch (error) {
-      console.error("Error saving category:", error);
-    }
+  // Criar categoria - funcionalidade temporariamente desabilitada
+  // Categorias devem ser criadas pelo administrador no backend
+  const handleSaveCategory = () => {
+    Alert.alert(
+      "Em breve",
+      "A criação de categorias personalizadas estará disponível em breve. Por enquanto, use as categorias padrão do sistema."
+    );
+    setShowCategoryModal(false);
+    resetForm();
   };
 
   const isFormValid = categoryName && categoryDescription && categoryType && selectedIcon;
@@ -355,44 +341,47 @@ const Acessor: React.FC = () => {
     setShowDateDropdown(false);
   };
 
+  // Criar entrada via API
   const handleSaveEntry = async () => {
     if (!entryValue || !entryDescription || !selectedCategoryId) {
       return;
     }
 
-    const selectedCategory = categories.find((cat) => cat.id === selectedCategoryId);
-    const newEntry: Entry = {
-      id: Date.now().toString(),
-      valor: entryValue,
-      descricao: entryDescription,
-      data: entryDate,
-      tipo: 'entrada',
-      categoria: selectedCategory
-        ? { id: selectedCategory.id, nome: selectedCategory.nome, icone: selectedCategory.icone }
-        : null,
-      createdAt: new Date().toISOString(),
-    };
+    setIsSaving(true);
+    setErrorMessage(null);
 
     try {
-      const updatedEntries = [...entries, newEntry].sort(
-        (a, b) => b.data.getTime() - a.data.getTime()
+      console.log('🔄 Criando entrada via API...');
+
+      const newEntry = await createEntryUseCase.execute(
+        entryValue,
+        entryDescription,
+        entryDate,
+        selectedCategoryId
       );
-      setEntries(updatedEntries);
-      const serializedEntries = updatedEntries.map((entry) => ({
-        ...entry,
-        data: entry.data.toISOString(),
-      }));
-      await AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(serializedEntries));
+
+      console.log('✅ Entrada criada com sucesso:', newEntry);
+
+      // Adicionar a nova entrada à lista local
+      const mappedEntry = mapFinancialEntryToEntry(newEntry);
+      setEntries((prev) => [mappedEntry, ...prev].sort((a, b) => b.data.getTime() - a.data.getTime()));
+
       setShowEntryModal(false);
       resetEntryForm();
-      
+
       // Mostrar modal de sucesso por 5 segundos
       setShowSuccessModal(true);
       setTimeout(() => {
         setShowSuccessModal(false);
       }, 5000);
-    } catch (error) {
-      console.error("Error saving entry:", error);
+    } catch (error: any) {
+      console.error("❌ Erro ao criar entrada:", error);
+      Alert.alert(
+        "Erro",
+        error.message || "Não foi possível criar a entrada. Tente novamente."
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -417,44 +406,47 @@ const Acessor: React.FC = () => {
     setShowDateDropdownSaida(false);
   };
 
+  // Criar saída via API
   const handleSaveSaida = async () => {
     if (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) {
       return;
     }
 
-    const selectedCategory = categories.find((cat) => cat.id === selectedCategoryIdSaida);
-    const newEntry: Entry = {
-      id: Date.now().toString(),
-      valor: saidaValue,
-      descricao: saidaDescription,
-      data: saidaDate,
-      tipo: 'saida',
-      categoria: selectedCategory
-        ? { id: selectedCategory.id, nome: selectedCategory.nome, icone: selectedCategory.icone }
-        : null,
-      createdAt: new Date().toISOString(),
-    };
+    setIsSaving(true);
+    setErrorMessage(null);
 
     try {
-      const updatedEntries = [...entries, newEntry].sort(
-        (a, b) => b.data.getTime() - a.data.getTime()
+      console.log('🔄 Criando saída via API...');
+
+      const newEntry = await createEntryUseCase.execute(
+        saidaValue,
+        saidaDescription,
+        saidaDate,
+        selectedCategoryIdSaida
       );
-      setEntries(updatedEntries);
-      const serializedEntries = updatedEntries.map((entry) => ({
-        ...entry,
-        data: entry.data.toISOString(),
-      }));
-      await AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(serializedEntries));
+
+      console.log('✅ Saída criada com sucesso:', newEntry);
+
+      // Adicionar a nova entrada à lista local
+      const mappedEntry = mapFinancialEntryToEntry(newEntry);
+      setEntries((prev) => [mappedEntry, ...prev].sort((a, b) => b.data.getTime() - a.data.getTime()));
+
       setShowEntryModalSaida(false);
       resetSaidaForm();
-      
+
       // Mostrar modal de sucesso por 5 segundos
       setShowSuccessModalSaida(true);
       setTimeout(() => {
         setShowSuccessModalSaida(false);
       }, 5000);
-    } catch (error) {
-      console.error("Error saving saida:", error);
+    } catch (error: any) {
+      console.error("❌ Erro ao criar saída:", error);
+      Alert.alert(
+        "Erro",
+        error.message || "Não foi possível criar a saída. Tente novamente."
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -487,6 +479,14 @@ const Acessor: React.FC = () => {
             <Text style={styles.periodButtonInlineText}>Outros períodos</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Loading indicator para dados */}
+        {(isLoadingCategories || isLoadingEntries) && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#D783D8" />
+            <Text style={styles.loadingText}>Carregando dados...</Text>
+          </View>
+        )}
 
         {/* Gráfico Container */}
         <View style={styles.chartContainer}>
@@ -673,15 +673,15 @@ const Acessor: React.FC = () => {
         {/* Botões */}
         <View style={styles.buttonsContainer}>
           <View style={styles.buttonWrapper}>
-            <GradientButton 
-              title="Nova Entrada" 
+            <GradientButton
+              title="Nova Entrada"
               onPress={() => setShowEntryModal(true)}
               icon={<NovaEntradaIcon width={24} height={24} />}
             />
           </View>
           <View style={styles.buttonWrapper}>
-            <GradientButton 
-              title="Nova Saída" 
+            <GradientButton
+              title="Nova Saída"
               onPress={() => setShowEntryModalSaida(true)}
               icon={<NovaCategoriaIcon width={24} height={24} />}
             />
@@ -749,7 +749,7 @@ const Acessor: React.FC = () => {
               <Icon name="calendar" size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          
+
 
           {showDateDropdown && (
             <View style={styles.calendarContainer}>
@@ -809,37 +809,45 @@ const Acessor: React.FC = () => {
             {showCategoryDropdown && (
               <View style={styles.categoryDropdown}>
                 <ScrollView style={styles.categoryDropdownList}>
-                  {categories.filter((cat) => cat.tipo === 'entrada').map((category) => (
-                    <TouchableOpacity
-                      key={category.id}
-                      style={[
-                        styles.categoryDropdownItem,
-                        selectedCategoryId === category.id &&
-                          styles.categoryDropdownItemActive,
-                      ]}
-                      onPress={() => {
-                        setSelectedCategoryId(category.id);
-                        setShowCategoryDropdown(false);
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      <Icon
-                        name={category.icone}
-                        size={22}
-                        color={selectedCategoryId === category.id ? "#D783D8" : "#A7A3AE"}
-                        style={styles.categoryDropdownIcon}
-                      />
-                      <Text
-                        style={[
-                          styles.categoryDropdownText,
-                          selectedCategoryId === category.id &&
-                            styles.categoryDropdownTextActive,
-                        ]}
-                      >
-                        {category.nome}
+                  {categories.filter((cat) => cat.tipo === 'entrada').length === 0 ? (
+                    <View style={styles.noCategoriesContainer}>
+                      <Text style={styles.noCategoriesText}>
+                        Nenhuma categoria de entrada disponível.
                       </Text>
-                    </TouchableOpacity>
-                  ))}
+                    </View>
+                  ) : (
+                    categories.filter((cat) => cat.tipo === 'entrada').map((category) => (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={[
+                          styles.categoryDropdownItem,
+                          selectedCategoryId === category.id &&
+                          styles.categoryDropdownItemActive,
+                        ]}
+                        onPress={() => {
+                          setSelectedCategoryId(category.id);
+                          setShowCategoryDropdown(false);
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Icon
+                          name={category.icone}
+                          size={22}
+                          color={selectedCategoryId === category.id ? "#D783D8" : "#A7A3AE"}
+                          style={styles.categoryDropdownIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryDropdownText,
+                            selectedCategoryId === category.id &&
+                            styles.categoryDropdownTextActive,
+                          ]}
+                        >
+                          {category.nome}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </ScrollView>
               </View>
             )}
@@ -847,23 +855,27 @@ const Acessor: React.FC = () => {
 
           <TouchableOpacity
             onPress={handleSaveEntry}
-            disabled={!entryValue || !entryDescription || !selectedCategoryId}
+            disabled={!entryValue || !entryDescription || !selectedCategoryId || isSaving}
             activeOpacity={0.85}
             style={[
               styles.modalSaveButton,
-              (!entryValue || !entryDescription || !selectedCategoryId) &&
-                styles.modalSaveButtonDisabled,
+              (!entryValue || !entryDescription || !selectedCategoryId || isSaving) &&
+              styles.modalSaveButtonDisabled,
             ]}
           >
-            <Text
-              style={[
-                styles.modalSaveButtonText,
-                (!entryValue || !entryDescription || !selectedCategoryId) &&
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text
+                style={[
+                  styles.modalSaveButtonText,
+                  (!entryValue || !entryDescription || !selectedCategoryId) &&
                   styles.modalSaveButtonTextDisabled,
-              ]}
-            >
-              Salvar
-            </Text>
+                ]}
+              >
+                Salvar
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </Modal>
@@ -986,37 +998,45 @@ const Acessor: React.FC = () => {
             {showCategoryDropdownSaida && (
               <View style={styles.categoryDropdown}>
                 <ScrollView style={styles.categoryDropdownList}>
-                  {categories.filter((cat) => cat.tipo === 'saida').map((category) => (
-                    <TouchableOpacity
-                      key={category.id}
-                      style={[
-                        styles.categoryDropdownItem,
-                        selectedCategoryIdSaida === category.id &&
-                          styles.categoryDropdownItemActive,
-                      ]}
-                      onPress={() => {
-                        setSelectedCategoryIdSaida(category.id);
-                        setShowCategoryDropdownSaida(false);
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      <Icon
-                        name={category.icone}
-                        size={22}
-                        color={selectedCategoryIdSaida === category.id ? "#D783D8" : "#A7A3AE"}
-                        style={styles.categoryDropdownIcon}
-                      />
-                      <Text
-                        style={[
-                          styles.categoryDropdownText,
-                          selectedCategoryIdSaida === category.id &&
-                            styles.categoryDropdownTextActive,
-                        ]}
-                      >
-                        {category.nome}
+                  {categories.filter((cat) => cat.tipo === 'saida').length === 0 ? (
+                    <View style={styles.noCategoriesContainer}>
+                      <Text style={styles.noCategoriesText}>
+                        Nenhuma categoria de saída disponível.
                       </Text>
-                    </TouchableOpacity>
-                  ))}
+                    </View>
+                  ) : (
+                    categories.filter((cat) => cat.tipo === 'saida').map((category) => (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={[
+                          styles.categoryDropdownItem,
+                          selectedCategoryIdSaida === category.id &&
+                          styles.categoryDropdownItemActive,
+                        ]}
+                        onPress={() => {
+                          setSelectedCategoryIdSaida(category.id);
+                          setShowCategoryDropdownSaida(false);
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Icon
+                          name={category.icone}
+                          size={22}
+                          color={selectedCategoryIdSaida === category.id ? "#D783D8" : "#A7A3AE"}
+                          style={styles.categoryDropdownIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryDropdownText,
+                            selectedCategoryIdSaida === category.id &&
+                            styles.categoryDropdownTextActive,
+                          ]}
+                        >
+                          {category.nome}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </ScrollView>
               </View>
             )}
@@ -1024,23 +1044,27 @@ const Acessor: React.FC = () => {
 
           <TouchableOpacity
             onPress={handleSaveSaida}
-            disabled={!saidaValue || !saidaDescription || !selectedCategoryIdSaida}
+            disabled={!saidaValue || !saidaDescription || !selectedCategoryIdSaida || isSaving}
             activeOpacity={0.85}
             style={[
               styles.modalSaveButton,
-              (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
-                styles.modalSaveButtonDisabled,
+              (!saidaValue || !saidaDescription || !selectedCategoryIdSaida || isSaving) &&
+              styles.modalSaveButtonDisabled,
             ]}
           >
-            <Text
-              style={[
-                styles.modalSaveButtonText,
-                (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text
+                style={[
+                  styles.modalSaveButtonText,
+                  (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
                   styles.modalSaveButtonTextDisabled,
-              ]}
-            >
-              Salvar
-            </Text>
+                ]}
+              >
+                Salvar
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </Modal>
@@ -1098,10 +1122,10 @@ const Acessor: React.FC = () => {
                 onPress={() => setCategoryType('saida')}
                 activeOpacity={0.8}
               >
-                <Icon 
-                  name="trending-down" 
-                  size={20} 
-                  color={categoryType === 'saida' ? '#FFFFFF' : '#A7A3AE'} 
+                <Icon
+                  name="trending-down"
+                  size={20}
+                  color={categoryType === 'saida' ? '#FFFFFF' : '#A7A3AE'}
                 />
                 <Text style={[
                   styles.typeButtonText,
@@ -1119,10 +1143,10 @@ const Acessor: React.FC = () => {
                 onPress={() => setCategoryType('entrada')}
                 activeOpacity={0.8}
               >
-                <Icon 
-                  name="trending-up" 
-                  size={20} 
-                  color={categoryType === 'entrada' ? '#FFFFFF' : '#A7A3AE'} 
+                <Icon
+                  name="trending-up"
+                  size={20}
+                  color={categoryType === 'entrada' ? '#FFFFFF' : '#A7A3AE'}
                 />
                 <Text style={[
                   styles.typeButtonText,
@@ -1138,7 +1162,7 @@ const Acessor: React.FC = () => {
           <View style={styles.iconsContainer}>
             <Text style={styles.iconsTitle}>Ícones</Text>
             <Text style={styles.iconsSubtitle}>Selecione um ícone para sua categoria</Text>
-            
+
             <View style={styles.iconsGrid}>
               {AVAILABLE_ICONS.map((iconName) => (
                 <TouchableOpacity
@@ -1150,10 +1174,10 @@ const Acessor: React.FC = () => {
                   onPress={() => setSelectedIcon(iconName)}
                   activeOpacity={0.7}
                 >
-                  <Icon 
-                    name={iconName} 
-                    size={28} 
-                    color={selectedIcon === iconName ? '#D783D8' : '#6B6677'} 
+                  <Icon
+                    name={iconName}
+                    size={28}
+                    color={selectedIcon === iconName ? '#D783D8' : '#6B6677'}
                   />
                 </TouchableOpacity>
               ))}
@@ -1243,7 +1267,18 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginTop: 60,
     marginBottom: 40,
-  
+
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    gap: 8,
+  },
+  loadingText: {
+    color: "#A7A3AE",
+    fontSize: 14,
   },
   periodSelector: {
     flexDirection: "row",
@@ -1634,6 +1669,16 @@ const styles = StyleSheet.create({
   },
   categoryDropdownTextActive: {
     color: "#FFFFFF",
+  },
+  noCategoriesContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  noCategoriesText: {
+    color: "#A7A3AE",
+    fontSize: 14,
+    textAlign: "center",
   },
   modalSaveButton: {
     width: "100%",

@@ -12,6 +12,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError } from "../../domain/errors/CustomErrors";
 
 interface ValidationErrors {
   password?: string;
@@ -101,6 +103,52 @@ const SignUpPassword: React.FC = () => {
     !errors.password &&
     !errors.confirmPassword;
 
+  const handleSubmit = async () => {
+    // Marcar todos como touched
+    setTouched({ password: true, confirmPassword: true });
+
+    const passwordError = validatePassword(password);
+    const confirmError = validateConfirmPassword(confirmPassword);
+
+    setErrors({
+      password: passwordError,
+      confirmPassword: confirmError,
+    });
+
+    // Se houver erros, não prosseguir
+    if (passwordError || confirmError) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const container = Container.getInstance();
+      const createPasswordUseCase = container.getCreatePasswordUseCase();
+
+      const result = await createPasswordUseCase.execute(email, password);
+
+      Alert.alert("Sucesso", "Cadastro realizado com sucesso! Faça login para continuar.", [
+        {
+          text: "OK",
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          },
+        },
+      ]);
+    } catch (error: unknown) {
+      console.error("Erro ao criar senha:", error);
+      if (error instanceof ValidationError) {
+        Alert.alert("Erro", error.message);
+      } else {
+        Alert.alert("Erro", "Erro ao finalizar cadastro. Verifique os dados e tente novamente.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
  
 
   return (
@@ -196,7 +244,7 @@ const SignUpPassword: React.FC = () => {
         <View style={styles.bottomContainer}>
           <GradientButton 
             title={loading ? "Cadastrando..." : "Próximo"} 
-            
+            onPress={handleSubmit}
             disabled={loading || !isFormValid}
           />
         </View>

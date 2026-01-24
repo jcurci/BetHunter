@@ -6,12 +6,18 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import HistoryFilters, { FilterOptions, Category } from "./HistoryFilters";
+
+// Clean Architecture imports
+import { Container } from "../../infrastructure/di/Container";
+import { FinancialCategory } from "../../domain/entities/FinancialCategory";
+import type { FinancialEntry } from "../../domain/entities/FinancialEntry";
 
 interface HistoryEntry {
   id: string;
@@ -23,13 +29,32 @@ interface HistoryEntry {
   createdAt: string;
 }
 
-const ENTRIES_KEY = "@bethunter:entries";
-const CATEGORIES_KEY = "@bethunter:categories";
+// Helper para converter FinancialCategory para Category (usado pelo HistoryFilters)
+const mapFinancialCategoryToFilterCategory = (fc: FinancialCategory): Category => ({
+  id: fc.id,
+  nome: fc.nome,
+  descricao: fc.descricao,
+  tipo: fc.tipo,
+  icone: fc.icone,
+  createdAt: new Date().toISOString(),
+});
+
+// Helper para converter FinancialEntry para HistoryEntry
+const mapFinancialEntryToHistoryEntry = (fe: FinancialEntry): HistoryEntry => ({
+  id: fe.id,
+  valor: fe.valor,
+  descricao: fe.descricao,
+  data: fe.data,
+  tipo: fe.tipo,
+  categoria: fe.categoria,
+  createdAt: fe.createdAt,
+});
 
 const HistoryList: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     tipo: null,
@@ -38,44 +63,64 @@ const HistoryList: React.FC = () => {
     categoriaId: null,
   });
 
+  // Use Cases from Container
+  const container = Container.getInstance();
+  const getCategoriesUseCase = container.getGetFinancialCategoriesUseCase();
+  const getEntriesUseCase = container.getGetFinancialEntriesUseCase();
+
   const loadEntries = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(ENTRIES_KEY);
-      if (stored) {
-        type StoredEntry = Omit<HistoryEntry, "data"> & { data: string; tipo?: 'entrada' | 'saida' };
-        const parsedRaw = JSON.parse(stored) as StoredEntry[];
-        const parsed: HistoryEntry[] = parsedRaw
-          .map((entry) => ({
-            ...entry,
-            data: new Date(entry.data),
-            tipo: entry.tipo || 'saida',
-          }))
+      console.log('🔄 [HistoryList] Carregando transações da API...');
+
+      // Buscar todas as entradas (sem filtro de período para o histórico completo)
+      const apiEntries = await getEntriesUseCase.execute();
+
+      if (apiEntries && apiEntries.length > 0) {
+        console.log('✅ [HistoryList] Transações carregadas:', apiEntries.length);
+        const mappedEntries = apiEntries
+          .map(mapFinancialEntryToHistoryEntry)
           .sort((a, b) => b.data.getTime() - a.data.getTime());
-        setEntries(parsed);
+        setEntries(mappedEntries);
       } else {
+        console.log('⚠️ [HistoryList] Nenhuma transação encontrada');
         setEntries([]);
       }
-    } catch (error) {
-      console.error("Error loading history entries:", error);
+    } catch (error: any) {
+      console.error("❌ [HistoryList] Erro ao carregar transações:", error);
+      Alert.alert(
+        "Erro",
+        error.message || "Não foi possível carregar o histórico. Tente novamente."
+      );
+      setEntries([]);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [getEntriesUseCase]);
 
   const loadCategories = useCallback(async () => {
     try {
-      const stored = await AsyncStorage.getItem(CATEGORIES_KEY);
-      if (stored) {
-        const parsed: Category[] = JSON.parse(stored);
-        setCategories(parsed);
+      console.log('🔄 [HistoryList] Carregando categorias da API...');
+      const apiCategories = await getCategoriesUseCase.execute();
+
+      if (apiCategories && apiCategories.length > 0) {
+        console.log('✅ [HistoryList] Categorias carregadas:', apiCategories.length);
+        const mappedCategories = apiCategories.map(mapFinancialCategoryToFilterCategory);
+        setCategories(mappedCategories);
+      } else {
+        console.log('⚠️ [HistoryList] Nenhuma categoria encontrada');
+        setCategories([]);
       }
-    } catch (error) {
-      console.error("Error loading categories:", error);
+    } catch (error: any) {
+      console.error("❌ [HistoryList] Erro ao carregar categorias:", error);
+      setCategories([]);
     }
-  }, []);
+  }, [getCategoriesUseCase]);
 
   useFocusEffect(
     useCallback(() => {
-      loadEntries();
       loadCategories();
+      loadEntries();
     }, [loadEntries, loadCategories])
   );
 
@@ -132,8 +177,8 @@ const HistoryList: React.FC = () => {
 
           <Text style={styles.headerTitle}>Histórico</Text>
 
-          <TouchableOpacity 
-            style={[styles.headerButton, hasActiveFilters && styles.headerButtonActive]} 
+          <TouchableOpacity
+            style={[styles.headerButton, hasActiveFilters && styles.headerButtonActive]}
             activeOpacity={0.85}
             onPress={() => setShowFiltersModal(true)}
           >
@@ -141,10 +186,15 @@ const HistoryList: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {filteredEntries.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#D783D8" />
+            <Text style={styles.loadingText}>Carregando histórico...</Text>
+          </View>
+        ) : filteredEntries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {hasActiveFilters 
+              {hasActiveFilters
                 ? "Nenhum lançamento encontrado com os filtros aplicados."
                 : "Você ainda não possui lançamentos."}
             </Text>
@@ -249,6 +299,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#FFFFFF",
     letterSpacing: 0.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  loadingText: {
+    color: "#A7A3AE",
+    fontSize: 16,
   },
   list: {
     flex: 1,
