@@ -53,9 +53,9 @@ import { NavigationProp } from "../../types/navigation";
 // Constants
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
-const DAYS_IN_MONTH = 30;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CAROUSEL_WIDTH = SCREEN_WIDTH - 40; // 20px padding em cada lado
+const DIAS_LIVRE_APOSTAS = 33; // TODO: vir do serviço/estado real
 
 type TabType = "conta" | "parceiros" | "social";
 
@@ -226,31 +226,32 @@ const Home: React.FC = () => {
     </View>
   );
 
-  const renderDayCalendar = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.calendarScroll}
-      contentContainerStyle={styles.calendarContent}
+  const renderGradientText = (text: string, style: object) => (
+    <MaskedView
+      maskElement={
+        <Text style={[style, { backgroundColor: "transparent" }]}>{text}</Text>
+      }
     >
-      {Array.from({ length: DAYS_IN_MONTH }).map((_, idx) => {
-        const day = idx + 1;
-        const isChecked = day < 27; // Ajustar lógica conforme dados reais
-        
-        return (
-          <View key={day} style={styles.dayContainer}>
-            <View style={styles.dayCircle}>
-              <Text style={styles.dayText}>{day}</Text>
-            </View>
-            {isChecked ? (
-              <Icon name="check" size={15} color="#D783D8" />
-            ) : (
-              <View style={styles.dayUnchecked} />
-            )}
-          </View>
-        );
-      })}
-    </ScrollView>
+      <LinearGradient
+        colors={HORIZONTAL_GRADIENT_COLORS}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <Text style={[style, { opacity: 0 }]}>{text}</Text>
+      </LinearGradient>
+    </MaskedView>
+  );
+
+  const renderFreeOfBetDaysDisplay = () => (
+    <View style={styles.freeOfBetDaysContainer}>
+      <Text style={styles.freeOfBetDaysLabel}>
+        Você está livre de apostas por:
+      </Text>
+      <View style={styles.freeOfBetDaysValueWrapper}>
+        {renderGradientText(`${DIAS_LIVRE_APOSTAS}`, styles.freeOfBetDaysNumber)}
+        {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
+      </View>
+    </View>
   );
 
   const renderFreeOfBetBox = () => (
@@ -374,8 +375,8 @@ const Home: React.FC = () => {
           </View>
 
           {renderHeader()}
-          
-          {renderDayCalendar()}
+
+          {renderFreeOfBetDaysDisplay()}
           
           {renderFreeOfBetBox()}
 
@@ -681,38 +682,38 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  // Calendar Styles
-  calendarScroll: {
+  // Free of Bet Days Display (substitui o calendário de círculos 1–8)
+  freeOfBetDaysContainer: {
+    alignItems: "center",
     marginBottom: 20,
     marginTop: 6,
   },
-  calendarContent: {
-    gap: 18,
-    paddingBottom: 4,
-    paddingTop: 2,
-  },
-  dayContainer: {
-    alignItems: "center",
-  },
-  dayCircle: {
-    backgroundColor: "#232027",
-    borderRadius: 999,
-    width: 43,
-    height: 43,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  dayText: {
-    color: "#D7D6E0",
+  freeOfBetDaysLabel: {
+    color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: "600",
+    textAlign: "center",
+    fontWeight: "500",
+    marginBottom: 8,
   },
-  dayUnchecked: {
-    width: 20,
-    height: 2,
-    backgroundColor: "#6B6677",
-    borderRadius: 1,
+  freeOfBetDaysValueWrapper: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    shadowColor: "#D783D8",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  freeOfBetDaysNumber: {
+    fontSize: 56,
+    fontWeight: "bold",
+  },
+  freeOfBetDaysUnit: {
+    fontSize: 56,
+    fontWeight: "bold",
+    marginLeft: 4,
   },
 
   // Free of Bet Box Styles
