@@ -47,6 +47,7 @@ import VideosIcon from "../../assets/home/videos.svg";
 import BetcoinIcon from "../../assets/home/betcoin.svg";
 
 // Domain & Infrastructure
+import { Container } from "../../infrastructure/di/Container";
 
 import { NavigationProp } from "../../types/navigation";
 
@@ -55,7 +56,7 @@ const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CAROUSEL_WIDTH = SCREEN_WIDTH - 40; // 20px padding em cada lado
-const DIAS_LIVRE_APOSTAS = 33; // TODO: vir do serviço/estado real
+// DIAS_LIVRE_APOSTAS agora vem do estado (betStreak) via API
 
 type TabType = "conta" | "parceiros" | "social";
 
@@ -69,11 +70,13 @@ const Home: React.FC = () => {
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
+  const [betStreak, setBetStreak] = useState<number>(0);
   const carouselRef = useRef<ScrollView>(null);
   
 
   useEffect(() => {
     loadData();
+    loadBetStreak();
   }, []);
 
   // Auto-close reset confirm modal after 3 seconds
@@ -118,6 +121,17 @@ const Home: React.FC = () => {
 
   const loadData = async () => {
   
+  };
+
+  const loadBetStreak = async () => {
+    try {
+      const container = Container.getInstance();
+      const betCheckInUseCase = container.getBetCheckInUseCase();
+      const result = await betCheckInUseCase.execute();
+      setBetStreak(result.betStreak);
+    } catch (error: any) {
+      console.log('ℹ️ BetCheckIn:', error.message);
+    }
   };
 
   const getArticleImage = (article: any): ReactElement | null => {
@@ -248,7 +262,7 @@ const Home: React.FC = () => {
         Você está livre de apostas por:
       </Text>
       <View style={styles.freeOfBetDaysValueWrapper}>
-        {renderGradientText(`${DIAS_LIVRE_APOSTAS}`, styles.freeOfBetDaysNumber)}
+        {renderGradientText(`${betStreak}`, styles.freeOfBetDaysNumber)}
         {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
       </View>
     </View>
@@ -263,19 +277,6 @@ const Home: React.FC = () => {
     >
       {showFreeOfBetBox && (
         <>
-          <Text style={styles.freeOfBetTitle}>
-            Você está livre de apostas por:
-          </Text>
-          
-          <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>15d</Text>
-            <Text style={styles.timerText}>7hrs</Text>
-            <Text style={[styles.timerText, styles.timerWarning]}>21mins</Text>
-            <Text style={[styles.timerText, styles.timerDanger, styles.timerSeconds]}>
-              17s
-            </Text>
-          </View>
-          
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -734,7 +735,7 @@ const styles = StyleSheet.create({
   },
   freeOfBetContainerExpanded: {
     width: "96%",
-    height: 210, 
+    height: 140, 
     padding: 20,
     justifyContent: "flex-start",
     shadowOffset: { width: 0, height: 8 },
@@ -742,34 +743,6 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 14,
    
-  },
-  freeOfBetTitle: {
-    color: "#A19DAA",
-    fontSize: 15,
-    textAlign: "center",
-    fontWeight: "500",
-    marginBottom: 9,
-  },
-  timerContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    marginBottom: 8,
-  },
-  timerText: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#B382FA",
-    marginRight: 6,
-  },
-  timerWarning: {
-    color: "#F37F98",
-  },
-  timerDanger: {
-    color: "#FF6FA6",
-  },
-  timerSeconds: {
-    fontSize: 19,
-    marginTop: 8,
   },
   actionsRow: {
     flexDirection: "row",

@@ -8,6 +8,11 @@ import { CreatePasswordUseCase } from "../../domain/usercases/signup/CreatePassw
 import { RegisterRepositoryImpl } from "../../domain/data/repositories/RegisterRepositoryImpl";
 import { RegisterApi } from "../services/Register.api";
 
+// Bet Streak imports
+import { BetCheckInUseCase } from "../../domain/usercases/BetCheckInUseCase";
+import { BetStreakRepositoryImpl } from "../../domain/data/repositories/BetStreakRepositoryImpl";
+import { BetStreakApi } from "../services/BetStreak.api";
+
 // Financial imports
 import { GetFinancialCategoriesUseCase } from "../../domain/usercases/GetFinancialCategoriesUseCase";
 import { GetFinancialEntriesUseCase } from "../../domain/usercases/GetFinancialEntriesUseCase";
@@ -24,6 +29,9 @@ export class Container {
   private startRegistrationUseCase: StartRegistrationUseCase | null = null;
   private verifyRegistrationCodeUseCase: VerifyRegistrationCodeUseCase | null = null;
   private createPasswordUseCase: CreatePasswordUseCase | null = null;
+
+  // Bet Streak use case
+  private betCheckInUseCase: BetCheckInUseCase | null = null;
 
   // Financial use cases
   private getFinancialCategoriesUseCase: GetFinancialCategoriesUseCase | null = null;
@@ -75,6 +83,17 @@ export class Container {
     }
 
     return this.createPasswordUseCase;
+  }
+
+  // Bet Streak use case
+  getBetCheckInUseCase(): BetCheckInUseCase {
+    if (!this.betCheckInUseCase) {
+      const betStreakApi = new BetStreakApi();
+      const betStreakRepository = new BetStreakRepositoryImpl(betStreakApi);
+      this.betCheckInUseCase = new BetCheckInUseCase(betStreakRepository);
+    }
+
+    return this.betCheckInUseCase;
   }
 
   // Financial use cases
