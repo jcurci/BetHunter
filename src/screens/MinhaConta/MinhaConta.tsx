@@ -12,7 +12,6 @@ import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
 import {
   BackIconButton,
-  Avatar,
   RadialGradientBackground,
   FeatureCard,
   MenuItem,
@@ -98,7 +97,11 @@ const MinhaConta: React.FC = () => {
             {/* Profile Section */}
             <View style={styles.profileSection}>
               <View style={styles.avatarContainer}>
-                <Avatar initials={getInitials(user?.name)} size={100} />
+                <View style={styles.avatarCircle}>
+                  <Text style={styles.avatarInitials}>
+                    {getInitials(user?.name)}
+                  </Text>
+                </View>
                 <View style={styles.proBadge}>
                   <Text style={styles.proBadgeText}>Pro</Text>
                 </View>
@@ -161,22 +164,13 @@ const MinhaConta: React.FC = () => {
                 label="Conta"
                 onPress={() => navigation.navigate("Profile")}
               />
-              <MenuItem
-                icon="credit-card"
-                label="Financeiro"
-                onPress={() => navigation.navigate("AccountOverview")}
-              />
+             
               <MenuItem
                 icon="help-circle"
                 label="Ajuda"
                 onPress={() => { }}
               />
-              <MenuItem
-                icon="mail"
-                label="Inbox"
-                onPress={() => { }}
-                showSeparator={false}
-              />
+              
             </MenuSection>
 
             <MenuSection>
@@ -191,17 +185,8 @@ const MinhaConta: React.FC = () => {
                 onPress={() => navigation.navigate("Notifications")}
               />
               <MenuItem icon="palette" label="Aparência" onPress={() => { }} />
-              <MenuItem
-                icon="accessibility"
-                label="Acessibilidade"
-                onPress={() => { }}
-              />
-              <MenuItem
-                icon="gamepad-2"
-                label="Novas Features"
-                onPress={() => { }}
-                showSeparator={false}
-              />
+             
+              
             </MenuSection>
 
             <MenuSection>
@@ -267,6 +252,19 @@ const styles = StyleSheet.create({
   avatarContainer: {
     alignItems: "center",
     marginBottom: 12,
+  },
+  avatarCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#1A1825",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarInitials: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   proBadge: {
     backgroundColor: "#1A1825",
