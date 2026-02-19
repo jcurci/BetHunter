@@ -13,6 +13,8 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError, AuthenticationError } from "../../domain/errors/CustomErrors";
 
 const CODE_LENGTH = 6;
 
@@ -54,11 +56,18 @@ const PasswordResetVerification: React.FC = () => {
     }
   };
 
-  const handleResendCode = () => {
-    if (canResend) {
+  const handleResendCode = async () => {
+    if (!canResend) return;
+    try {
+      const container = Container.getInstance();
+      await container.getRequestPasswordChangeUseCase().execute(value);
       setCountdown(30);
       setCanResend(false);
-      Alert.alert("Código reenviado", "Um novo código foi enviado para você.");
+      Alert.alert("Código reenviado", "Um novo código foi enviado para o seu e-mail.");
+    } catch (err: any) {
+      const message =
+        err?.message ?? "Não foi possível reenviar. Tente novamente.";
+      Alert.alert("Erro", message);
     }
   };
 
@@ -70,7 +79,7 @@ const PasswordResetVerification: React.FC = () => {
   // Verifica se o código está completo
   const isCodeComplete = code.every(digit => digit !== "");
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const fullCode = code.join("");
 
     if (fullCode.length !== CODE_LENGTH) {
@@ -78,9 +87,17 @@ const PasswordResetVerification: React.FC = () => {
       return;
     }
 
-    // TODO: Validar código com a API
-    // Navegar para a tela de nova senha
-    navigation.navigate("PasswordResetNewPassword", { method, value, code: fullCode });
+    try {
+      const container = Container.getInstance();
+      await container.getVerifyPasswordChangeCodeUseCase().execute(value, fullCode);
+      navigation.navigate("PasswordResetNewPassword", { method, value, code: fullCode });
+    } catch (err: any) {
+      const message =
+        err instanceof ValidationError || err instanceof AuthenticationError
+          ? err.message
+          : err?.message ?? "Erro ao verificar código. Tente novamente.";
+      Alert.alert("Erro", message);
+    }
   };
 
   return (
@@ -99,7 +116,7 @@ const PasswordResetVerification: React.FC = () => {
             </Text>
           </View>
           <Text style={styles.subtitle}>
-            Escreva o codigo que recebeu em seu telefone para continuar.
+            Digite o código que enviamos para o seu e-mail.
           </Text>
 
           <View style={styles.codeContainer}>

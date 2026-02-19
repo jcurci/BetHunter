@@ -12,6 +12,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError, AuthenticationError } from "../../domain/errors/CustomErrors";
 
 interface ValidationErrors {
   password?: string;
@@ -119,9 +121,8 @@ const PasswordResetNewPassword: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: Chamar API para resetar a senha
-      console.log("Reset de senha:", { method, value, code, password });
-
+      const container = Container.getInstance();
+      await container.getConfirmPasswordChangeUseCase().execute(value, code, password);
       Alert.alert("Sucesso", "Sua senha foi alterada com sucesso! Faça login para continuar.", [
         {
           text: "OK",
@@ -133,9 +134,12 @@ const PasswordResetNewPassword: React.FC = () => {
           },
         },
       ]);
-    } catch (error: any) {
-      console.error("Erro ao resetar senha:", error);
-      Alert.alert("Erro", "Erro ao alterar a senha. Tente novamente.");
+    } catch (err: any) {
+      const message =
+        err instanceof ValidationError || err instanceof AuthenticationError
+          ? err.message
+          : "Erro ao alterar a senha. Tente novamente.";
+      Alert.alert("Erro", message);
     } finally {
       setLoading(false);
     }

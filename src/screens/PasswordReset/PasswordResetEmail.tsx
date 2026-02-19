@@ -11,6 +11,8 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { CircularIconButton, GradientButton } from "../../components/common";
+import { Container } from "../../infrastructure/di/Container";
+import { ValidationError, AuthenticationError } from "../../domain/errors/CustomErrors";
 
 type RecoveryMethod = 'email' | 'username' | 'phone';
 
@@ -47,6 +49,7 @@ const PasswordResetEmail: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [apiError, setApiError] = useState<string>("");
   const [touched, setTouched] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "PasswordResetEmail">>();
   const { method } = route.params;
@@ -151,12 +154,26 @@ const PasswordResetEmail: React.FC = () => {
       return;
     }
 
-    // TODO: Chamar API para verificar se a conta existe
-    // Em caso de erro da API, descomentar a linha abaixo:
-    // setApiError(config.apiError);
+    if (method !== "email") {
+      setApiError("No momento apenas a recuperação por e-mail está disponível.");
+      return;
+    }
 
-    // Navegar para tela de verificação de código
-    navigation.navigate("PasswordResetVerification", { method, value });
+    setLoading(true);
+    setApiError("");
+    try {
+      const container = Container.getInstance();
+      await container.getRequestPasswordChangeUseCase().execute(value);
+      navigation.navigate("PasswordResetVerification", { method, value });
+    } catch (err: any) {
+      const message =
+        err instanceof ValidationError || err instanceof AuthenticationError
+          ? err.message
+          : "Erro ao enviar. Tente novamente.";
+      setApiError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getEmptyFieldError = (): string => {
@@ -277,7 +294,11 @@ const PasswordResetEmail: React.FC = () => {
         </View>
 
         <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} disabled={!isFormValid()} />
+          <GradientButton
+            title={loading ? "Enviando..." : "Próximo"}
+            onPress={handleNext}
+            disabled={!isFormValid() || loading}
+          />
         </View>
       </SafeAreaView>
     </View>
