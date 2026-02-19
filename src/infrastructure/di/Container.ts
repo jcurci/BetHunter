@@ -10,6 +10,8 @@ import { RegisterApi } from "../services/Register.api";
 
 // Bet Streak imports
 import { BetCheckInUseCase } from "../../domain/usercases/BetCheckInUseCase";
+import { GetBetStreakStatusUseCase } from "../../domain/usercases/GetBetStreakStatusUseCase";
+import { ResetBetStreakUseCase } from "../../domain/usercases/ResetBetStreakUseCase";
 import { BetStreakRepositoryImpl } from "../../domain/data/repositories/BetStreakRepositoryImpl";
 import { BetStreakApi } from "../services/BetStreak.api";
 
@@ -22,6 +24,17 @@ import { FinancialEntryRepositoryImpl } from "../../domain/data/repositories/Fin
 import { FinancialCategoryApi } from "../services/FinancialCategory.api";
 import { FinancialEntryApi } from "../services/FinancialEntry.api";
 
+// User profile imports
+import { GetCurrentUserUseCase } from "../../domain/usercases/GetCurrentUserUseCase";
+import { LoadDashboardUseCase } from "../../domain/usercases/LoadDashboardUseCase";
+import { UserRepositoryImpl } from "../../domain/data/repositories/UserRepositoryImpl";
+import { UserApi } from "../services/User.api";
+
+// Password change (esqueci a senha) imports
+import { RequestPasswordChangeUseCase } from "../../domain/usercases/RequestPasswordChangeUseCase";
+import { VerifyPasswordChangeCodeUseCase } from "../../domain/usercases/VerifyPasswordChangeCodeUseCase";
+import { ConfirmPasswordChangeUseCase } from "../../domain/usercases/ConfirmPasswordChangeUseCase";
+
 export class Container {
   private static instance: Container;
 
@@ -30,13 +43,34 @@ export class Container {
   private verifyRegistrationCodeUseCase: VerifyRegistrationCodeUseCase | null = null;
   private createPasswordUseCase: CreatePasswordUseCase | null = null;
 
-  // Bet Streak use case
+  // Bet Streak use cases
   private betCheckInUseCase: BetCheckInUseCase | null = null;
+  private getBetStreakStatusUseCase: GetBetStreakStatusUseCase | null = null;
+  private resetBetStreakUseCase: ResetBetStreakUseCase | null = null;
 
   // Financial use cases
   private getFinancialCategoriesUseCase: GetFinancialCategoriesUseCase | null = null;
   private getFinancialEntriesUseCase: GetFinancialEntriesUseCase | null = null;
   private createFinancialEntryUseCase: CreateFinancialEntryUseCase | null = null;
+
+  // User profile
+  private getCurrentUserUseCase: GetCurrentUserUseCase | null = null;
+  private loadDashboardUseCase: LoadDashboardUseCase | null = null;
+
+  // Password change (esqueci a senha)
+  private requestPasswordChangeUseCase: RequestPasswordChangeUseCase | null = null;
+  private verifyPasswordChangeCodeUseCase: VerifyPasswordChangeCodeUseCase | null = null;
+  private confirmPasswordChangeUseCase: ConfirmPasswordChangeUseCase | null = null;
+
+  private authApi: AuthApi | null = null;
+  private authRepository: AuthRepositoryImpl | null = null;
+
+  private ensureAuthDependencies(): void {
+    if (!this.authApi) {
+      this.authApi = new AuthApi();
+      this.authRepository = new AuthRepositoryImpl(this.authApi);
+    }
+  }
 
   static getInstance(): Container {
     if (!Container.instance) {
@@ -46,10 +80,9 @@ export class Container {
   }
 
   getLoginUseCase(): LoginUseCase {
+    this.ensureAuthDependencies();
     if (!this.loginUseCase) {
-      const authApi = new AuthApi();
-      const authRepository = new AuthRepositoryImpl(authApi);
-      this.loginUseCase = new LoginUseCase(authRepository);
+      this.loginUseCase = new LoginUseCase(this.authRepository!);
     }
 
     return this.loginUseCase;
@@ -85,7 +118,17 @@ export class Container {
     return this.createPasswordUseCase;
   }
 
-  // Bet Streak use case
+  // Bet Streak use cases
+  getGetBetStreakStatusUseCase(): GetBetStreakStatusUseCase {
+    if (!this.getBetStreakStatusUseCase) {
+      const betStreakApi = new BetStreakApi();
+      const betStreakRepository = new BetStreakRepositoryImpl(betStreakApi);
+      this.getBetStreakStatusUseCase = new GetBetStreakStatusUseCase(betStreakRepository);
+    }
+
+    return this.getBetStreakStatusUseCase;
+  }
+
   getBetCheckInUseCase(): BetCheckInUseCase {
     if (!this.betCheckInUseCase) {
       const betStreakApi = new BetStreakApi();
@@ -94,6 +137,16 @@ export class Container {
     }
 
     return this.betCheckInUseCase;
+  }
+
+  getResetBetStreakUseCase(): ResetBetStreakUseCase {
+    if (!this.resetBetStreakUseCase) {
+      const betStreakApi = new BetStreakApi();
+      const betStreakRepository = new BetStreakRepositoryImpl(betStreakApi);
+      this.resetBetStreakUseCase = new ResetBetStreakUseCase(betStreakRepository);
+    }
+
+    return this.resetBetStreakUseCase;
   }
 
   // Financial use cases
@@ -125,5 +178,48 @@ export class Container {
     }
 
     return this.createFinancialEntryUseCase;
+  }
+
+  getGetCurrentUserUseCase(): GetCurrentUserUseCase {
+    if (!this.getCurrentUserUseCase) {
+      const userApi = new UserApi();
+      const userRepository = new UserRepositoryImpl(userApi);
+      this.getCurrentUserUseCase = new GetCurrentUserUseCase(userRepository);
+    }
+
+    return this.getCurrentUserUseCase;
+  }
+
+  getLoadDashboardUseCase(): LoadDashboardUseCase {
+    if (!this.loadDashboardUseCase) {
+      const userApi = new UserApi();
+      const userRepository = new UserRepositoryImpl(userApi);
+      this.loadDashboardUseCase = new LoadDashboardUseCase(userRepository);
+    }
+    return this.loadDashboardUseCase;
+  }
+
+  getRequestPasswordChangeUseCase(): RequestPasswordChangeUseCase {
+    this.ensureAuthDependencies();
+    if (!this.requestPasswordChangeUseCase) {
+      this.requestPasswordChangeUseCase = new RequestPasswordChangeUseCase(this.authRepository!);
+    }
+    return this.requestPasswordChangeUseCase;
+  }
+
+  getVerifyPasswordChangeCodeUseCase(): VerifyPasswordChangeCodeUseCase {
+    this.ensureAuthDependencies();
+    if (!this.verifyPasswordChangeCodeUseCase) {
+      this.verifyPasswordChangeCodeUseCase = new VerifyPasswordChangeCodeUseCase(this.authRepository!);
+    }
+    return this.verifyPasswordChangeCodeUseCase;
+  }
+
+  getConfirmPasswordChangeUseCase(): ConfirmPasswordChangeUseCase {
+    this.ensureAuthDependencies();
+    if (!this.confirmPasswordChangeUseCase) {
+      this.confirmPasswordChangeUseCase = new ConfirmPasswordChangeUseCase(this.authRepository!);
+    }
+    return this.confirmPasswordChangeUseCase;
   }
 }

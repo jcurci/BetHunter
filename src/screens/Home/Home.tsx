@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import type { ReactElement } from "react";
 import {
   View,
@@ -7,9 +7,6 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -38,45 +35,35 @@ import Block from "../../assets/home/block.svg";
 import BetHunterIcon from "../../assets/home/bethunter.svg";
 import AcessorIcon from "../../assets/home/acessor.svg";
 import JornadaIcon from "../../assets/home/jornada.svg";
-import MedicoIcon from "../../assets/home/medico.svg";
-import EventosIcon from "../../assets/home/eventos.svg";
-import CursosIcon from "../../assets/home/cursos.svg";
-import ForumsIcon from "../../assets/home/forums.svg";
-import ArtigosIcon from "../../assets/home/artigos.svg";
-import VideosIcon from "../../assets/home/videos.svg";
 import BetcoinIcon from "../../assets/home/betcoin.svg";
 
 // Domain & Infrastructure
-import { Container } from "../../infrastructure/di/Container";
 
+import { Container } from "../../infrastructure/di/Container";
+import { useAuthStore } from "../../storage/authStore";
 import { NavigationProp } from "../../types/navigation";
 
 // Constants
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CAROUSEL_WIDTH = SCREEN_WIDTH - 40; // 20px padding em cada lado
-// DIAS_LIVRE_APOSTAS agora vem do estado (betStreak) via API
-
-type TabType = "conta" | "parceiros" | "social";
-
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const user = useAuthStore((s) => s.user);
   const [articles, setArticles] = useState<any[]>([]);
-  const [user, setUser] = useState<string | null>(null);
   const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<TabType>("conta");
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
   const [betStreak, setBetStreak] = useState<number>(0);
-  const carouselRef = useRef<ScrollView>(null);
+  const [canCheckIn, setCanCheckIn] = useState<boolean>(false);
+  const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
+  const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
+  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
   
 
   useEffect(() => {
     loadData();
-    loadBetStreak();
   }, []);
 
   // Auto-close reset confirm modal after 3 seconds
@@ -120,17 +107,49 @@ const Home: React.FC = () => {
   }, [showBlockSuccessModal]);
 
   const loadData = async () => {
-  
+    await loadBetStreak();
+    await loadDashboard();
+  };
+
+  const loadDashboard = async () => {
+    try {
+      const container = Container.getInstance();
+      const useCase = container.getLoadDashboardUseCase();
+      const result = await useCase.execute();
+      setDashboard({ energy: result.energy, streak: result.streak });
+    } catch (error: any) {
+      console.log("LoadDashboard:", error?.message ?? error);
+    }
   };
 
   const loadBetStreak = async () => {
     try {
       const container = Container.getInstance();
-      const betCheckInUseCase = container.getBetCheckInUseCase();
-      const result = await betCheckInUseCase.execute();
+      const useCase = container.getGetBetStreakStatusUseCase();
+      const result = await useCase.execute();
       setBetStreak(result.betStreak);
+      setCanCheckIn(result.canCheckIn);
     } catch (error: any) {
-      console.log('ℹ️ BetCheckIn:', error.message);
+      console.log("BetCheckIn status:", error?.message ?? error);
+    }
+  };
+
+  const handleDaysPress = () => {
+    if (canCheckIn) {
+      setShowCheckInModal(true);
+    } else {
+      setShowAlreadyMarkedModal(true);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    try {
+      const container = Container.getInstance();
+      await container.getBetCheckInUseCase().execute();
+      setShowCheckInModal(false);
+      await loadBetStreak();
+    } catch (error: any) {
+      console.log("BetCheckIn POST:", error?.message ?? error);
     }
   };
 
@@ -146,70 +165,6 @@ const Home: React.FC = () => {
 
   const toggleFreeOfBetBox = () => {
     setShowFreeOfBetBox(!showFreeOfBetBox);
-  };
-
-  const getTabIndex = (tab: TabType): number => {
-    const tabs: TabType[] = ["conta", "parceiros", "social"];
-    return tabs.indexOf(tab);
-  };
-
-  const getTabByIndex = (index: number): TabType => {
-    const tabs: TabType[] = ["conta", "parceiros", "social"];
-    return tabs[index] || "conta";
-  };
-
-  const handleTabPress = (tab: TabType) => {
-    setActiveTab(tab);
-    const index = getTabIndex(tab);
-    carouselRef.current?.scrollTo({
-      x: index * CAROUSEL_WIDTH,
-      animated: true,
-    });
-  };
-
-  const handleCarouselScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / CAROUSEL_WIDTH);
-    const newTab = getTabByIndex(index);
-    if (newTab !== activeTab) {
-      setActiveTab(newTab);
-    }
-  };
-
-  const renderTabButton = (tab: TabType, label: string) => {
-    const isActive = activeTab === tab;
-    
-    if (isActive) {
-      return (
-        <TouchableOpacity
-          key={tab}
-          onPress={() => handleTabPress(tab)}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={HORIZONTAL_GRADIENT_COLORS}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.tabButtonGradient}
-          >
-            <View style={styles.tabButtonInner}>
-              <Text style={styles.tabButtonTextActive}>{label}</Text>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        key={tab}
-        onPress={() => handleTabPress(tab)}
-        style={styles.tabButtonInactive}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.tabButtonTextInactive}>{label}</Text>
-      </TouchableOpacity>
-    );
   };
 
   const renderHeader = () => (
@@ -230,13 +185,13 @@ const Home: React.FC = () => {
             style={{ flex: 1 }}
           >
             <Text style={[styles.greetingText, { opacity: 0 }]}>
-              "John Doe"
+              {user?.name || "Usuário"}
             </Text>
           </LinearGradient>
         </MaskedView>
       </View>
       
-      <StatsDisplay energy={10} streak="3d" />
+      <StatsDisplay energy={dashboard?.energy ?? 10} streak={dashboard != null ? `${dashboard.streak}d` : "3d"} />
     </View>
   );
 
@@ -261,10 +216,17 @@ const Home: React.FC = () => {
       <Text style={styles.freeOfBetDaysLabel}>
         Você está livre de apostas por:
       </Text>
-      <View style={styles.freeOfBetDaysValueWrapper}>
+      <TouchableOpacity
+        onPress={handleDaysPress}
+        activeOpacity={0.85}
+        style={[
+          styles.freeOfBetDaysValueWrapper,
+          canCheckIn && styles.freeOfBetDaysValueClickable,
+        ]}
+      >
         {renderGradientText(`${betStreak}`, styles.freeOfBetDaysNumber)}
         {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 
@@ -395,90 +357,23 @@ const Home: React.FC = () => {
             />
           </TouchableOpacity>
 
-          {/* Seção Conta, Parceiros, Social - Tabs */}
-          <View style={styles.tabsContainer}>
-            {renderTabButton("conta", "Conta")}
-            {renderTabButton("parceiros", "Parceiros")}
-            {renderTabButton("social", "Social")}
-          </View> 
-
-          {/* Carousel - Cards dinâmicos baseados na aba ativa */}
-          <ScrollView
-            ref={carouselRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleCarouselScroll}
-            scrollEventThrottle={16}
-            decelerationRate="fast"
-            snapToInterval={CAROUSEL_WIDTH}
-            snapToAlignment="center"
-            contentContainerStyle={styles.carouselContentContainer}
-            style={styles.carousel}
-          >
-            {/* Conta */}
-            <View style={[styles.cardsContainer, { width: CAROUSEL_WIDTH }]}>
-              <IconCard 
-                icon={<BetHunterIcon width={24} height={24} />} 
-                title="Minha Conta" 
-                onPress={() => navigation.navigate("MinhaConta")}
-              />
-              <IconCard 
-                icon={<AcessorIcon width={24} height={24} />} 
-                title="Meu Acessor" 
-                onPress={() => navigation.navigate("Acessor")}
-              />
-              <IconCard 
-                icon={<JornadaIcon width={24} height={24} />} 
-                title="Minha  Jornada" 
-                onPress={() => navigation.navigate("MinhaJornada")}
-              />
-            </View>
-
-            {/* Parceiros */}
-            <View style={[styles.cardsContainer, { width: CAROUSEL_WIDTH }]}>
-              <IconCard 
-                icon={<MedicoIcon width={24} height={24} />} 
-                title="Consultas" 
-              />
-              <IconCard 
-                icon={<EventosIcon width={24} height={24} />} 
-                title="Eventos" 
-              />
-              <IconCard 
-                icon={<CursosIcon width={24} height={24} />} 
-                title="Cursos" 
-              />
-            </View>
-
-            {/* Social */}
-            <View style={[styles.cardsContainer, { width: CAROUSEL_WIDTH }]}>
-              <IconCard 
-                icon={<ForumsIcon width={24} height={24} />} 
-                title="Fóruns" 
-              />
-              <IconCard 
-                icon={<ArtigosIcon width={24} height={24} />} 
-                title="Artigos" 
-              />
-              <IconCard 
-                icon={<VideosIcon width={24} height={24} />} 
-                title="Vídeos" 
-              />
-            </View>
-          </ScrollView>
-
-          {/* Dots Indicator */}
-          <View style={styles.dotsContainer}>
-            {["conta", "parceiros", "social"].map((tab, index) => (
-              <View
-                key={tab}
-                style={[
-                  styles.dot,
-                  activeTab === tab && styles.dotActive
-                ]}
-              />
-            ))}
+          {/* Minha conta, Meu acessor, Minha jornada */}
+          <View style={styles.cardsContainer}>
+            <IconCard 
+              icon={<BetHunterIcon width={24} height={24} />} 
+              title="Minha Conta" 
+              onPress={() => navigation.navigate("MinhaConta")}
+            />
+            <IconCard 
+              icon={<AcessorIcon width={24} height={24} />} 
+              title="Meu Acessor" 
+              onPress={() => navigation.navigate("Acessor")}
+            />
+            <IconCard 
+              icon={<JornadaIcon width={24} height={24} />} 
+              title="Minha Jornada" 
+              onPress={() => navigation.navigate("MinhaJornada")}
+            />
           </View>
 
           {/* Betcoins Roulette Box */}
@@ -585,10 +480,16 @@ const Home: React.FC = () => {
         <View style={styles.resetModalContent}>
           <GradientBorderButton
             label="Continuar"
-            onPress={() => {
-              // TODO: Implementar lógica de reset do contador
-              setShowResetModal(false);
-              setShowResetConfirmModal(true);
+            onPress={async () => {
+              try {
+                const container = Container.getInstance();
+                await container.getResetBetStreakUseCase().execute();
+                setShowResetModal(false);
+                setShowResetConfirmModal(true);
+                await loadBetStreak();
+              } catch (error: any) {
+                console.log("ResetBetStreak:", error?.message ?? error);
+              }
             }}
           />
         </View>
@@ -636,6 +537,42 @@ const Home: React.FC = () => {
         showCloseButton={false}
       >
         <View style={styles.resetConfirmModalContent} />
+      </Modal>
+
+      {/* Modal de Check-in (Apostou / Não apostei) */}
+      <Modal
+        visible={showCheckInModal}
+        onClose={() => setShowCheckInModal(false)}
+        size="small"
+        title="Marcar check-in"
+        subtitle="Você apostou hoje?"
+      >
+        <View style={styles.checkInModalContent}>
+          <GradientBorderButton
+            label="Não apostei"
+            onPress={handleCheckIn}
+          />
+          <GradientBorderButton
+            label="Apostou"
+            onPress={() => setShowCheckInModal(false)}
+          />
+        </View>
+      </Modal>
+
+      {/* Modal Já marcado */}
+      <Modal
+        visible={showAlreadyMarkedModal}
+        onClose={() => setShowAlreadyMarkedModal(false)}
+        size="small"
+        title="Já marcado"
+        subtitle="Já foi marcado. Aguarde 1 dia para marcar novamente."
+      >
+        <View style={styles.resetModalContent}>
+          <GradientBorderButton
+            label="Entendi"
+            onPress={() => setShowAlreadyMarkedModal(false)}
+          />
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -707,6 +644,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  freeOfBetDaysValueClickable: {
+    opacity: 0.9,
+  },
   freeOfBetDaysNumber: {
     fontSize: 56,
     fontWeight: "bold",
@@ -735,25 +675,51 @@ const styles = StyleSheet.create({
   },
   freeOfBetContainerExpanded: {
     width: "96%",
-    height: 140, 
-    padding: 20,
+    height: 140,
+    padding: 12,
     justifyContent: "flex-start",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 18,
     elevation: 14,
-   
+  },
+  freeOfBetTitle: {
+    color: "#A19DAA",
+    fontSize: 15,
+    textAlign: "center",
+    fontWeight: "500",
+    marginBottom: 9,
+  },
+  timerContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 8,
+  },
+  timerText: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#B382FA",
+    marginRight: 6,
+  },
+  timerWarning: {
+    color: "#F37F98",
+  },
+  timerDanger: {
+    color: "#FF6FA6",
+  },
+  timerSeconds: {
+    fontSize: 19,
+    marginTop: 8,
   },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 12,
+    marginTop: 0,
   },
   actionButton: {
     flex: 1,
     alignItems: "center",
-    marginHorizontal: 7,
   },
   actionIconCircle: {
     backgroundColor: "#191922",
@@ -762,7 +728,7 @@ const styles = StyleSheet.create({
     height: 62,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   actionText: {
     color: "#FFFFFF",
@@ -831,6 +797,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
+    marginTop: 20,
   },
 
   // Dots Indicator
@@ -988,6 +955,11 @@ const styles = StyleSheet.create({
   blockModalContent: {
     alignItems: "center",
     paddingTop: 10,
+  },
+  checkInModalContent: {
+    alignItems: "center",
+    paddingTop: 20,
+    gap: 12,
   },
   resetConfirmModalContent: {
     display: "none",

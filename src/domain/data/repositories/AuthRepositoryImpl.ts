@@ -7,4 +7,16 @@ export class AuthRepositoryImpl implements AuthRepository {
   async login(email: string, password: string) {
     return await this.authApi.login(email, password);
   }
+
+  async requestPasswordChange(email: string): Promise<void> {
+    return await this.authApi.requestPasswordChange(email);
+  }
+
+  async verifyPasswordChangeCode(email: string, code: string): Promise<void> {
+    return await this.authApi.verifyPasswordChangeCode(email, code);
+  }
+
+  async confirmPasswordChange(email: string, code: string, newPassword: string): Promise<void> {
+    return await this.authApi.confirmPasswordChange(email, code, newPassword);
+  }
 }

@@ -13,6 +13,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import { Footer, StatsDisplay, Avatar, DayCounter, IconCard } from "../../components";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
+import { Container } from "../../infrastructure/di/Container";
 
 // Assets
 const bookIcon = require("../../assets/icon-book.png");
@@ -28,12 +29,23 @@ const XP_GRADIENT_LOCATIONS = [0.0, 0.15, 0.32, 0.62] as const;
 
 const MenuEducacional: React.FC = () => {
   const [user, setUser] = useState< | null>(null);
-  
+  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
   const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
-   
+    loadDashboard();
   }, []);
+
+  const loadDashboard = async () => {
+    try {
+      const container = Container.getInstance();
+      const loadDashboardUseCase = container.getLoadDashboardUseCase();
+      const result = await loadDashboardUseCase.execute();
+      setDashboard({ energy: result.energy, streak: result.streak });
+    } catch (error: any) {
+      console.log('ℹ️ LoadDashboard:', error.message);
+    }
+  };
 
  
 
@@ -60,7 +72,7 @@ const MenuEducacional: React.FC = () => {
             </View>
           </View>
           <View style={styles.headerRight}>
-            <StatsDisplay energy={10} streak="3d" />
+            <StatsDisplay energy={dashboard?.energy ?? 10} streak={dashboard != null ? `${dashboard.streak}d` : '3d'} />
           </View>
         </View>
 
@@ -70,7 +82,7 @@ const MenuEducacional: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           {/* XP Progress Card */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             activeOpacity={0.9}
             style={styles.xpCard}
             onPress={() => navigation.navigate("Ranking")}
@@ -92,8 +104,8 @@ const MenuEducacional: React.FC = () => {
                   <Text style={styles.xpValue}>410xp</Text>
                   <Text style={styles.xpRanking}>Você está em 4º lugar</Text>
                 </View>
-                <View style={styles.xpArrowContainer}>
-                  <Image
+                <View style={styles.xpArrowContainer}> */}
+                  {/* <Image
                     source={require("../../assets/Icon-seta-efeito.png")}
                     style={styles.xpArrowEffect}
                     resizeMode="contain"
@@ -106,14 +118,18 @@ const MenuEducacional: React.FC = () => {
                 </View>
               </View>
             </LinearGradient>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Streak Counter */}
           <DayCounter
             useFireIcons={true}
-            activeFires={4}
-            totalFires={6}
-            finalNumber={27}
+            activeFires={Math.min(dashboard?.streak ?? 0, 7)}
+            totalFires={7}
+            finalNumber={
+              dashboard != null && (dashboard.streak ?? 0) > 7
+                ? (dashboard.streak ?? 0)
+                : undefined
+            }
             style={styles.streakCounter}
           />
 
@@ -130,21 +146,12 @@ const MenuEducacional: React.FC = () => {
                   title="Cursos"
                   onPress={() => navigation.navigate("Cursos")}
                 />
-                <IconCard
-                  icon={<Image source={abcIcon} style={styles.optionIconImage} resizeMode="contain" />}
-                  title="Aulas"
-                  onPress={() => navigation.navigate("Cursos")}
-                />
-                <IconCard
-                  icon={<Image source={diceIcon} style={styles.optionIconImage} resizeMode="contain" />}
-                  title="Roleta Bethunter"
-                  onPress={() => navigation.navigate("Roulette")}
-                />
+          
               </View>
 
               {/* Row 2 */}
               <View style={styles.optionsRow}>
-                <IconCard
+                {/* <IconCard
                   icon={<Image source={bookIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Cursos Salvos"
                   onPress={() => navigation.navigate("CursosSalvos")}
@@ -152,7 +159,7 @@ const MenuEducacional: React.FC = () => {
                 <IconCard
                   icon={<Image source={savedAbcIcon} style={styles.optionIconImage} resizeMode="contain" />}
                   title="Aulas Salvas"
-                />
+                /> */}
                 <IconCard
                   icon={<EmojiHappy width={32} height={32} />}
                   title="Parceiros Bethunter"

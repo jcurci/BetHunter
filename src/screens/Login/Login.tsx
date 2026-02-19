@@ -45,10 +45,19 @@ const Login: React.FC = () => {
 
       const session = await loginUseCase.execute(email, password);
 
-      // Salvar token no authStore (persiste no AsyncStorage)
-      await authStore.setToken(session.accessToken);
+      if (session.user && session.user.id) {
+        const userMapeado = {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          points: session.user.energy ?? 0,
+          betcoins: 0,
+        };
+        await authStore.login(session.accessToken, userMapeado);
+      } else {
+        await authStore.setToken(session.accessToken);
+      }
 
-      // Navegar para Home
       navigation.navigate("Home");
     } catch (error: unknown) {
       console.error("Erro ao fazer login:", error);

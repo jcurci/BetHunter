@@ -31,7 +31,6 @@ import {
   BUTTON_INNER_BORDER_COLOR,
 } from "../../config/colors";
 
-// Icon Components
 const ProIcon: React.FC = () => (
   <View style={styles.proIconContainer}>
     <LinearGradient
@@ -134,15 +133,13 @@ const MinhaConta: React.FC = () => {
                   <Text style={styles.statusText}>
                     Seu perfil é: <Text style={styles.statusBold}>Apostador</Text>
                   </Text>
-                  <TouchableOpacity style={styles.redoButton}>
-                    <Text style={styles.redoButtonText}>Quer refazer a pesquisa?</Text>
-                  </TouchableOpacity>
+                
                 </View>
               </LinearGradient>
             </View>
 
-            {/* Feature Cards Row */}
-            <View style={styles.featureCardsRow}>
+            Feature Cards Row
+            {/* <View style={styles.featureCardsRow}>
               <FeatureCard
                 icon={<ProIcon />}
                 title="Pro"
@@ -155,7 +152,7 @@ const MinhaConta: React.FC = () => {
                 subtitle="Ganhe R$20 ou mais"
                 style={styles.featureCard}
               />
-            </View>
+            </View> */}
 
             {/* Menu Sections */}
             <MenuSection>
@@ -184,7 +181,7 @@ const MinhaConta: React.FC = () => {
                 label="Configurações de Notificação"
                 onPress={() => navigation.navigate("Notifications")}
               />
-              <MenuItem icon="palette" label="Aparência" onPress={() => { }} />
+             
              
               
             </MenuSection>
@@ -322,9 +319,7 @@ const styles = StyleSheet.create({
   statusBold: {
     fontWeight: "bold",
   },
-  redoButton: {
-    alignSelf: "flex-start",
-  },
+  
   redoButtonText: {
     fontSize: 12,
     color: "#A09CAB",
