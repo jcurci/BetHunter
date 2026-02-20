@@ -264,7 +264,7 @@ const Home: React.FC = () => {
             
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => setShowBlockModal(true)}
+              onPress={() => navigation.navigate("BlockerSetup")}
               activeOpacity={0.85}
             >
               <View style={styles.actionIconCircle}>

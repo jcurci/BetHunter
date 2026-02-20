@@ -33,6 +33,7 @@ import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
 import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
+import { BlockerSetup, BlockerConfig, BlockerLogs } from "./src/screens/Blocker";
 import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -262,6 +263,27 @@ const App: React.FC = () => {
         <Stack.Screen
           name="MinhaConta"
           component={MinhaConta}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="BlockerSetup"
+          component={BlockerSetup}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="BlockerConfig"
+          component={BlockerConfig}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="BlockerLogs"
+          component={BlockerLogs}
           options={{
             headerShown: false,
           }}
