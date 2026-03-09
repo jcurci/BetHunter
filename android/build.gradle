@@ -1,0 +1,32 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+    // Expo modules artifacts (local Maven repos shipped inside node_modules).
+    // This avoids relying on any remote Expo Maven endpoint.
+    maven { url("$rootDir/../node_modules/expo-asset/local-maven-repo") }
+    maven { url("$rootDir/../node_modules/expo-file-system/local-maven-repo") }
+    maven { url("$rootDir/../node_modules/expo-font/local-maven-repo") }
+    maven { url("$rootDir/../node_modules/expo-keep-awake/local-maven-repo") }
+    maven { url("$rootDir/../node_modules/expo-linear-gradient/local-maven-repo") }
+    maven { url("$rootDir/../node_modules/expo-system-ui/local-maven-repo") }
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"

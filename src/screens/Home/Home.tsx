@@ -10,6 +10,8 @@ import {
   Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  NativeModules,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -61,12 +63,65 @@ const Home: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>("conta");
+  const [vpnEnabled, setVpnEnabled] = useState<boolean>(false);
+  const [vpnBusy, setVpnBusy] = useState<boolean>(false);
   const carouselRef = useRef<ScrollView>(null);
   const container = Container.getInstance();
 
   useEffect(() => {
     loadData();
+    syncVpnState();
   }, []);
+
+  const BetBlocker = NativeModules?.BetBlocker as
+    | {
+        startBlocking: () => void;
+        stopBlocking: () => Promise<void>;
+        isBlockingEnabled: () => Promise<boolean>;
+        setBlockedDomains: (domains: string[]) => void;
+      }
+    | undefined;
+
+  const syncVpnState = async () => {
+    if (!BetBlocker || Platform.OS !== "android") return;
+    try {
+      const enabled = await BetBlocker.isBlockingEnabled();
+      setVpnEnabled(Boolean(enabled));
+    } catch (e) {
+      console.warn("Failed to read VPN state:", e);
+    }
+  };
+
+  const enableVpn = async () => {
+    if (!BetBlocker || Platform.OS !== "android") return;
+    setVpnBusy(true);
+    try {
+      BetBlocker.setBlockedDomains(["www.bet365.bet.br", "bet365.com", "www.bet365.com"]);
+      BetBlocker.startBlocking();
+      // state flips after user accepts system VPN dialog; re-check shortly
+      setTimeout(syncVpnState, 800);
+      setTimeout(syncVpnState, 2500);
+    } finally {
+      setVpnBusy(false);
+    }
+  };
+
+  const disableVpn = async () => {
+    if (!BetBlocker || Platform.OS !== "android") return;
+  
+    setVpnBusy(true);
+  
+    try {
+      await BetBlocker.stopBlocking();
+  
+      setTimeout(syncVpnState, 500);
+      setTimeout(syncVpnState, 1500);
+    } catch (e) {
+      console.warn("Error stopping VPN:", e);
+    } finally {
+      setVpnBusy(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -273,6 +328,45 @@ const Home: React.FC = () => {
               </View>
               <Text style={styles.actionText}>Bloquear</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={styles.vpnBox}>
+            <Text style={styles.vpnTitle}>Bloqueador (VPN)</Text>
+            <Text style={styles.vpnSubtitle}>
+              Domínio em teste: <Text style={styles.vpnMono}>bet365.com</Text>
+            </Text>
+
+            {!BetBlocker || Platform.OS !== "android" ? (
+              <Text style={styles.vpnUnavailable}>
+                Módulo Android não disponível (você está no Expo Go / iOS / web).
+              </Text>
+            ) : (
+              <View style={styles.vpnButtonsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.vpnButton,
+                    vpnEnabled ? styles.vpnButtonOn : styles.vpnButtonOff,
+                    vpnBusy && styles.vpnButtonDisabled,
+                  ]}
+                  onPress={vpnEnabled ? disableVpn : enableVpn}
+                  activeOpacity={0.85}
+                  disabled={vpnBusy}
+                >
+                  <Text style={styles.vpnButtonText}>
+                    {vpnEnabled ? "Desligar VPN" : "Ligar VPN"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.vpnButtonSecondary, vpnBusy && styles.vpnButtonDisabled]}
+                  onPress={syncVpnState}
+                  activeOpacity={0.85}
+                  disabled={vpnBusy}
+                >
+                  <Text style={styles.vpnButtonTextSecondary}>Atualizar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </>
       )}
@@ -588,7 +682,7 @@ const styles = StyleSheet.create({
   },
   freeOfBetContainerExpanded: {
     width: "96%",
-    height: 210, 
+    height: 320,
     padding: 20,
     justifyContent: "flex-start",
     shadowOffset: { width: 0, height: 8 },
@@ -649,6 +743,76 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 13,
+  },
+
+  // VPN block (test UI)
+  vpnBox: {
+    width: "100%",
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#2B2734",
+  },
+  vpnTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  vpnSubtitle: {
+    color: "#A19DAA",
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 10,
+  },
+  vpnMono: {
+    color: "#D783D8",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+  },
+  vpnUnavailable: {
+    color: "#F37F98",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  vpnButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  vpnButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  vpnButtonOn: {
+    backgroundColor: "#2E2542",
+    borderWidth: 1,
+    borderColor: "#D783D8",
+  },
+  vpnButtonOff: {
+    backgroundColor: "#915BFF",
+  },
+  vpnButtonSecondary: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#3A3644",
+    backgroundColor: "#161522",
+  },
+  vpnButtonDisabled: {
+    opacity: 0.6,
+  },
+  vpnButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  vpnButtonTextSecondary: {
+    color: "#C7C3D1",
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   // Divider
