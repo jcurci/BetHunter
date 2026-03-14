@@ -7,6 +7,9 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  NativeModules,
+  Platform,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -46,6 +49,16 @@ import { NavigationProp } from "../../types/navigation";
 // Constants
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
+
+const { BetBlocker } = NativeModules;
+const BLOCKED_DOMAINS = [
+  "bet365.com",
+  "betfair.com",
+  "blaze.com",
+  "pokerstars.com",
+  "1xbet.com",
+];
+
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((s) => s.user);
@@ -150,6 +163,38 @@ const Home: React.FC = () => {
       await loadBetStreak();
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
+    }
+  };
+
+  const handleBlockContinue = async () => {
+    if (Platform.OS !== "android") {
+      setShowBlockModal(false);
+      Alert.alert(
+        "Disponível no Android",
+        "O bloqueio de apostas via VPN está disponível apenas no Android."
+      );
+      return;
+    }
+    if (!BetBlocker) {
+      console.log("BetBlocker: módulo nativo não disponível");
+      setShowBlockModal(false);
+      Alert.alert(
+        "Indisponível",
+        "O recurso de bloqueio não está disponível neste ambiente."
+      );
+      return;
+    }
+    try {
+      BetBlocker.setBlockedDomains(BLOCKED_DOMAINS);
+      BetBlocker.startBlocking();
+      setShowBlockModal(false);
+      setShowBlockSuccessModal(true);
+    } catch (error: any) {
+      console.log("BetBlocker error", error);
+      Alert.alert(
+        "Erro",
+        "Não foi possível ativar o bloqueio. Tente novamente."
+      );
     }
   };
 
@@ -278,7 +323,7 @@ const Home: React.FC = () => {
     </View>
   );
 
-  const renderArticleCard = (article: Article) => (
+  const renderArticleCard = (article: any) => (
     <View key={article.id} style={styles.articleCard}>
       <View style={styles.articleImageContainer}>
         {getArticleImage(article)}
@@ -518,11 +563,7 @@ const Home: React.FC = () => {
         <View style={styles.blockModalContent}>
           <GradientBorderButton
             label="Continuar"
-            onPress={() => {
-              // TODO: Implementar lógica de bloqueio VPN
-              setShowBlockModal(false);
-              setShowBlockSuccessModal(true);
-            }}
+            onPress={handleBlockContinue}
           />
         </View>
       </Modal>
