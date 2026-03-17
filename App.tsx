@@ -34,6 +34,7 @@ import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
 import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
 import { RootStackParamList } from "./src/types/navigation";
+import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -41,7 +42,14 @@ const App: React.FC = () => {
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="OnboardingFlow">
+        <Stack.Screen
+          name="OnboardingFlow"
+          component={OnboardingFlow}
+          options={{
+            headerShown: false,
+          }}
+        />
         <Stack.Screen
           name="Login"
           component={Login}

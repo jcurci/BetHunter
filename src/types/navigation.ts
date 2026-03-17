@@ -1,6 +1,7 @@
 import { NavigationProp as RNNavigationProp } from '@react-navigation/native';
 
 export type RootStackParamList = {
+  OnboardingFlow: undefined;
   Login: undefined;
   SignUpName: undefined;
   SignUpContact: { name: string; username: string };
