@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuthStore } from "./src/storage/authStore";
 import Login from "./src/screens/Login/Login";
 import {
   SignUpName,
@@ -39,10 +41,31 @@ import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const App: React.FC = () => {
+  const [isReady, setIsReady] = useState(false);
+  const [initialRoute, setInitialRoute] = useState<'Login' | 'Home'>('Login');
+
+  useEffect(() => {
+    const init = async () => {
+      await useAuthStore.getState().initialize();
+      const { isAuthenticated } = useAuthStore.getState();
+      setInitialRoute(isAuthenticated ? 'Home' : 'Login');
+      setIsReady(true);
+    };
+    init();
+  }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#D783D8" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
-      <Stack.Navigator initialRouteName="OnboardingFlow">
+      <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen
           name="OnboardingFlow"
           component={OnboardingFlow}

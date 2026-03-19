@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { OnboardingProvider, useOnboarding } from './OnboardingContext';
+import { setOnboardingFlowCompleted } from './onboardingStorage';
+import { RootStackParamList } from '../../types/navigation';
 import { NotificationsPermissionScreen } from './screens/NotificationsPermissionScreen';
 import { QuizFrequencyScreen } from './screens/QuizFrequencyScreen';
 import { QuizFinancialImpactScreen } from './screens/QuizFinancialImpactScreen';
@@ -52,6 +55,7 @@ const QUIZ_TOTAL = 6;
 const OnboardingInner: React.FC = () => {
   const { hydrated, savedStep, persistStep } = useOnboarding();
   const [step, setStep] = useState<StepId>('notifications');
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     if (hydrated && savedStep && STEP_ORDER.includes(savedStep as StepId)) {
@@ -202,9 +206,9 @@ const OnboardingInner: React.FC = () => {
       return (
         <CelebrationScreen
           {...shared}
-          onNext={() => {
-            // TODO: próxima fase (paywall)
-            console.log('Celebration done — ir para paywall');
+          onNext={async () => {
+            await setOnboardingFlowCompleted();
+            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
           }}
           onBack={goBack}
         />

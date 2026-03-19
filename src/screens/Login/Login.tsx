@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,11 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,23 +19,92 @@ import { useNavigation } from "@react-navigation/native";
 import Logo from "../../assets/logo-img/LogoImgETexto.svg";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { NavigationProp } from "../../types/navigation";
-import { HORIZONTAL_GRADIENT } from "../../config/colors";
+import {
+  HORIZONTAL_GRADIENT,
+  HORIZONTAL_GRADIENT_COLORS,
+  HORIZONTAL_GRADIENT_LOCATIONS,
+} from "../../config/colors";
 import { RadialGradientBackground } from "../../components";
 import { useAuthStore } from "../../storage/authStore";
 import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 
 const Login: React.FC = () => {
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const navigation = useNavigation<NavigationProp>();
   const authStore = useAuthStore();
 
-  const toggleShowPassword = (): void => {
-    setShowPassword(!showPassword);
-  };
+  // Entrance animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+  const logoFloat = useRef(new Animated.Value(0)).current;
+  const formFade = useRef(new Animated.Value(0)).current;
+  const formSlide = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    // Logo entrance
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 60,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Form entrance (delayed)
+    Animated.parallel([
+      Animated.timing(formFade, {
+        toValue: 1,
+        duration: 400,
+        delay: 200,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(formSlide, {
+        toValue: 0,
+        duration: 400,
+        delay: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Subtle float loop on logo
+    const floatLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoFloat, {
+          toValue: -6,
+          duration: 2000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoFloat, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const floatTimeout = setTimeout(() => floatLoop.start(), 600);
+    return () => {
+      clearTimeout(floatTimeout);
+      floatLoop.stop();
+    };
+  }, []);
 
   const handleLogin = async (): Promise<void> => {
     if (!email.trim() || !password.trim()) {
@@ -42,7 +116,6 @@ const Login: React.FC = () => {
     try {
       const container = Container.getInstance();
       const loginUseCase = container.getLoginUseCase();
-
       const session = await loginUseCase.execute(email, password);
 
       if (session.user && session.user.id) {
@@ -71,113 +144,145 @@ const Login: React.FC = () => {
     }
   };
 
+  const isFormReady = email.trim().length > 0 && password.trim().length > 0;
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Background Gradient - Radial Effect */}
-        <RadialGradientBackground style={styles.backgroundGradient} />
+      <RadialGradientBackground style={StyleSheet.absoluteFillObject} />
 
-        <View style={styles.content}>
-          <MaskedView
-            maskElement={<Text style={styles.moduleTitle}>Login</Text>}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Logo section */}
+          <Animated.View
+            style={[
+              styles.logoSection,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: logoScale }, { translateY: logoFloat }],
+              },
+            ]}
           >
-            <LinearGradient
-              {...HORIZONTAL_GRADIENT}
-            >
-              <Text style={[styles.moduleTitle, { opacity: 0 }]}>Login</Text>
-            </LinearGradient>
-          </MaskedView>
+            <Logo width={180} height={46} />
+          </Animated.View>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholderTextColor="#A0A0A0"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                secureTextEntry={!showPassword}
-                placeholderTextColor="#A0A0A0"
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={toggleShowPassword}
+          {/* Form card */}
+          <Animated.View
+            style={[
+              styles.formCard,
+              {
+                opacity: formFade,
+                transform: [{ translateY: formSlide }],
+              },
+            ]}
+          >
+            {/* Title */}
+            <MaskedView maskElement={<Text style={styles.cardTitle}>Bem-vindo de volta</Text>}>
+              <LinearGradient
+                colors={[...HORIZONTAL_GRADIENT_COLORS]}
+                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
               >
-                <Icon
-                  name={showPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#A0A0A0"
+                <Text style={[styles.cardTitle, { opacity: 0 }]}>Bem-vindo de volta</Text>
+              </LinearGradient>
+            </MaskedView>
+            <Text style={styles.cardSubtitle}>Entre na sua conta para continuar</Text>
+
+            {/* Inputs */}
+            <View style={styles.inputsSection}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  emailFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <Icon name="mail" size={18} color={emailFocused ? "#B8A8E8" : "#555"} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholderTextColor="#555"
+                  value={email}
+                  onChangeText={setEmail}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                 />
+              </View>
+
+              <View
+                style={[
+                  styles.inputWrapper,
+                  passwordFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <Icon name="lock" size={18} color={passwordFocused ? "#B8A8E8" : "#555"} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Senha"
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#555"
+                  value={password}
+                  onChangeText={setPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Icon name={showPassword ? "eye" : "eye-off"} size={18} color="#555" />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate("PasswordResetMethod")}
+                style={styles.forgotRow}
+              >
+                <Text style={styles.forgotText}>Esqueceu a senha?</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={() => navigation.navigate("PasswordResetMethod")}
-            >
-              <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
-            </TouchableOpacity>
 
+            {/* Login button */}
             <TouchableOpacity
-              style={styles.loginButtonContainer}
               onPress={handleLogin}
-              disabled={loading}
-              activeOpacity={0.8}
+              disabled={loading || !isFormReady}
+              activeOpacity={0.85}
+              style={[styles.loginBtn, (!isFormReady || loading) && styles.loginBtnDisabled]}
             >
               <LinearGradient
-                colors={HORIZONTAL_GRADIENT.colors}
-                locations={HORIZONTAL_GRADIENT.locations}
-                start={HORIZONTAL_GRADIENT.start}
-                end={HORIZONTAL_GRADIENT.end}
-                style={[styles.loginButton, loading && styles.disabledButton]}
+                colors={[...HORIZONTAL_GRADIENT_COLORS]}
+                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.loginGradient}
               >
-                <Text style={styles.buttonText}>
-                  {loading ? "Entrando..." : "Logar"}
-                </Text>
+                <Text style={styles.loginBtnText}>{loading ? "Entrando..." : "Entrar"}</Text>
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Sign up link */}
             <TouchableOpacity
-              style={styles.registerLink}
               onPress={() => navigation.navigate("SignUpName")}
               activeOpacity={0.7}
+              style={styles.signUpBtn}
             >
-              <View style={styles.registerLinkContainer}>
-                <Text style={styles.registerLinkText}>Nao tem conta? </Text>
-                <MaskedView
-                  maskElement={<Text style={styles.registerLinkGradientText}>Cadastre-se!</Text>}
-                >
-                  <LinearGradient
-                    colors={HORIZONTAL_GRADIENT.colors}
-                    locations={HORIZONTAL_GRADIENT.locations}
-                    start={HORIZONTAL_GRADIENT.start}
-                    end={HORIZONTAL_GRADIENT.end}
-                  >
-                    <Text style={[styles.registerLinkGradientText, { opacity: 0 }]}>
-                      Cadastre-se!
-                    </Text>
-                  </LinearGradient>
-                </MaskedView>
-              </View>
+              <Text style={styles.signUpBtnText}>Criar uma conta</Text>
             </TouchableOpacity>
-
-
-          </View>
-        </View>
-        <View style={styles.logoContainer}>
-          <Logo width={211} height={53} style={styles.bethunterLogoImage} />
-        </View>
-      </View>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -187,127 +292,122 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
-  container: {
+  flex: {
     flex: 1,
   },
-  backgroundGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "100%",
-    zIndex: -1,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
-  content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 10,
-  },
-  gradientTitleContainer: {
-    marginBottom: 10,
-    alignSelf: "flex-start",
-    width: "100%",
-    height: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#7456C8",
-    textAlign: "left",
-    marginBottom: 20,
-  },
-  moduleTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "left",
-    marginTop: 54,
-    marginBottom: 20,
-  },
-  form: {
-    width: "100%",
+  logoSection: {
     alignItems: "center",
+    marginBottom: 36,
   },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 12,
-    position: "relative",
+  formCard: {
+    backgroundColor: "rgba(22,20,31,0.85)",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "rgba(116,86,200,0.2)",
+  },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginBottom: 6,
+    letterSpacing: 0.3,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: "#7A7390",
+    marginBottom: 28,
+    lineHeight: 20,
+  },
+  inputsSection: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1C1928",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.06)",
+    gap: 10,
+  },
+  inputWrapperFocused: {
+    borderColor: "rgba(116,86,200,0.5)",
+    backgroundColor: "#201D2E",
+  },
+  inputIcon: {
+    marginRight: 2,
   },
   input: {
-    backgroundColor: "#14121B",
-    padding: 16,
-    paddingRight: 50,
-    borderRadius: 10,
-    color: "#4F4C56",
-    fontSize: 16,
-    marginBottom: 2,
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 15,
+    padding: 0,
   },
-  eyeIcon: {
-    position: "absolute",
-    right: 16,
-    top: "50%",
-    transform: [{ translateY: -10 }],
+  forgotRow: {
+    alignSelf: "flex-end",
+    marginTop: 4,
   },
-  loginButtonContainer: {
-    width: "100%",
-    marginBottom: 10,
-    marginTop: 6,
+  forgotText: {
+    color: "#7456C8",
+    fontSize: 13,
+    fontWeight: "600",
   },
-  loginButton: {
+  loginBtn: {
+    borderRadius: 999,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  loginBtnDisabled: {
+    opacity: 0.5,
+  },
+  loginGradient: {
     paddingVertical: 16,
-    borderRadius: 25,
     alignItems: "center",
-    width: "100%",
+    borderRadius: 999,
   },
-  registerLink: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "flex-start",
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  registerLinkContainer: {
-    flexDirection: "row",
-    display: "flex",
-    justifyContent: "flex-start",
-  },
-  registerLinkText: {
-    color: "#A09CAB",
-    fontSize: 14,
-    fontWeight: "normal",
-  },
-  registerLinkGradientText: {
-    fontSize: 14,
-    fontWeight: "normal",
-  },
-  buttonText: {
-    color: "white",
+  loginBtnText: {
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
-    width: "100%",
-    textAlign: "center",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
-  forgotPassword: {
-    alignSelf: "flex-start",
-    marginBottom: 12,
-    marginTop: 6,
-  },
-  forgotPasswordText: {
-    color: "#A09CAB",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  logoContainer: {
+  dividerRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 40,
+    marginBottom: 16,
+    gap: 12,
   },
-  bethunterLogoImage: {
-    width: 211,
-    height: 53,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  disabledButton: {
-    opacity: 0.7,
+  dividerText: {
+    color: "#555",
+    fontSize: 13,
+  },
+  signUpBtn: {
+    backgroundColor: "rgba(116,86,200,0.12)",
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(116,86,200,0.3)",
+  },
+  signUpBtnText: {
+    color: "#B8A8E8",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });
 

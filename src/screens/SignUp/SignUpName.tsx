@@ -1,15 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
+  TouchableOpacity,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import { CircularIconButton, GradientButton } from "../../components/common";
+import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
+import {
+  HORIZONTAL_GRADIENT_COLORS,
+  HORIZONTAL_GRADIENT_LOCATIONS,
+} from "../../config/colors";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface ValidationErrors {
   name?: string;
@@ -17,278 +26,251 @@ interface ValidationErrors {
 }
 
 const SignUpName: React.FC = () => {
-  const [name, setName] = useState<string>("");
-  const [username, setUsername] = useState<string>("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<{ name: boolean; username: boolean }>({
-    name: false,
-    username: false,
-  });
+  const [touched, setTouched] = useState({ name: false, username: false });
+  const [nameFocused, setNameFocused] = useState(false);
+  const [usernameFocused, setUsernameFocused] = useState(false);
   const navigation = useNavigation<NavigationProp>();
 
-  const validateName = (value: string): string | undefined => {
-    if (!value.trim()) {
-      return "Escreva seu nome completo";
-    }
-    if (value.trim().length < 3) {
-      return "O nome deve ter no mínimo 3 caracteres";
-    }
-    return undefined;
+  // Animations
+  const titleFade = useRef(new Animated.Value(0)).current;
+  const titleSlide = useRef(new Animated.Value(16)).current;
+  const field1Fade = useRef(new Animated.Value(0)).current;
+  const field1Slide = useRef(new Animated.Value(16)).current;
+  const field2Fade = useRef(new Animated.Value(0)).current;
+  const field2Slide = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    const stagger = (anim: { fade: Animated.Value; slide: Animated.Value }, delay: number) =>
+      Animated.parallel([
+        Animated.timing(anim.fade, { toValue: 1, duration: 350, delay, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(anim.slide, { toValue: 0, duration: 350, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]);
+
+    stagger({ fade: titleFade, slide: titleSlide }, 0).start();
+    stagger({ fade: field1Fade, slide: field1Slide }, 80).start();
+    stagger({ fade: field2Fade, slide: field2Slide }, 160).start();
+  }, []);
+
+  const validateName = (v: string) => {
+    if (!v.trim()) return "Escreva seu nome completo";
+    if (v.trim().length < 3) return "O nome deve ter no mínimo 3 caracteres";
   };
 
-  const validateUsername = (value: string): string | undefined => {
-    if (!value.trim()) {
-      return "Preencha o nome de usuário";
-    }
-    if (value.length < 3 || value.length > 32) {
-      return "O nome de usuário deve ter entre 3 e 32 caracteres";
-    }
-    // Validar caracteres permitidos (letras, números, underscore)
-    const usernameRegex = /^[a-zA-Z0-9_]+$/;
-    if (!usernameRegex.test(value)) {
-      return "Use apenas letras, números e underscore";
-    }
-    return undefined;
+  const validateUsername = (v: string) => {
+    if (!v.trim()) return "Preencha o nome de usuário";
+    if (v.length < 3 || v.length > 32) return "O nome de usuário deve ter entre 3 e 32 caracteres";
+    if (!/^[a-zA-Z0-9_]+$/.test(v)) return "Use apenas letras, números e underscore";
   };
 
-  const handleNameChange = (value: string) => {
-    setName(value);
-    
-    // Marca como touched quando começar a digitar
-    if (value.length > 0 && !touched.name) {
-      setTouched((prev) => ({ ...prev, name: true }));
-    }
-
-    if (touched.name || value.length > 0) {
-      // Se o campo estiver vazio, limpa o erro
-      if (!value.trim()) {
-        setErrors((prev) => ({ ...prev, name: undefined }));
-      } else {
-        setErrors((prev) => ({ ...prev, name: validateName(value) }));
-      }
+  const handleNameChange = (v: string) => {
+    setName(v);
+    if (v.length > 0 && !touched.name) setTouched(p => ({ ...p, name: true }));
+    if (touched.name || v.length > 0) {
+      setErrors(p => ({ ...p, name: v.trim() ? validateName(v) : undefined }));
     }
   };
 
-  const handleUsernameChange = (value: string) => {
-    // Remove espaços ao digitar
-    const cleanValue = value.toLowerCase().replace(/\s/g, "");
-    setUsername(cleanValue);
-
-    // Marca como touched quando começar a digitar
-    if (cleanValue.length > 0 && !touched.username) {
-      setTouched((prev) => ({ ...prev, username: true }));
-    }
-
-    if (touched.username || cleanValue.length > 0) {
-      // Se campo vazio, limpa o erro
-      if (!cleanValue.trim()) {
-        setErrors((prev) => ({ ...prev, username: undefined }));
-      } else {
-        // Usa a função de validação completa para ser consistente
-        const error = validateUsername(cleanValue);
-        setErrors((prev) => ({ ...prev, username: error }));
-      }
+  const handleUsernameChange = (v: string) => {
+    const clean = v.toLowerCase().replace(/\s/g, "");
+    setUsername(clean);
+    if (clean.length > 0 && !touched.username) setTouched(p => ({ ...p, username: true }));
+    if (touched.username || clean.length > 0) {
+      setErrors(p => ({ ...p, username: clean ? validateUsername(clean) : undefined }));
     }
   };
 
-  const handleNameBlur = () => {
-    setTouched((prev) => ({ ...prev, name: true }));
-    setErrors((prev) => ({ ...prev, name: validateName(name) }));
-  };
-
-  const handleUsernameBlur = () => {
-    setTouched((prev) => ({ ...prev, username: true }));
-    setErrors((prev) => ({ ...prev, username: validateUsername(username) }));
-  };
-
-  // Verifica se o formulário é válido para habilitar o botão
-  const isFormValid = 
-    name.trim().length >= 3 && 
-    username.length >= 3 && 
+  const isFormValid =
+    name.trim().length >= 3 &&
+    username.length >= 3 &&
     username.length <= 32 &&
     /^[a-zA-Z0-9_]+$/.test(username) &&
-    !errors.name && 
+    !errors.name &&
     !errors.username;
 
   const handleNext = () => {
-    // Marcar todos como touched
     setTouched({ name: true, username: true });
-
-    // Validar todos os campos
-    const nameError = validateName(name);
-    const usernameError = validateUsername(username);
-
-    setErrors({
-      name: nameError,
-      username: usernameError,
-    });
-
-    // Se houver erros, não prosseguir
-    if (nameError || usernameError) {
-      return;
-    }
-
+    const nameErr = validateName(name);
+    const usernameErr = validateUsername(username);
+    setErrors({ name: nameErr, username: usernameErr });
+    if (nameErr || usernameErr) return;
     navigation.navigate("SignUpContact", { name, username });
   };
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <CircularIconButton
-              onPress={() => navigation.goBack()}
-              size={50}
+    <OnboardingLayout
+      currentStep={0}
+      totalSteps={4}
+      onBack={() => navigation.goBack()}
+      stepLabel="1 de 4 — Nome"
+    >
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title */}
+          <Animated.View style={{ opacity: titleFade, transform: [{ translateY: titleSlide }] }}>
+            <Text style={styles.title}>Qual o{"\n"}seu nome?</Text>
+            <Text style={styles.subtitle}>Cadastre seu nome e usuário para começar.</Text>
+          </Animated.View>
+
+          {/* Name field */}
+          <Animated.View style={[styles.fieldBlock, { opacity: field1Fade, transform: [{ translateY: field1Slide }] }]}>
+            <Text style={styles.fieldLabel}>Nome completo</Text>
+            <View style={[styles.inputWrapper, nameFocused && styles.inputWrapperFocused, errors.name && touched.name && styles.inputWrapperError]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: João Silva"
+                autoCapitalize="words"
+                placeholderTextColor="#555"
+                value={name}
+                onChangeText={handleNameChange}
+                onBlur={() => { setNameFocused(false); setTouched(p => ({ ...p, name: true })); setErrors(p => ({ ...p, name: validateName(name) })); }}
+                onFocus={() => setNameFocused(true)}
+              />
+            </View>
+            {errors.name && touched.name && <Text style={styles.errorText}>{errors.name}</Text>}
+          </Animated.View>
+
+          {/* Username field */}
+          <Animated.View style={[styles.fieldBlock, { opacity: field2Fade, transform: [{ translateY: field2Slide }] }]}>
+            <Text style={styles.fieldLabel}>Nome de usuário</Text>
+            <View style={[styles.inputWrapper, usernameFocused && styles.inputWrapperFocused, errors.username && touched.username && styles.inputWrapperError]}>
+              <Text style={styles.atSymbol}>@</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="nomedeusuario"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholderTextColor="#555"
+                value={username}
+                onChangeText={handleUsernameChange}
+                onBlur={() => { setUsernameFocused(false); setTouched(p => ({ ...p, username: true })); setErrors(p => ({ ...p, username: validateUsername(username) })); }}
+                onFocus={() => setUsernameFocused(true)}
+              />
+            </View>
+            {errors.username && touched.username && <Text style={styles.errorText}>{errors.username}</Text>}
+          </Animated.View>
+        </ScrollView>
+
+        {/* CTA */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={!isFormValid}
+            activeOpacity={0.85}
+            style={[styles.continueBtn, !isFormValid && styles.continueBtnDisabled]}
+          >
+            <LinearGradient
+              colors={[...HORIZONTAL_GRADIENT_COLORS]}
+              locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.continueGradient}
             >
-              <Icon name="arrow-back" size={24} color="#FFFFFF" />
-            </CircularIconButton>
-            <Text style={styles.title}>
-              <Text style={styles.titleBold}>Qual o</Text>
-              {"\n"}
-              <Text style={styles.titleBold}>seu nome?</Text>
-            </Text>
-          </View>
-          <Text style={styles.subtitle}>
-            Cadastre seu nome de usuário para continuar.
-          </Text>
-
-          <View style={styles.form}>
-            <View style={styles.inputWrapper}>
-              <View
-                style={[
-                  styles.inputContainer,
-                  errors.name && touched.name && styles.inputError,
-                ]}
-              >
-                <TextInput
-                  style={styles.input}
-                  placeholder="Escreva seu nome completo!"
-                  autoCapitalize="words"
-                  placeholderTextColor="#6B6B6B"
-                  value={name}
-                  onChangeText={handleNameChange}
-                  onBlur={handleNameBlur}
-                />
-              </View>
-              {errors.name && touched.name && (
-                <Text style={styles.errorText}>{errors.name}</Text>
-              )}
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <View
-                style={[
-                  styles.usernameContainer,
-                  errors.username && touched.username && styles.inputError,
-                ]}
-              >
-                <Text style={styles.atSymbol}>@</Text>
-                <TextInput
-                  style={styles.usernameInput}
-                  placeholder="nomedeusuario"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholderTextColor="#6B6B6B"
-                  value={username}
-                  onChangeText={handleUsernameChange}
-                  onBlur={handleUsernameBlur}
-                />
-              </View>
-              {errors.username && touched.username && (
-                <Text style={styles.errorText}>{errors.username}</Text>
-              )}
-            </View>
-          </View>
+              <Text style={styles.continueBtnText}>Próximo</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.bottomContainer}>
-          <GradientButton title="Próximo" onPress={handleNext} disabled={!isFormValid} />
-        </View>
-      </SafeAreaView>
-    </View>
+      </KeyboardAvoidingView>
+    </OnboardingLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-  },
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
+  flex: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 32,
-    marginLeft: 15,
-  },
-  titleBold: {
-    fontWeight: "bold",
+    fontSize: 30,
+    fontWeight: "800",
     color: "#FFFFFF",
+    lineHeight: 38,
+    marginBottom: 10,
+    letterSpacing: 0.2,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#8A8A8A",
-    marginBottom: 30,
+    fontSize: 14,
+    color: "#7A7390",
+    marginBottom: 28,
+    lineHeight: 20,
   },
-  form: {
-    width: "100%",
+  fieldBlock: {
+    marginBottom: 18,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7A7390",
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   inputWrapper: {
-    marginBottom: 15,
-  },
-  inputContainer: {
-    backgroundColor: "#1C1C1C",
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  usernameContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1C1C1C",
-    borderRadius: 25,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: "transparent",
+    backgroundColor: "#1C1928",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.06)",
+    gap: 8,
   },
-  inputError: {
+  inputWrapperFocused: {
+    borderColor: "rgba(116,86,200,0.5)",
+    backgroundColor: "#201D2E",
+  },
+  inputWrapperError: {
     borderColor: "#E74C3C",
   },
-  input: {
-    padding: 18,
-    color: "#FFFFFF",
-    fontSize: 16,
-  },
   atSymbol: {
-    color: "#6B6B6B",
+    color: "#7456C8",
     fontSize: 16,
-    marginRight: 8,
+    fontWeight: "700",
   },
-  usernameInput: {
+  input: {
     flex: 1,
-    paddingVertical: 18,
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 15,
+    padding: 0,
   },
   errorText: {
     color: "#E74C3C",
-    fontSize: 14,
-    marginTop: 8,
-    marginLeft: 18,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
   },
-  bottomContainer: {
-    padding: 20,
-    paddingBottom: 30,
+  footer: {
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  continueBtn: {
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  continueBtnDisabled: {
+    opacity: 0.4,
+  },
+  continueGradient: {
+    paddingVertical: 16,
+    alignItems: "center",
+    borderRadius: 999,
+  },
+  continueBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 });
 

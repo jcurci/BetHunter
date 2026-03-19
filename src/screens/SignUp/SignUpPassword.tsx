@@ -1,102 +1,100 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   Alert,
+  TouchableOpacity,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
-import { CircularIconButton, GradientButton } from "../../components/common";
+import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
 import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  HORIZONTAL_GRADIENT_COLORS,
+  HORIZONTAL_GRADIENT_LOCATIONS,
+} from "../../config/colors";
 
 interface ValidationErrors {
   password?: string;
   confirmPassword?: string;
 }
 
+const REQUIREMENTS = [
+  { key: "length", label: "Mínimo 8 caracteres", test: (p: string) => p.length >= 8 },
+  { key: "special", label: "Pelo menos um caractere especial (!, @, #, $, %)", test: (p: string) => /[!@#$%]/.test(p) },
+];
+
 const SignUpPassword: React.FC = () => {
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [touched, setTouched] = useState<{ password: boolean; confirmPassword: boolean }>({
-    password: false,
-    confirmPassword: false,
-  });
+  const [touched, setTouched] = useState({ password: false, confirmPassword: false });
+  const [passFocused, setPassFocused] = useState(false);
+  const [confirmFocused, setConfirmFocused] = useState(false);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "SignUpPassword">>();
   const { name, username, email, phone } = route.params;
-  
 
-  const validatePassword = (pass: string): string | undefined => {
-    if (!pass) return undefined;
-    if (pass.length < 8) {
-      return "A senha deve ter no mínimo 8 caracteres";
-    }
-    const specialChars = /[!@#$%]/;
-    if (!specialChars.test(pass)) {
-      return "A senha deve conter pelo menos um caractere especial (!, @, #, $, %)";
-    }
-    return undefined;
+  // Animations
+  const titleFade = useRef(new Animated.Value(0)).current;
+  const titleSlide = useRef(new Animated.Value(16)).current;
+  const field1Fade = useRef(new Animated.Value(0)).current;
+  const field1Slide = useRef(new Animated.Value(16)).current;
+  const field2Fade = useRef(new Animated.Value(0)).current;
+  const field2Slide = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    const stagger = (anim: { fade: Animated.Value; slide: Animated.Value }, delay: number) =>
+      Animated.parallel([
+        Animated.timing(anim.fade, { toValue: 1, duration: 350, delay, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(anim.slide, { toValue: 0, duration: 350, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]);
+    stagger({ fade: titleFade, slide: titleSlide }, 0).start();
+    stagger({ fade: field1Fade, slide: field1Slide }, 80).start();
+    stagger({ fade: field2Fade, slide: field2Slide }, 160).start();
+  }, []);
+
+  const validatePassword = (p: string): string | undefined => {
+    if (!p) return undefined;
+    if (p.length < 8) return "A senha deve ter no mínimo 8 caracteres";
+    if (!/[!@#$%]/.test(p)) return "A senha deve conter pelo menos um caractere especial (!, @, #, $, %)";
   };
 
-  const validateConfirmPassword = (confirm: string): string | undefined => {
-    if (!confirm) return undefined;
-    if (password && confirm !== password) {
-      return "As senhas não coincidem";
-    }
-    return undefined;
+  const validateConfirmPassword = (c: string): string | undefined => {
+    if (!c) return undefined;
+    if (password && c !== password) return "As senhas não coincidem";
   };
 
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-    if (touched.password) {
-      if (!value) {
-        setErrors((prev) => ({ ...prev, password: undefined }));
-      } else {
-        setErrors((prev) => ({ ...prev, password: validatePassword(value) }));
-      }
-    }
-    // Revalidar confirmPassword quando a senha muda
+  const handlePasswordChange = (v: string) => {
+    setPassword(v);
+    if (touched.password) setErrors(p => ({ ...p, password: v ? validatePassword(v) : undefined }));
     if (confirmPassword && touched.confirmPassword) {
-      if (value !== confirmPassword) {
-        setErrors((prev) => ({ ...prev, confirmPassword: "As senhas não coincidem" }));
-      } else {
-        setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
-      }
+      setErrors(p => ({ ...p, confirmPassword: v !== confirmPassword ? "As senhas não coincidem" : undefined }));
     }
   };
 
-  const handleConfirmPasswordChange = (value: string) => {
-    setConfirmPassword(value);
-    // Só limpa o erro se o campo estiver vazio, validação completa só no blur
-    if (!value) {
-      setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
-    }
+  const handleConfirmPasswordChange = (v: string) => {
+    setConfirmPassword(v);
+    if (!v) setErrors(p => ({ ...p, confirmPassword: undefined }));
   };
 
-  const handlePasswordBlur = () => {
-    setTouched((prev) => ({ ...prev, password: true }));
-    setErrors((prev) => ({ ...prev, password: validatePassword(password) }));
-  };
-
-  const handleConfirmPasswordBlur = () => {
-    setTouched((prev) => ({ ...prev, confirmPassword: true }));
-    setErrors((prev) => ({ ...prev, confirmPassword: validateConfirmPassword(confirmPassword) }));
-  };
-
-  // Verifica se o formulário é válido para habilitar o botão
   const specialChars = /[!@#$%]/;
-  const isFormValid = 
-    password.length >= 8 && 
+  const isFormValid =
+    password.length >= 8 &&
     specialChars.test(password) &&
     confirmPassword !== "" &&
     password === confirmPassword &&
@@ -104,40 +102,18 @@ const SignUpPassword: React.FC = () => {
     !errors.confirmPassword;
 
   const handleSubmit = async () => {
-    // Marcar todos como touched
     setTouched({ password: true, confirmPassword: true });
-
-    const passwordError = validatePassword(password);
-    const confirmError = validateConfirmPassword(confirmPassword);
-
-    setErrors({
-      password: passwordError,
-      confirmPassword: confirmError,
-    });
-
-    // Se houver erros, não prosseguir
-    if (passwordError || confirmError) {
-      return;
-    }
+    const passErr = validatePassword(password);
+    const confirmErr = validateConfirmPassword(confirmPassword);
+    setErrors({ password: passErr, confirmPassword: confirmErr });
+    if (passErr || confirmErr) return;
 
     setLoading(true);
     try {
       const container = Container.getInstance();
       const createPasswordUseCase = container.getCreatePasswordUseCase();
-
-      const result = await createPasswordUseCase.execute(email, password);
-
-      Alert.alert("Sucesso", "Cadastro realizado com sucesso! Faça login para continuar.", [
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          },
-        },
-      ]);
+      await createPasswordUseCase.execute(email, password);
+      navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });
     } catch (error: unknown) {
       console.error("Erro ao criar senha:", error);
       if (error instanceof ValidationError) {
@@ -149,195 +125,196 @@ const SignUpPassword: React.FC = () => {
       setLoading(false);
     }
   };
- 
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <CircularIconButton
-              onPress={() => navigation.goBack()}
-              size={50}
-            >
-              <Icon name="arrow-back" size={24} color="#FFFFFF" />
-            </CircularIconButton>
-            <Text style={styles.title}>
-              <Text style={styles.titleBold}>Última etapa!</Text>
-            </Text>
-          </View>
-          <Text style={styles.subtitle}>
-            Cadastre uma senha para continuar.
-          </Text>
+    <OnboardingLayout
+      currentStep={3}
+      totalSteps={4}
+      onBack={() => navigation.goBack()}
+      stepLabel="4 de 4 — Senha"
+    >
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title */}
+          <Animated.View style={{ opacity: titleFade, transform: [{ translateY: titleSlide }] }}>
+            <Text style={styles.title}>Última etapa!</Text>
+            <Text style={styles.subtitle}>Crie uma senha segura para proteger sua conta.</Text>
+          </Animated.View>
 
-          <View style={styles.form}>
-            <View style={styles.inputWrapper}>
-              <View style={[
-                styles.inputContainer,
-                errors.password && touched.password && styles.inputError
-              ]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Digite sua senha"
-                  secureTextEntry={!showPassword}
-                  placeholderTextColor="#6B6B6B"
-                  value={password}
-                  onChangeText={handlePasswordChange}
-                  onBlur={handlePasswordBlur}
-                />
-                <CircularIconButton
-                  onPress={() => setShowPassword(!showPassword)}
-                  size={40}
-                  containerStyle={styles.eyeButton}
-                >
-                  <Icon
-                    name={showPassword ? "visibility" : "visibility-off"}
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                </CircularIconButton>
-              </View>
-              {errors.password && touched.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
+          {/* Password field */}
+          <Animated.View style={[styles.fieldBlock, { opacity: field1Fade, transform: [{ translateY: field1Slide }] }]}>
+            <Text style={styles.fieldLabel}>Senha</Text>
+            <View style={[styles.inputWrapper, passFocused && styles.inputWrapperFocused, errors.password && touched.password && styles.inputWrapperError]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Crie uma senha"
+                secureTextEntry={!showPassword}
+                placeholderTextColor="#555"
+                value={password}
+                onChangeText={handlePasswordChange}
+                onFocus={() => setPassFocused(true)}
+                onBlur={() => { setPassFocused(false); setTouched(p => ({ ...p, password: true })); setErrors(p => ({ ...p, password: validatePassword(password) })); }}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Icon name={showPassword ? "visibility" : "visibility-off"} size={20} color="#555" />
+              </TouchableOpacity>
             </View>
+            {errors.password && touched.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-            <View style={styles.passwordRequirements}>
-              <Text style={styles.requirementsTitle}>A senha:</Text>
-              <Text style={styles.requirementItem}>• Deve conter no mínimo 8 caracteres</Text>
-              <Text style={styles.requirementItem}>• Deve conter no mínimo um caractere especial (ex: !, @, #, $, %)</Text>
+            {/* Requirements */}
+            <View style={styles.requirementsBox}>
+              {REQUIREMENTS.map(req => {
+                const met = req.test(password);
+                return (
+                  <View key={req.key} style={styles.reqRow}>
+                    <View style={[styles.reqDot, met && styles.reqDotMet]} />
+                    <Text style={[styles.reqText, met && styles.reqTextMet]}>{req.label}</Text>
+                  </View>
+                );
+              })}
             </View>
+          </Animated.View>
 
-            <View style={styles.inputWrapper}>
-              <View style={[
-                styles.inputContainer,
-                errors.confirmPassword && touched.confirmPassword && styles.inputError
-              ]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirme sua senha"
-                  secureTextEntry={!showConfirmPassword}
-                  placeholderTextColor="#6B6B6B"
-                  value={confirmPassword}
-                  onChangeText={handleConfirmPasswordChange}
-                  onBlur={handleConfirmPasswordBlur}
-                />
-                <CircularIconButton
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  size={40}
-                  containerStyle={styles.eyeButton}
-                >
-                  <Icon
-                    name={showConfirmPassword ? "visibility" : "visibility-off"}
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                </CircularIconButton>
-              </View>
-              {errors.confirmPassword && touched.confirmPassword && (
-                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-              )}
+          {/* Confirm password */}
+          <Animated.View style={[styles.fieldBlock, { opacity: field2Fade, transform: [{ translateY: field2Slide }] }]}>
+            <Text style={styles.fieldLabel}>Confirmar senha</Text>
+            <View style={[styles.inputWrapper, confirmFocused && styles.inputWrapperFocused, errors.confirmPassword && touched.confirmPassword && styles.inputWrapperError]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Repita a senha"
+                secureTextEntry={!showConfirmPassword}
+                placeholderTextColor="#555"
+                value={confirmPassword}
+                onChangeText={handleConfirmPasswordChange}
+                onFocus={() => setConfirmFocused(true)}
+                onBlur={() => { setConfirmFocused(false); setTouched(p => ({ ...p, confirmPassword: true })); setErrors(p => ({ ...p, confirmPassword: validateConfirmPassword(confirmPassword) })); }}
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Icon name={showConfirmPassword ? "visibility" : "visibility-off"} size={20} color="#555" />
+              </TouchableOpacity>
             </View>
-          </View>
-        </View>
+            {errors.confirmPassword && touched.confirmPassword && (
+              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+            )}
+          </Animated.View>
+        </ScrollView>
 
-        <View style={styles.bottomContainer}>
-          <GradientButton 
-            title={loading ? "Cadastrando..." : "Próximo"} 
+        {/* CTA */}
+        <View style={styles.footer}>
+          <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading || !isFormValid}
-          />
+            activeOpacity={0.85}
+            style={[styles.continueBtn, (loading || !isFormValid) && styles.continueBtnDisabled]}
+          >
+            <LinearGradient
+              colors={[...HORIZONTAL_GRADIENT_COLORS]}
+              locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.continueGradient}
+            >
+              <Text style={styles.continueBtnText}>{loading ? "Finalizando..." : "Criar conta"}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </View>
+      </KeyboardAvoidingView>
+    </OnboardingLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-  },
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-  },
+  flex: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingBottom: 16 },
   title: {
-    fontSize: 32,
-    marginLeft: 15,
-  },
-  titleBold: {
-    fontWeight: "bold",
+    fontSize: 30,
+    fontWeight: "800",
     color: "#FFFFFF",
+    lineHeight: 38,
+    marginBottom: 10,
+    letterSpacing: 0.2,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#8A8A8A",
-    marginBottom: 30,
+    fontSize: 14,
+    color: "#7A7390",
+    marginBottom: 28,
+    lineHeight: 20,
   },
-  form: {
-    width: "100%",
+  fieldBlock: { marginBottom: 18 },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7A7390",
+    marginBottom: 8,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   inputWrapper: {
-    marginBottom: 15,
-  },
-  inputContainer: {
-    width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1C1C1C",
-    borderRadius: 25,
-    paddingRight: 8,
-    borderWidth: 2,
-    borderColor: "transparent",
+    backgroundColor: "#1C1928",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.06)",
+    gap: 10,
   },
-  inputError: {
-    borderColor: "#E74C3C",
+  inputWrapperFocused: {
+    borderColor: "rgba(116,86,200,0.5)",
+    backgroundColor: "#201D2E",
   },
+  inputWrapperError: { borderColor: "#E74C3C" },
   input: {
     flex: 1,
-    padding: 18,
     color: "#FFFFFF",
-    fontSize: 16,
-  },
-  eyeButton: {
-    marginLeft: 8,
-  },
-  passwordRequirements: {
-    width: "100%",
-    marginBottom: 15,
-  },
-  requirementsTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 10,
-  },
-  requirementItem: {
-    fontSize: 14,
-    color: "#8A8A8A",
-    marginBottom: 5,
+    fontSize: 15,
+    padding: 0,
   },
   errorText: {
     color: "#E74C3C",
-    fontSize: 14,
-    marginTop: 8,
-    marginLeft: 18,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
   },
-  bottomContainer: {
-    padding: 20,
-    paddingBottom: 30,
+  requirementsBox: {
+    marginTop: 12,
+    gap: 6,
   },
+  reqRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  reqDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#3A3650",
+  },
+  reqDotMet: {
+    backgroundColor: "#7456C8",
+  },
+  reqText: {
+    fontSize: 12,
+    color: "#555",
+    flex: 1,
+  },
+  reqTextMet: {
+    color: "#B8A8E8",
+  },
+  footer: { paddingTop: 12, paddingBottom: 8 },
+  continueBtn: { borderRadius: 999, overflow: "hidden" },
+  continueBtnDisabled: { opacity: 0.4 },
+  continueGradient: { paddingVertical: 16, alignItems: "center", borderRadius: 999 },
+  continueBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", letterSpacing: 0.3 },
 });
 
 export default SignUpPassword;
-
