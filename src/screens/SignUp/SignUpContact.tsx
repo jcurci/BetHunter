@@ -17,7 +17,7 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
 import { Container } from "../../infrastructure/di/Container";
-import { ValidationError } from "../../domain/errors/CustomErrors";
+import { AuthenticationError, ValidationError } from "../../domain/errors/CustomErrors";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -124,7 +124,7 @@ const SignUpContact: React.FC = () => {
       });
     } catch (error: unknown) {
       console.error("Erro ao iniciar cadastro:", error);
-      if (error instanceof ValidationError) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
         Alert.alert("Erro", error.message);
       } else {
         Alert.alert("Erro", "Erro ao iniciar cadastro. Verifique os dados e tente novamente.");

@@ -3,6 +3,11 @@ import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { initRevenueCat } from "./src/services/revenueCat";
+import {
+  useSubscriptionStore,
+  setupCustomerInfoListener,
+} from "./src/storage/subscriptionStore";
 import { useAuthStore } from "./src/storage/authStore";
 import Login from "./src/screens/Login/Login";
 import {
@@ -35,23 +40,42 @@ import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
 import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
+import CustomerCenter from "./src/screens/CustomerCenter/CustomerCenter";
 import { RootStackParamList } from "./src/types/navigation";
 import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
+import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardingStorage";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
-  const [initialRoute, setInitialRoute] = useState<'Login' | 'Home'>('Login');
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
 
   useEffect(() => {
     const init = async () => {
-      await useAuthStore.getState().initialize();
-      const { isAuthenticated } = useAuthStore.getState();
-      setInitialRoute(isAuthenticated ? 'Home' : 'Login');
+      // TODO: descomentar após testes — lógica real de rota inicial
+      // const onboardingDone = await isOnboardingFlowCompleted();
+      // if (!onboardingDone) {
+      //   setInitialRoute('OnboardingFlow');
+      //   setIsReady(true);
+      //   return;
+      // }
+      // await useAuthStore.getState().initialize();
+      // const { isAuthenticated } = useAuthStore.getState();
+      // setInitialRoute(isAuthenticated ? 'Home' : 'Login');
+
+      setInitialRoute('Login');
       setIsReady(true);
     };
     init();
+  }, []);
+
+  useEffect(() => {
+    initRevenueCat().then(() => {
+      useSubscriptionStore.getState().refresh();
+    });
+    const removeListener = setupCustomerInfoListener();
+    return removeListener;
   }, []);
 
   if (!isReady) {
@@ -293,6 +317,13 @@ const App: React.FC = () => {
         <Stack.Screen
           name="MinhaConta"
           component={MinhaConta}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CustomerCenter"
+          component={CustomerCenter}
           options={{
             headerShown: false,
           }}

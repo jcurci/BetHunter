@@ -14,7 +14,7 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
 import { Container } from "../../infrastructure/di/Container";
-import { ValidationError } from "../../domain/errors/CustomErrors";
+import { AuthenticationError, ValidationError } from "../../domain/errors/CustomErrors";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import {
@@ -103,7 +103,7 @@ const SignUpVerification: React.FC = () => {
       Alert.alert("Código reenviado", "Um novo código foi enviado para seu telefone.");
     } catch (error: unknown) {
       console.error("Erro ao reenviar código:", error);
-      if (error instanceof ValidationError) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
         Alert.alert("Erro", error.message);
       } else {
         Alert.alert("Erro", "Erro ao reenviar código. Tente novamente.");
@@ -129,7 +129,7 @@ const SignUpVerification: React.FC = () => {
       navigation.navigate("SignUpPassword", { name, username, email, phone });
     } catch (error: unknown) {
       console.error("Erro ao verificar código:", error);
-      if (error instanceof ValidationError) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
         Alert.alert("Erro", error.message);
       } else {
         Alert.alert("Erro", "Código inválido ou expirado. Tente novamente.");

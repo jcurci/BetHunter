@@ -18,7 +18,7 @@ import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
 import { Container } from "../../infrastructure/di/Container";
-import { ValidationError } from "../../domain/errors/CustomErrors";
+import { AuthenticationError, ValidationError } from "../../domain/errors/CustomErrors";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -116,7 +116,7 @@ const SignUpPassword: React.FC = () => {
       navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });
     } catch (error: unknown) {
       console.error("Erro ao criar senha:", error);
-      if (error instanceof ValidationError) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
         Alert.alert("Erro", error.message);
       } else {
         Alert.alert("Erro", "Erro ao finalizar cadastro. Verifique os dados e tente novamente.");

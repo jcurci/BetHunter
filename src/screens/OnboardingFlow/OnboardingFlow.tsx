@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../types/navigation';
 import { OnboardingProvider, useOnboarding } from './OnboardingContext';
 import { setOnboardingFlowCompleted } from './onboardingStorage';
-import { RootStackParamList } from '../../types/navigation';
 import { NotificationsPermissionScreen } from './screens/NotificationsPermissionScreen';
 import { QuizFrequencyScreen } from './screens/QuizFrequencyScreen';
 import { QuizFinancialImpactScreen } from './screens/QuizFinancialImpactScreen';
@@ -17,6 +18,7 @@ import { PlanPreviewScreen } from './screens/PlanPreviewScreen';
 import { CounterActivationScreen } from './screens/CounterActivationScreen';
 import { FirstLessonScreen } from './screens/FirstLessonScreen';
 import { CelebrationScreen } from './screens/CelebrationScreen';
+import { PaywallScreen } from './screens/PaywallScreen';
 
 type StepId =
   | 'notifications'
@@ -31,7 +33,8 @@ type StepId =
   | 'planPreview'
   | 'counterActivation'
   | 'firstLesson'
-  | 'celebration';
+  | 'celebration'
+  | 'paywall';
 
 const STEP_ORDER: StepId[] = [
   'notifications',
@@ -47,15 +50,16 @@ const STEP_ORDER: StepId[] = [
   'counterActivation',
   'firstLesson',
   'celebration',
+  'paywall',
 ];
 
 const TOTAL_STEPS = STEP_ORDER.length;
 const QUIZ_TOTAL = 6;
 
 const OnboardingInner: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { hydrated, savedStep, persistStep } = useOnboarding();
   const [step, setStep] = useState<StepId>('notifications');
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     if (hydrated && savedStep && STEP_ORDER.includes(savedStep as StepId)) {
@@ -206,9 +210,17 @@ const OnboardingInner: React.FC = () => {
       return (
         <CelebrationScreen
           {...shared}
-          onNext={async () => {
+          onNext={goNext}
+          onBack={goBack}
+        />
+      );
+    case 'paywall':
+      return (
+        <PaywallScreen
+          {...shared}
+          onComplete={async () => {
             await setOnboardingFlowCompleted();
-            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           }}
           onBack={goBack}
         />
