@@ -1,6 +1,7 @@
 package com.bethunter.app.dns
 
 import android.util.Log
+import com.bethunter.app.BuildConfig
 import com.bethunter.app.domain.DomainMatcher
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -21,7 +22,9 @@ class DnsInterceptor(
     val domain = q.qName
 
     if (domainMatcher.isBlocked(domain)) {
-      Log.i(TAG, "Blocked DNS query for $domain")
+      if (BuildConfig.DEBUG) {
+        Log.i(TAG, "Blocked DNS query for $domain")
+      }
       return DnsResponseBuilder.buildNxDomain(msg)
     }
     return forwardToUpstream(queryPayload, queryLength)

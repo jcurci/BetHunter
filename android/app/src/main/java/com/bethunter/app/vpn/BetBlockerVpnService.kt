@@ -19,31 +19,38 @@ import com.bethunter.app.R
 import com.bethunter.app.dns.DnsInterceptor
 import com.bethunter.app.domain.DomainMatcher
 import com.bethunter.app.repository.BlockedDomainsRepository
+import com.bethunter.app.repository.BlocklistManager
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramSocket
+import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import android.content.pm.ServiceInfo
 import java.net.DatagramPacket
-import java.net.InetAddress
 
 class BetBlockerVpnService : VpnService() {
   @Volatile private var running = false
   private var tunInterface: ParcelFileDescriptor? = null
   private var workerThread: Thread? = null
+  private var refreshThread: Thread? = null
 
   private lateinit var repository: BlockedDomainsRepository
+  private lateinit var blocklistManager: BlocklistManager
   private lateinit var domainMatcher: DomainMatcher
   private lateinit var dnsInterceptor: DnsInterceptor
 
   override fun onCreate() {
     super.onCreate()
     repository = BlockedDomainsRepository(applicationContext)
+    blocklistManager = BlocklistManager(repository)
+    blocklistManager.ensureBlocklistPresent()
     domainMatcher = DomainMatcher(repository)
     dnsInterceptor = DnsInterceptor(
       domainMatcher = domainMatcher,
       protect = { socket: DatagramSocket -> protect(socket) }
     )
+    refreshBlocklistIfNeeded()
     startAsForeground()
   }
 
@@ -129,18 +136,31 @@ class BetBlockerVpnService : VpnService() {
     workerThread = thread(name = "BetBlockerVpnThread") {
       runLoop(reader, writer)
     }
+    startRefreshLoop()
   }
 
   private fun stopVpn() {
+    stopRefreshLoop()
     running = false
-    try {
-      workerThread?.interrupt()
-    } catch (_: Exception) {}
-    workerThread = null
+    
+    // 1. Fechar o TUN Interface PRIMEIRO. Isso força o `reader.read()` a lançar 
+    // uma exceção e destravar a thread bloqueada em I/O.
     try {
       tunInterface?.close()
     } catch (_: Exception) {}
     tunInterface = null
+
+    // 2. Agora podemos interromper as threads com segurança
+    try {
+      workerThread?.interrupt()
+    } catch (_: Exception) {}
+    workerThread = null
+    
+    try {
+      refreshThread?.interrupt()
+    } catch (_: Exception) {}
+    refreshThread = null
+
     try {
       if (Build.VERSION.SDK_INT >= 24) {
         stopForeground(Service.STOP_FOREGROUND_REMOVE)
@@ -203,6 +223,47 @@ class BetBlockerVpnService : VpnService() {
     Log.i(TAG, "Scheduled VPN restart in 1.5s")
   }
 
+  private fun refreshBlocklistIfNeeded() {
+    thread(name = "BetBlockerRefreshCheck") {
+      try {
+        if (blocklistManager.refreshIfStale()) {
+          domainMatcher.reload()
+          Log.i(TAG, "Blocklist refreshed from remote source")
+        }
+      } catch (e: Exception) {
+        Log.w(TAG, "Blocklist refresh failed", e)
+      }
+    }
+  }
+
+  private fun startRefreshLoop() {
+    refreshThread = thread(name = "BetBlockerRefreshLoop") {
+      while (running && !Thread.currentThread().isInterrupted) {
+        try {
+          Thread.sleep(TimeUnit.HOURS.toMillis(24))
+        } catch (_: InterruptedException) {
+          break
+        }
+        if (!running) break
+        try {
+          if (blocklistManager.forceRefresh()) {
+            domainMatcher.reload()
+            Log.i(TAG, "Periodic blocklist refresh completed")
+          }
+        } catch (e: Exception) {
+          Log.w(TAG, "Periodic blocklist refresh failed", e)
+        }
+      }
+    }
+  }
+
+  private fun stopRefreshLoop() {
+    try {
+      refreshThread?.interrupt()
+    } catch (_: Exception) {}
+    refreshThread = null
+  }
+
   fun handleDnsQuery(payload: ByteArray, length: Int): ByteArray? {
     val domain = parseDomain(payload)
 
@@ -254,9 +315,16 @@ class BetBlockerVpnService : VpnService() {
         var pos = 12
         val domain = StringBuilder()
 
-        while (true) {
+        while (pos < query.size) {
             val len = query[pos].toInt() and 0xFF
             if (len == 0) break
+
+            // Tratamento de pointer de compressão DNS (0xC0)
+            if ((len and 0xC0) == 0xC0) {
+                // Ao encontrar um ponteiro na query, podemos abortar a leitura sequencial 
+                // para simplificar, pois a pergunta principal completa já deve ter sido lida
+                break
+            }
 
             pos++
 
@@ -265,7 +333,9 @@ class BetBlockerVpnService : VpnService() {
             }
 
             for (i in 0 until len) {
-                domain.append(query[pos + i].toInt().toChar())
+                if (pos + i < query.size) {
+                    domain.append(query[pos + i].toInt().toChar())
+                }
             }
 
             pos += len
@@ -278,23 +348,28 @@ class BetBlockerVpnService : VpnService() {
   }
 
   private fun buildBlockedResponse(query: ByteArray): ByteArray {
+    // Para funcionar bem no Android, o ideal é retornar falha na resolução (NXDOMAIN) em vez de 0.0.0.0
     val response = query.copyOf()
 
-    response[2] = (response[2].toInt() or 0x80).toByte() // response flag
-    response[3] = 0x00
+    // Flag QR = 1 (Response), Opcode = 0 (Query), AA = 0, TC = 0, RD = * (copiado do request)
+    response[2] = (response[2].toInt() or 0x80).toByte() 
+    
+    // Flag RA = 1, e RCODE = 3 (Name Error / NXDOMAIN)
+    response[3] = (response[3].toInt() or 0x80).toByte() 
+    response[3] = (response[3].toInt() or 0x03).toByte()
 
-    response[7] = 1 // ANCOUNT = 1
+    // O header de queries continuam 1. Zera todas as contagens de Answers (pois não encontrou nada)
+    // ANCOUNT = 0
+    response[6] = 0x00
+    response[7] = 0x00
+    // NSCOUNT = 0
+    response[8] = 0x00
+    response[9] = 0x00
+    // ARCOUNT = 0
+    response[10] = 0x00
+    response[11] = 0x00
 
-    val answer = byteArrayOf(
-        0xC0.toByte(), 0x0C,
-        0x00, 0x01,
-        0x00, 0x01,
-        0x00, 0x00, 0x00, 0x3C,
-        0x00, 0x04,
-        0x00, 0x00, 0x00, 0x00
-    )
-
-    return response + answer
+    return response
   }
 
   private fun startAsForeground() {

@@ -6,12 +6,14 @@ import android.net.VpnService
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.bethunter.app.repository.BlockedDomainsRepository
+import com.bethunter.app.repository.BlocklistManager
 import com.bethunter.app.vpn.BetBlockerVpnService
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
+import kotlin.concurrent.thread
 
 class BetBlockerModule(
   private val reactContext: ReactApplicationContext
@@ -52,7 +54,11 @@ class BetBlockerModule(
     val intent = Intent(reactContext, BetBlockerVpnService::class.java)
     intent.action = BetBlockerVpnService.ACTION_STOP
 
-    reactContext.startService(intent)
+    try {
+      ContextCompat.startForegroundService(reactContext, intent)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to startForegroundService for stopping: ${e.message}")
+    }
   }
 
   @ReactMethod
@@ -77,6 +83,29 @@ class BetBlockerModule(
       ContextCompat.startForegroundService(reactContext, reloadIntent)
     } catch (e: Exception) {
       Log.w(TAG, "Reload broadcast failed: ${e.message}")
+    }
+  }
+
+  @ReactMethod
+  fun refreshBlockedDomains(promise: Promise) {
+    thread(name = "BetBlockerRefresh") {
+      try {
+        val manager = BlocklistManager(repository)
+        val updated = manager.forceRefresh()
+        if (updated) {
+          val reloadIntent = Intent(reactContext, BetBlockerVpnService::class.java).apply {
+            action = BetBlockerVpnService.ACTION_RELOAD
+          }
+          try {
+            ContextCompat.startForegroundService(reactContext, reloadIntent)
+          } catch (e: Exception) {
+            Log.w(TAG, "Failed to reload VPN service after refresh: ${e.message}")
+          }
+        }
+        promise.resolve(updated)
+      } catch (e: Exception) {
+        promise.reject("REFRESH_FAILED", e)
+      }
     }
   }
 
