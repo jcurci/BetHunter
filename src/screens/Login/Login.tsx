@@ -106,6 +106,14 @@ const Login: React.FC = () => {
     };
   }, []);
 
+  // Auto-navigate to Home for testing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      navigation.navigate("Home");
+    }, 500); // Short delay to allow animations to start
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleLogin = async (): Promise<void> => {
     if (!email.trim() || !password.trim()) {
       Alert.alert("Erro", "Preencha email e senha");

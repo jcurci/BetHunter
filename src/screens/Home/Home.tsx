@@ -51,13 +51,6 @@ const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 
 const { BetBlocker } = NativeModules;
-const BLOCKED_DOMAINS = [
-  "bet365.com",
-  "betfair.com",
-  "blaze.com",
-  "pokerstars.com",
-  "1xbet.com",
-];
 
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -185,7 +178,9 @@ const Home: React.FC = () => {
       return;
     }
     try {
-      BetBlocker.setBlockedDomains(BLOCKED_DOMAINS);
+      if (BetBlocker.refreshBlockedDomains) {
+        await BetBlocker.refreshBlockedDomains();
+      }
       BetBlocker.startBlocking();
       setShowBlockModal(false);
       setShowBlockSuccessModal(true);
