@@ -8,7 +8,8 @@
     "resolveJsonModule": true,
     "strict": true
   },
-  "extends": "./node_modules/expo/tsconfig.base",
+  "extends": "./BetHunter/node_modules/expo/tsconfig.base",
+  // "extends": "./node_modules/expo/tsconfig.base",
   "include": [
     "**/*.ts",
     "**/*.tsx",
