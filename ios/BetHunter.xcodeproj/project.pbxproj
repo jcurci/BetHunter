@@ -10,11 +10,45 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		7A87F3C83463761AE9C2F60B /* libPods-BetHunter.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4465A2E0AB8E50DC6A8179DE /* libPods-BetHunter.a */; };
+		A1B2C3D4E5F60000BB000001 /* BetBlockingModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000001 /* BetBlockingModule.swift */; };
+		A1B2C3D4E5F60000BB000002 /* BetBlockingModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000002 /* BetBlockingModule.m */; };
+		A1B2C3D4E5F60000BB000003 /* BlockingFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000003 /* BlockingFlowCoordinator.swift */; };
+		A1B2C3D4E5F60000BB000004 /* BlockingControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000004 /* BlockingControlView.swift */; };
+		A1B2C3D4E5F60000BB000005 /* AppGroupHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */; };
+		A1B2C3D4E5F60000BB000006 /* BlockingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */; };
+		A1B2C3D4E5F60000BB000007 /* BlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */; };
+		A1B2C3D4E5F60000CC000001 /* DNSProxyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */; };
+		A1B2C3D4E5F60000CC000002 /* BlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */; };
+		A1B2C3D4E5F60000DD000001 /* DNSProxy.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B059F9B1B06C82BC328094CE /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B597602FB8DB49B1F174E1 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		D68788FC7D0097DD631A8054 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FCCF28C057236EECF70B8417 /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1B2C3D4E5F60000FF000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1B2C3D4E5F60000FF000001;
+			remoteInfo = DNSProxy;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1B2C3D4E5F60000FF000009 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1B2C3D4E5F60000DD000001 /* DNSProxy.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		05423CF41056164C82379E94 /* Pods-BetHunter.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BetHunter.debug.xcconfig"; path = "Target Support Files/Pods-BetHunter/Pods-BetHunter.debug.xcconfig"; sourceTree = "<group>"; };
@@ -22,6 +56,17 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BetHunter/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BetHunter/Info.plist; sourceTree = "<group>"; };
 		4465A2E0AB8E50DC6A8179DE /* libPods-BetHunter.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-BetHunter.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60000AA000001 /* BetBlockingModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetBlockingModule.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000002 /* BetBlockingModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BetBlockingModule.m; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000003 /* BlockingFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingFlowCoordinator.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000004 /* BlockingControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingControlView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupHelper.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingManager.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedDomains.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSProxyProvider.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA00000A /* DNSProxy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DNSProxy.entitlements; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DNSProxy.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4B597602FB8DB49B1F174E1 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BetHunter/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BetHunter/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
@@ -29,7 +74,7 @@
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = BetHunter/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* BetHunter-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "BetHunter-Bridging-Header.h"; path = "BetHunter/BetHunter-Bridging-Header.h"; sourceTree = "<group>"; };
 		F5C77BB501BCE4C995AAF0CD /* Pods-BetHunter.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BetHunter.release.xcconfig"; path = "Target Support Files/Pods-BetHunter/Pods-BetHunter.release.xcconfig"; sourceTree = "<group>"; };
-		FCCF28C057236EECF70B8417 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = BetHunter/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FCCF28C057236EECF70B8417 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = BetHunter/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +86,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1B2C3D4E5F60000FF000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -49,6 +101,7 @@
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* BetHunter-Bridging-Header.h */,
+				A1B2C3D4E5F60000EE000001 /* BetHunter/Blocking */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -73,7 +126,6 @@
 				05423CF41056164C82379E94 /* Pods-BetHunter.debug.xcconfig */,
 				F5C77BB501BCE4C995AAF0CD /* Pods-BetHunter.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -88,6 +140,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07FAE1A68108700A75B9A /* BetHunter */,
+				A1B2C3D4E5F60000EE000002 /* DNSProxy */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -103,8 +156,33 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* BetHunter.app */,
+				A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60000EE000001 /* BetHunter/Blocking */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60000AA000001 /* BetBlockingModule.swift */,
+				A1B2C3D4E5F60000AA000002 /* BetBlockingModule.m */,
+				A1B2C3D4E5F60000AA000003 /* BlockingFlowCoordinator.swift */,
+				A1B2C3D4E5F60000AA000004 /* BlockingControlView.swift */,
+				A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */,
+				A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */,
+				A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */,
+			);
+			path = BetHunter/Blocking;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60000EE000002 /* DNSProxy */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */,
+				A1B2C3D4E5F60000AA000009 /* Info.plist */,
+				A1B2C3D4E5F60000AA00000A /* DNSProxy.entitlements */,
+			);
+			path = DNSProxy;
 			sourceTree = "<group>";
 		};
 		B9577B8C3FBDA12E4C7E03DE /* ExpoModulesProviders */ = {
@@ -147,15 +225,33 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				FBE2DF07C9066F7294EB90C5 /* [CP] Embed Pods Frameworks */,
+				A1B2C3D4E5F60000FF000009 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A1B2C3D4E5F60000FF000007 /* PBXTargetDependency */,
 			);
 			name = BetHunter;
 			productName = BetHunter;
 			productReference = 13B07F961A680F5B00A75B9A /* BetHunter.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A1B2C3D4E5F60000FF000001 /* DNSProxy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F60000FF000006 /* Build configuration list for PBXNativeTarget "DNSProxy" */;
+			buildPhases = (
+				A1B2C3D4E5F60000FF000002 /* Sources */,
+				A1B2C3D4E5F60000FF000003 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DNSProxy;
+			productName = DNSProxy;
+			productReference = A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -167,6 +263,9 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+					};
+					A1B2C3D4E5F60000FF000001 = {
+						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
@@ -184,6 +283,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* BetHunter */,
+				A1B2C3D4E5F60000FF000001 /* DNSProxy */,
 			);
 		};
 /* End PBXProject section */
@@ -375,27 +475,53 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				B059F9B1B06C82BC328094CE /* ExpoModulesProvider.swift in Sources */,
+				A1B2C3D4E5F60000BB000001 /* BetBlockingModule.swift in Sources */,
+				A1B2C3D4E5F60000BB000002 /* BetBlockingModule.m in Sources */,
+				A1B2C3D4E5F60000BB000003 /* BlockingFlowCoordinator.swift in Sources */,
+				A1B2C3D4E5F60000BB000004 /* BlockingControlView.swift in Sources */,
+				A1B2C3D4E5F60000BB000005 /* AppGroupHelper.swift in Sources */,
+				A1B2C3D4E5F60000BB000006 /* BlockingManager.swift in Sources */,
+				A1B2C3D4E5F60000BB000007 /* BlockedDomains.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60000FF000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F60000CC000001 /* DNSProxyProvider.swift in Sources */,
+				A1B2C3D4E5F60000CC000002 /* BlockedDomains.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1B2C3D4E5F60000FF000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1B2C3D4E5F60000FF000001 /* DNSProxy */;
+			targetProxy = A1B2C3D4E5F60000FF000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 05423CF41056164C82379E94 /* Pods-BetHunter.debug.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BetHunter/BetHunter.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K876CPA8FF;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
 				INFOPLIST_FILE = BetHunter/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -407,7 +533,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick;
 				PRODUCT_NAME = BetHunter;
 				SWIFT_OBJC_BRIDGING_HEADER = "BetHunter/BetHunter-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -421,12 +547,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = F5C77BB501BCE4C995AAF0CD /* Pods-BetHunter.release.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BetHunter/BetHunter.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K876CPA8FF;
 				INFOPLIST_FILE = BetHunter/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -438,7 +566,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick;
 				PRODUCT_NAME = BetHunter;
 				SWIFT_OBJC_BRIDGING_HEADER = "BetHunter/BetHunter-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -494,7 +622,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -550,7 +678,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
 					"$(inherited)",
@@ -562,6 +690,52 @@
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1B2C3D4E5F60000FF000004 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = DNSProxy/DNSProxy.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K876CPA8FF;
+				INFOPLIST_FILE = DNSProxy/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F60000FF000005 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = DNSProxy/DNSProxy.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K876CPA8FF;
+				INFOPLIST_FILE = DNSProxy/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -582,6 +756,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F60000FF000006 /* Build configuration list for PBXNativeTarget "DNSProxy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F60000FF000004 /* Debug */,
+				A1B2C3D4E5F60000FF000005 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

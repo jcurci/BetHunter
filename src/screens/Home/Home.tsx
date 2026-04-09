@@ -304,7 +304,13 @@ const Home: React.FC = () => {
             
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => setShowBlockModal(true)}
+              onPress={() => {
+                if (Platform.OS === "ios" && BetBlocking) {
+                  BetBlocking.openBlockingFlow();
+                } else {
+                  setShowBlockModal(true);
+                }
+              }}
               activeOpacity={0.85}
             >
               <View style={styles.actionIconCircle}>
