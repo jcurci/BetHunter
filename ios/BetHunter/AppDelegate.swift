@@ -13,6 +13,10 @@ public class AppDelegate: ExpoAppDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+#if DEBUG
+    Self.ensureBundleURLProvider()
+#endif
+
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -30,6 +34,29 @@ public class AppDelegate: ExpoAppDelegate {
 #endif
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// Garante que RCTBundleURLProvider tem um host configurado antes do RN arrancar.
+  /// Evita que jsBundleURL(forBundleRoot:) devolva nil em qualquer code-path.
+  private static func ensureBundleURLProvider() {
+    let settings = RCTBundleURLProvider.sharedSettings()
+    let current = settings.jsLocation ?? ""
+    if !current.isEmpty { return }
+
+#if targetEnvironment(simulator)
+    settings.jsLocation = "127.0.0.1"
+#else
+    if let ip = metroHostFromIpFile() {
+      settings.jsLocation = ip
+    }
+#endif
+  }
+
+  private static func metroHostFromIpFile() -> String? {
+    guard let path = Bundle.main.path(forResource: "ip", ofType: "txt"),
+          let raw = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
+    let ip = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    return ip.isEmpty ? nil : ip
   }
 
   // Linking API
@@ -62,9 +89,27 @@ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry")
+    if let url = RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry") {
+      return url
+    }
+    // Fallback: RCTBundleURLProvider devolveu nil (Metro não detetado).
+    // Devolver URL não-nil evita RCTFatal; o app mostra "Could not connect" recuperável.
+    let host: String
+#if targetEnvironment(simulator)
+    host = "127.0.0.1"
+#else
+    host = Self.metroHostFromIpFile() ?? "127.0.0.1"
+#endif
+    return URL(string: "http://\(host):8081/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&lazy=true&minify=false&inlineSourceMap=false&modulesOnly=false&runModule=true")!
 #else
     return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
+  }
+
+  private static func metroHostFromIpFile() -> String? {
+    guard let path = Bundle.main.path(forResource: "ip", ofType: "txt"),
+          let raw = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
+    let ip = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    return ip.isEmpty ? nil : ip
   }
 }

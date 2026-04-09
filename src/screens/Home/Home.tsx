@@ -50,7 +50,7 @@ import { NavigationProp } from "../../types/navigation";
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 
-const { BetBlocker } = NativeModules;
+const { BetBlocker, BetBlocking } = NativeModules;
 const BLOCKED_DOMAINS = [
   "bet365.com",
   "betfair.com",
@@ -309,7 +309,13 @@ const Home: React.FC = () => {
             
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => setShowBlockModal(true)}
+              onPress={() => {
+                if (Platform.OS === "ios" && BetBlocking) {
+                  BetBlocking.openBlockingFlow();
+                } else {
+                  setShowBlockModal(true);
+                }
+              }}
               activeOpacity={0.85}
             >
               <View style={styles.actionIconCircle}>
