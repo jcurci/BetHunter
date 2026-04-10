@@ -65,7 +65,7 @@ const MinhaConta: React.FC = () => {
   // Usuário já vem do authStore, não precisa mais de loadUser
 
   const getInitials = (name: string | undefined): string => {
-    if (!name) return "JD";
+    if (!name) return "US";
     const parts = name.trim().split(" ");
     if (parts.length === 1) {
       return parts[0].substring(0, 2).toUpperCase();
@@ -74,7 +74,7 @@ const MinhaConta: React.FC = () => {
   };
 
   const getUserHandle = (name: string | undefined): string => {
-    if (!name) return "jhondoe";
+    if (!name) return "usuario";
     return name.toLowerCase().replace(/\s+/g, "");
   };
 
@@ -105,7 +105,7 @@ const MinhaConta: React.FC = () => {
                   <Text style={styles.proBadgeText}>Pro</Text>
                 </View>
               </View>
-              <Text style={styles.userName}>{user?.name || "Jhon Doe"}</Text>
+              <Text style={styles.userName}>{user?.name || "Usuário"}</Text>
               <Text style={styles.userHandle}>
                 @{getUserHandle(user?.name)}
               </Text>
@@ -138,8 +138,8 @@ const MinhaConta: React.FC = () => {
               </LinearGradient>
             </View>
 
-            Feature Cards Row
-            {/* <View style={styles.featureCardsRow}>
+            {/* Feature Cards Row
+            <View style={styles.featureCardsRow}>
               <FeatureCard
                 icon={<ProIcon />}
                 title="Pro"

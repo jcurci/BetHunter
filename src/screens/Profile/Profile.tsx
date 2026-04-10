@@ -34,7 +34,7 @@ const Profile: React.FC = () => {
             showsVerticalScrollIndicator={false}
           >
             {/* Menu Sections */}
-            <MenuSection>
+            {/* <MenuSection>
               <MenuItem
                 icon="user"
                 label="Detalhes pessoais"
@@ -60,7 +60,7 @@ const Profile: React.FC = () => {
                 onPress={() => {}}
                 showSeparator={false}
               />
-            </MenuSection>
+            </MenuSection> */}
 
             <MenuSection>
               <MenuItem

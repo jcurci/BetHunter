@@ -50,8 +50,7 @@ import { NavigationProp } from "../../types/navigation";
 const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 
-const { BetBlocker } = NativeModules;
-
+const { BetBlocker, BetBlocking } = NativeModules;
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((s) => s.user);
@@ -596,7 +595,19 @@ const Home: React.FC = () => {
           />
           <GradientBorderButton
             label="Apostou"
-            onPress={() => setShowCheckInModal(false)}
+            onPress={async () => {
+              try {
+                const container = Container.getInstance();
+                await container.getResetBetStreakUseCase().execute();
+                setShowCheckInModal(false);
+                setShowResetConfirmModal(true);
+                await loadBetStreak();
+                await loadDashboard();
+              } catch (error: any) {
+                console.log("BetCheckIn apostou (reset):", error?.message ?? error);
+                setShowCheckInModal(false);
+              }
+            }}
           />
         </View>
       </Modal>

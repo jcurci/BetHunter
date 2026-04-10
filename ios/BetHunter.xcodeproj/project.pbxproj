@@ -101,7 +101,7 @@
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* BetHunter-Bridging-Header.h */,
-				A1B2C3D4E5F60000EE000001 /* BetHunter/Blocking */,
+				A1B2C3D4E5F60000EE000001 /* Blocking */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -161,7 +161,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A1B2C3D4E5F60000EE000001 /* BetHunter/Blocking */ = {
+		A1B2C3D4E5F60000EE000001 /* Blocking */ = {
 			isa = PBXGroup;
 			children = (
 				A1B2C3D4E5F60000AA000001 /* BetBlockingModule.swift */,
@@ -708,6 +708,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -731,6 +732,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
