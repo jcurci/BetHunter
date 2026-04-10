@@ -5,6 +5,8 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Linking,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -15,8 +17,24 @@ import {
 } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 
+const ACCOUNT_DELETION_FORM_URL =
+  "https://docs.google.com/forms/d/1XTdVTJxxeEgB7tzYcWab3TTOJIXX270DhCUBbDplz8w/viewform";
+
 const Profile: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+
+  const openAccountDeletionForm = async () => {
+    try {
+      const supported = await Linking.canOpenURL(ACCOUNT_DELETION_FORM_URL);
+      if (supported) {
+        await Linking.openURL(ACCOUNT_DELETION_FORM_URL);
+      } else {
+        Alert.alert("Erro", "Não foi possível abrir o formulário.");
+      }
+    } catch {
+      Alert.alert("Erro", "Não foi possível abrir o formulário.");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -66,7 +84,7 @@ const Profile: React.FC = () => {
               <MenuItem
                 icon="heart"
                 label="Desativar conta"
-                onPress={() => {}}
+                onPress={openAccountDeletionForm}
                 iconColor="#FF4444"
                 textColor="#FF4444"
                 showSeparator={false}
