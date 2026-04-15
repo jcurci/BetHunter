@@ -28,12 +28,15 @@ import { RadialGradientBackground } from "../../components";
 import { useAuthStore } from "../../storage/authStore";
 import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
+import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import { ENV } from "../../config/env";
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const navigation = useNavigation<NavigationProp>();
@@ -106,13 +109,65 @@ const Login: React.FC = () => {
     };
   }, []);
 
-  // Auto-navigate to Home for testing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.navigate("Home");
-    }, 500); // Short delay to allow animations to start
-    return () => clearTimeout(timer);
+    const webClientId =
+      Platform.OS === 'android' && ENV.GOOGLE_ANDROID_CLIENT_ID
+        ? ENV.GOOGLE_ANDROID_CLIENT_ID
+        : ENV.GOOGLE_WEB_CLIENT_ID;
+
+    GoogleSignin.configure({
+      webClientId,
+      ...(Platform.OS === 'ios' && ENV.GOOGLE_IOS_CLIENT_ID
+        ? { iosClientId: ENV.GOOGLE_IOS_CLIENT_ID }
+        : {}),
+    });
   }, []);
+
+  const handleGoogleLogin = async (): Promise<void> => {
+    setGoogleLoading(true);
+    try {
+      if (Platform.OS === "android") {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
+      const signInResult = await GoogleSignin.signIn();
+      const idToken = signInResult.data?.idToken;
+
+      if (!idToken) {
+        Alert.alert("Erro", "Não foi possível obter o token do Google. Tente novamente.");
+        return;
+      }
+
+      const container = Container.getInstance();
+      const loginWithGoogleUseCase = container.getLoginWithGoogleUseCase();
+      const session = await loginWithGoogleUseCase.execute(idToken);
+
+      if (session.user && session.user.id) {
+        const userMapeado = {
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          points: session.user.energy ?? 0,
+          betcoins: 0,
+        };
+        await authStore.login(session.accessToken, userMapeado);
+      } else {
+        await authStore.setToken(session.accessToken);
+      }
+
+      navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return;
+      }
+      if (error.code === statusCodes.IN_PROGRESS) {
+        return;
+      }
+      console.error("Erro ao fazer login com Google:", error);
+      Alert.alert("Erro", "Não foi possível entrar com Google. Tente novamente.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async (): Promise<void> => {
     if (!email.trim() || !password.trim()) {
@@ -280,6 +335,18 @@ const Login: React.FC = () => {
               <View style={styles.dividerLine} />
             </View>
 
+            {/* Google Sign-In */}
+            <TouchableOpacity
+              onPress={handleGoogleLogin}
+              disabled={googleLoading || loading}
+              activeOpacity={0.85}
+              style={[styles.googleBtn, (googleLoading || loading) && styles.loginBtnDisabled]}
+            >
+              <Text style={styles.googleBtnText}>
+                {googleLoading ? "Conectando..." : "Continuar com Google"}
+              </Text>
+            </TouchableOpacity>
+
             {/* Sign up link */}
             <TouchableOpacity
               onPress={() => navigation.navigate("SignUpName")}
@@ -403,6 +470,18 @@ const styles = StyleSheet.create({
   dividerText: {
     color: "#555",
     fontSize: 13,
+  },
+  googleBtn: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  googleBtnText: {
+    color: "#1C1928",
+    fontSize: 15,
+    fontWeight: "600",
   },
   signUpBtn: {
     backgroundColor: "rgba(116,86,200,0.12)",

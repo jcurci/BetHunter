@@ -8,6 +8,10 @@ export class AuthRepositoryImpl implements AuthRepository {
     return await this.authApi.login(email, password);
   }
 
+  async loginWithGoogle(idToken: string) {
+    return await this.authApi.loginWithGoogle(idToken);
+  }
+
   async requestPasswordChange(email: string): Promise<void> {
     return await this.authApi.requestPasswordChange(email);
   }

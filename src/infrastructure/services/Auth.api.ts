@@ -83,6 +83,68 @@ export class AuthApi {
     }
   }
 
+  async loginWithGoogle(idToken: string): Promise<AuthSession> {
+    try {
+      const url = '/auth/google';
+      console.log('🔗 AuthApi.loginWithGoogle - Fazendo requisição para:', url);
+
+      const response = await apiClient.post(url, { idToken });
+
+      const token = response.data.token || response.data.accessToken;
+
+      if (!token) {
+        throw new AuthenticationError('Token não recebido do servidor');
+      }
+
+      const dataUser = response.data.user;
+      const user =
+        dataUser && typeof dataUser === 'object' && dataUser.id
+          ? {
+              id: dataUser.id,
+              name: dataUser.name ?? '',
+              email: dataUser.email ?? '',
+              energy: dataUser.energy,
+              app_streak: dataUser.app_streak,
+            }
+          : undefined;
+
+      return {
+        accessToken: token,
+        user,
+      };
+    } catch (error: any) {
+      console.error('🚨 AuthApi.loginWithGoogle - Erro detalhado:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        isNetworkError: !error.response,
+      });
+
+      if (error instanceof AuthenticationError) {
+        throw error;
+      }
+
+      if (!error.response) {
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          throw new AuthenticationError('Timeout. O servidor demorou muito para responder.');
+        }
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
+          throw new AuthenticationError('Erro de conexão. Verifique sua internet.');
+        }
+        throw new AuthenticationError('Não foi possível conectar ao servidor. Verifique sua conexão.');
+      }
+
+      if (error.response.status === 401) {
+        throw new AuthenticationError('Token Google inválido ou expirado. Tente novamente.');
+      }
+      if (error.response.status === 500) {
+        throw new AuthenticationError('Erro no servidor. Tente novamente mais tarde.');
+      }
+
+      throw new AuthenticationError(`Erro ao fazer login com Google (${error.response.status}).`);
+    }
+  }
+
   async requestPasswordChange(email: string): Promise<void> {
     try {
       const url = '/auth/password/change/request';

@@ -1,5 +1,6 @@
 // infrastructure/di/Container.ts
 import { LoginUseCase } from "../../domain/usercases/LoginUseCase";
+import { LoginWithGoogleUseCase } from "../../domain/usercases/LoginWithGoogleUseCase";
 import { AuthRepositoryImpl } from "../../domain/data/repositories/AuthRepositoryImpl";
 import { AuthApi } from "../services/Auth.api";
 import { StartRegistrationUseCase } from "../../domain/usercases/signup/StartRegistrationUseCase";
@@ -39,6 +40,7 @@ export class Container {
   private static instance: Container;
 
   private loginUseCase: LoginUseCase | null = null;
+  private loginWithGoogleUseCase: LoginWithGoogleUseCase | null = null;
   private startRegistrationUseCase: StartRegistrationUseCase | null = null;
   private verifyRegistrationCodeUseCase: VerifyRegistrationCodeUseCase | null = null;
   private createPasswordUseCase: CreatePasswordUseCase | null = null;
@@ -86,6 +88,14 @@ export class Container {
     }
 
     return this.loginUseCase;
+  }
+
+  getLoginWithGoogleUseCase(): LoginWithGoogleUseCase {
+    this.ensureAuthDependencies();
+    if (!this.loginWithGoogleUseCase) {
+      this.loginWithGoogleUseCase = new LoginWithGoogleUseCase(this.authRepository!);
+    }
+    return this.loginWithGoogleUseCase;
   }
 
   getStartRegistrationUseCase(): StartRegistrationUseCase {

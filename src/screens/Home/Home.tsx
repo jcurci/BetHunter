@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import type { ReactElement } from "react";
 import {
   View,
   Text,
@@ -17,7 +16,7 @@ import Icon from "react-native-vector-icons/Entypo";
 import MaskedView from "@react-native-masked-view/masked-view";
 
 // Components
-import { Footer, StatsDisplay, IconCard, RadialGradientBackground, GradientBorderButton } from "../../components";
+import { Footer, StatsDisplay, IconCard, GradientBorderButton } from "../../components";
 import Modal from "../../components/common/Modal/Modal";
 
 // Config
@@ -26,19 +25,17 @@ import {
   BACKGROUND_GRADIENT_LOCATIONS,
   SHADOW_OVERLAY_COLORS,
   HORIZONTAL_GRADIENT_COLORS,
+  HORIZONTAL_GRADIENT_LOCATIONS,
+  BUTTON_INNER_BACKGROUND,
 } from "../../config/colors";
 
 // Assets
-import ImageBitcoin from "../../assets/image-bitcoin.svg";
-import ImageMoeda from "../../assets/image-moeda.svg";
-import ImageGrafico from "../../assets/image-grafico.svg";
 import Meditation from "../../assets/home/meditation.svg";
 import Reset from "../../assets/home/reset.svg";
 import Block from "../../assets/home/block.svg";
 import BetHunterIcon from "../../assets/home/bethunter.svg";
 import AcessorIcon from "../../assets/home/acessor.svg";
-import JornadaIcon from "../../assets/home/jornada.svg";
-import BetcoinIcon from "../../assets/home/betcoin.svg";
+import CursosIcon from "../../assets/home/cursos.svg";
 
 // Domain & Infrastructure
 
@@ -47,15 +44,12 @@ import { useAuthStore } from "../../storage/authStore";
 import { NavigationProp } from "../../types/navigation";
 
 // Constants
-const GRADIENT_HEIGHT_COLLAPSED = 242;
 const GRADIENT_HEIGHT_EXPANDED = 450;
 
 const { BetBlocker, BetBlocking } = NativeModules;
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((s) => s.user);
-  const [articles, setArticles] = useState<any[]>([]);
-  const [showFreeOfBetBox, setShowFreeOfBetBox] = useState<boolean>(false);
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
@@ -70,26 +64,6 @@ const Home: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
-
-  // Auto-close reset confirm modal after 3 seconds
-  useEffect(() => {
-    if (showResetConfirmModal) {
-      const timer = setTimeout(() => {
-        setShowResetConfirmModal(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showResetConfirmModal]);
-
-  // Auto-close block success modal after 3 seconds
-  useEffect(() => {
-    if (showBlockSuccessModal) {
-      const timer = setTimeout(() => {
-        setShowBlockSuccessModal(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showBlockSuccessModal]);
 
   // Auto-close reset confirm modal after 3 seconds
   useEffect(() => {
@@ -192,19 +166,6 @@ const Home: React.FC = () => {
     }
   };
 
-  const getArticleImage = (article: any): ReactElement | null => {
-    const imageMap: Record<string, ReactElement> = {
-      bitcoin: <ImageBitcoin width="100%" height={90} />,
-      moeda: <ImageMoeda width="100%" height={90} />,
-      grafico: <ImageGrafico width="100%" height={90} />,
-    };
-
-    return imageMap[article.imageUrl] || null;
-  };
-
-  const toggleFreeOfBetBox = () => {
-    setShowFreeOfBetBox(!showFreeOfBetBox);
-  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -257,85 +218,69 @@ const Home: React.FC = () => {
       </Text>
       <TouchableOpacity
         onPress={handleDaysPress}
-        activeOpacity={0.85}
-        style={[
-          styles.freeOfBetDaysValueWrapper,
-          canCheckIn && styles.freeOfBetDaysValueClickable,
-        ]}
+        activeOpacity={canCheckIn ? 0.7 : 1}
+        style={styles.freeOfBetDaysValueWrapper}
       >
         {renderGradientText(`${betStreak}`, styles.freeOfBetDaysNumber)}
         {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
       </TouchableOpacity>
-    </View>
-  );
-
-  const renderFreeOfBetBox = () => (
-    <View
-      style={[
-        styles.freeOfBetContainer,
-        showFreeOfBetBox && styles.freeOfBetContainerExpanded,
-      ]}
-    >
-      {showFreeOfBetBox && (
-        <>
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("Meditacao")}
-              activeOpacity={0.85}
-            >
-              <View style={styles.actionIconCircle}>
-                <Meditation width={24} height={24} />
-              </View>
-              <Text style={styles.actionText}>Meditar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => setShowResetModal(true)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.actionIconCircle}>
-                <Reset width={24} height={24} />
-              </View>
-              <Text style={styles.actionText}>Resetar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                if (Platform.OS === "ios" && BetBlocking) {
-                  BetBlocking.openBlockingFlow();
-                } else {
-                  setShowBlockModal(true);
-                }
-              }}
-              activeOpacity={0.85}
-            >
-              <View style={styles.actionIconCircle}>
-                <Block width={27} height={27} />
-              </View>
-              <Text style={styles.actionText}>Bloquear</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+      {canCheckIn && (
+        <TouchableOpacity
+          onPress={handleDaysPress}
+          activeOpacity={0.7}
+          style={styles.checkInHint}
+        >
+          <Text style={styles.checkInHintText}>Toque para marcar se apostou hoje</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
 
-  const renderArticleCard = (article: any) => (
-    <View key={article.id} style={styles.articleCard}>
-      <View style={styles.articleImageContainer}>
-        {getArticleImage(article)}
+  const renderFreeOfBetBox = () => (
+    <View style={styles.freeOfBetContainer}>
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate("Meditacao")}
+          activeOpacity={0.85}
+        >
+          <View style={styles.actionIconCircle}>
+            <Meditation width={24} height={24} />
+          </View>
+          <Text style={styles.actionText}>Meditar</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setShowResetModal(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.actionIconCircle}>
+            <Reset width={24} height={24} />
+          </View>
+          <Text style={styles.actionText}>Resetar</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            if (Platform.OS === "ios" && BetBlocking) {
+              BetBlocking.openBlockingFlow();
+            } else {
+              setShowBlockModal(true);
+            }
+          }}
+          activeOpacity={0.85}
+        >
+          <View style={styles.actionIconCircle}>
+            <Block width={27} height={27} />
+          </View>
+          <Text style={styles.actionText}>Bloquear</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.articleTitle} numberOfLines={2}>
-        {article.title}
-      </Text>
-      <Text style={styles.articleDescription} numberOfLines={2}>
-        {article.description}
-      </Text>
     </View>
   );
+
 
   return (  
     <SafeAreaView style={styles.safeArea}>
@@ -349,9 +294,7 @@ const Home: React.FC = () => {
             style={[
               styles.backgroundGradient,
               {
-                height: showFreeOfBetBox
-                  ? GRADIENT_HEIGHT_EXPANDED
-                  : GRADIENT_HEIGHT_COLLAPSED,
+                height: GRADIENT_HEIGHT_EXPANDED,
                 backgroundColor: '#000000',
               },
             ]}
@@ -389,46 +332,18 @@ const Home: React.FC = () => {
           {renderFreeOfBetBox()}
 
           {/* Divider */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={toggleFreeOfBetBox}
-            style={styles.dividerTouchable}
-          >
+          <View style={styles.dividerTouchable}>
             <LinearGradient
               colors={HORIZONTAL_GRADIENT_COLORS}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.divider}
             />
-          </TouchableOpacity>
-
-          {/* Minha conta, Meu acessor, Minha jornada */}
-          <View style={styles.cardsContainer}>
-            <IconCard 
-              icon={<BetHunterIcon width={24} height={24} />} 
-              title="Minha Conta" 
-              onPress={() => navigation.navigate("MinhaConta")}
-            />
-            <IconCard 
-              icon={<AcessorIcon width={24} height={24} />} 
-              title="Meu Acessor" 
-              onPress={() => navigation.navigate("Acessor")}
-            />
-            <IconCard 
-              icon={<JornadaIcon width={24} height={24} />} 
-              title="Minha Jornada" 
-              onPress={() => navigation.navigate("MinhaJornada")}
-            />
           </View>
 
-          {/* Betcoins Roulette Box */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate("Roulette")}
-            style={styles.rouletteBoxContainer}
-          >
+          {/* Continue de onde parou */}
+          <View style={styles.continueBoxOuter}>
             <View style={styles.rouletteBox}>
-              {/* Vertical gradient from top center */}
               <LinearGradient
                 colors={BACKGROUND_GRADIENT_COLORS}
                 locations={BACKGROUND_GRADIENT_LOCATIONS}
@@ -436,79 +351,58 @@ const Home: React.FC = () => {
                 end={{ x: 0.5, y: 1 }}
                 style={StyleSheet.absoluteFill}
               />
-              
-              {/* Left shadow overlay */}
               <LinearGradient
                 colors={SHADOW_OVERLAY_COLORS}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0.5, y: 0 }}
                 style={StyleSheet.absoluteFill}
               />
-              
-              {/* Right shadow overlay */}
               <LinearGradient
                 colors={SHADOW_OVERLAY_COLORS}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 0.5, y: 0 }}
                 style={StyleSheet.absoluteFill}
               />
-              
-              <View style={styles.rouletteContent}>
-                <View style={styles.rouletteTextContainer}>
-                  <View style={styles.rouletteTextInner}>
-                    <Text style={styles.rouletteTitle}>Você tem</Text>
-                    <View style={styles.betcoinsRow}>
-                      <Text style={styles.betcoinsAmount}>
-                        {user?.betcoins || 40}
-                      </Text>
-                 
-                      <MaskedView
-                        maskElement={
-                          <Text style={styles.betcoinsTextMask}>
-                            betcoins
-                          </Text>
-                        }
-                      >
-                        <LinearGradient
-                          colors={HORIZONTAL_GRADIENT_COLORS}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.betcoinsGradient}
-                        >
-                          <Text style={styles.betcoinsTextHidden}>
-                            betcoins
-                          </Text>
-                        </LinearGradient>
-                      </MaskedView>
-                    </View>
-                  </View>
-                  <Text style={styles.rouletteSubtitle}>
-                    Toque aqui para ir a roleta
-                  </Text>
-                </View>
-                <View style={styles.rouletteIconContainer}>
-                  <BetcoinIcon width={93} height={67} />
-                </View>
-              </View>
+              <Text style={styles.continueBoxTitle}>Continue de onde parou</Text>
+              <LinearGradient
+                colors={[...HORIZONTAL_GRADIENT_COLORS]}
+                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.continueCardBorder}
+              >
+                <TouchableOpacity
+                  style={styles.continueCardInner}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.continueText}>Fundamentos: 1/4</Text>
+                  <Icon name="chevron-right" size={22} color="#B8B3BF" />
+                </TouchableOpacity>
+              </LinearGradient>
             </View>
-          </TouchableOpacity>
+          </View>
 
-          {/* Seção Para Você */}
-          <Text style={styles.sectionTitle}>Para você</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.carouselContainer}
-          >
-            {articles?.map(renderArticleCard)}
-          </ScrollView>
-
-          {/* Seção Continue */}
-          <Text style={styles.sectionTitle}>Continue de onde parou</Text>
-          <TouchableOpacity style={styles.continueCard}>
-            <Text style={styles.continueText}>Fundamentos: 1/4</Text>
-            <Icon name="chevron-right" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          {/* Minha conta, Meu acessor, Menu Educacional */}
+          <View style={styles.cardsContainer}>
+            <IconCard 
+              icon={<BetHunterIcon width={20} height={20} />} 
+              title={"Minha\nConta"} 
+              cardBackgroundColor="#14121B"
+              onPress={() => navigation.navigate("MinhaConta")}
+            />
+            <IconCard 
+              icon={<AcessorIcon width={20} height={20} />} 
+              title={"Meu\nAcessor"} 
+              cardBackgroundColor="#14121B"
+              onPress={() => navigation.navigate("Acessor")}
+            />
+            <IconCard 
+              icon={<CursosIcon width={20} height={20} />} 
+              title={"Menu\nEducacional"} 
+              cardBackgroundColor="#14121B"
+              onPress={() => navigation.navigate("MenuEducacional")}
+            />
+          </View>
         </ScrollView>
       </View>
       
@@ -677,7 +571,7 @@ const styles = StyleSheet.create({
   freeOfBetDaysContainer: {
     alignItems: "center",
     marginBottom: 20,
-    marginTop: 6,
+    marginTop: 12,
   },
   freeOfBetDaysLabel: {
     color: "#FFFFFF",
@@ -691,14 +585,16 @@ const styles = StyleSheet.create({
     alignItems: "baseline",
     justifyContent: "center",
     flexWrap: "wrap",
-    shadowColor: "#D783D8",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  freeOfBetDaysValueClickable: {
-    opacity: 0.9,
+  checkInHint: {
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
+  checkInHintText: {
+    color: "#B8B3BF",
+    fontSize: 13,
+    fontWeight: "500",
+    textAlign: "center",
   },
   freeOfBetDaysNumber: {
     fontSize: 56,
@@ -712,57 +608,14 @@ const styles = StyleSheet.create({
 
   // Free of Bet Box Styles
   freeOfBetContainer: {
-    width: "50%",
-    height: 5,
+    width: "96%",
+    height: 140,
     alignSelf: "center",
     marginBottom: 0,
     marginTop: 10,
-    padding: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#915BFF",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  freeOfBetContainerExpanded: {
-    width: "96%",
-    height: 140,
     padding: 12,
     justifyContent: "flex-start",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 14,
-  },
-  freeOfBetTitle: {
-    color: "#A19DAA",
-    fontSize: 15,
-    textAlign: "center",
-    fontWeight: "500",
-    marginBottom: 9,
-  },
-  timerContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    marginBottom: 8,
-  },
-  timerText: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#B382FA",
-    marginRight: 6,
-  },
-  timerWarning: {
-    color: "#F37F98",
-  },
-  timerDanger: {
-    color: "#FF6FA6",
-  },
-  timerSeconds: {
-    fontSize: 19,
-    marginTop: 8,
+    alignItems: "center",
   },
   actionsRow: {
     flexDirection: "row",
@@ -775,10 +628,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionIconCircle: {
-    backgroundColor: "#191922",
+    backgroundColor: "#201F2A",
     borderRadius: 999,
-    width: 62,
-    height: 62,
+    width: 65,
+    height: 65,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 2,
@@ -802,203 +655,55 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  // Tabs Styles
-  tabsContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    marginVertical: 10,
-  },
-  tabButtonGradient: {
-    borderRadius: 12,
-    padding: 1.2,
-    marginRight: 8,
-  },
-  tabButtonInner: {
-    backgroundColor: "#161522",
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 6,
-  },
-  tabButtonTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "500",
-    fontSize: 15,
-  },
-  tabButtonInactive: {
-    borderRadius: 12,
-    backgroundColor: "#161522",
-    paddingHorizontal: 18,
-    paddingVertical: 6,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "#282232",
-  },
-  tabButtonTextInactive: {
-    color: "#C7C3D1",
-    fontWeight: "500",
-    fontSize: 15,
-  },
-
-  // Cards Container (Minha Conta, Meu Acessor, Minha Jornada)
-  carousel: {
-    marginVertical: 20,
-  },
-  carouselContentContainer: {
-    paddingHorizontal: 0,
-  },
+  // Cards Container
   cardsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 20,
+    marginTop: 0,
+    
   },
 
-  // Dots Indicator
-  dotsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 16,
-    marginBottom: 4,
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#3A3644",
-  },
-  dotActive: {
-    width: 24,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#D783D8",
-  },
 
-  // Section Styles
-  sectionTitle: {
+
+
+  continueBoxTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginBottom: 15,
+    marginBottom: 12,
   },
-
-  // Article Carousel Styles
-  carouselContainer: {
-    marginBottom: 20,
-  },
-  articleCard: {
-    backgroundColor: "#1C1C1C",
-    padding: 10,
-    borderRadius: 10,
-    marginRight: 10,
-    width: 150,
-  },
-  articleImageContainer: {
-    width: "100%",
-    height: 90,
-    borderRadius: 8,
-    marginBottom: 10,
+  continueCardBorder: {
+    borderRadius: 16,
+    padding: 1,
     overflow: "hidden",
   },
-  articleTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 5,
-  },
-  articleDescription: {
-    fontSize: 12,
-    color: "#A0A0A0",
-  },
-
-  // Continue Card Styles
-  continueCard: {
+  continueCardInner: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#1C1C1C",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 60,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderRadius: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   continueText: {
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: "500",
     color: "#FFFFFF",
+    letterSpacing: 0.2,
   },
 
-  // Roulette Box Styles
-  rouletteBoxContainer: {
+  // Continue Box (reuses roulette visual)
+  continueBoxOuter: {
     marginVertical: 20,
+    marginBottom: 60,
   },
   rouletteBox: {
     borderRadius: 24,
     padding: 20,
-    paddingBottom: 16,
-    minHeight: 140,
-    justifyContent: "flex-end",
+    paddingBottom: 20,
     overflow: "hidden",
     backgroundColor: "#000000",
-  },
-  rouletteContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginTop: 15,
-  },
-  rouletteTextContainer: {
-    flex: 1,
-  },
-  rouletteTextInner: {
-    marginBottom: 0,
-  },
-  rouletteTitle: {
-    fontSize: 24,
-    color: "#FFFFFF",
-    fontWeight: "400",
-  },
-  betcoinsRow: {
-    flexDirection: "row",
-    marginBottom: 0,
-  },
-  betcoinsAmount: {
-    fontSize: 24,
-    color: "#FFFFFF",
-    fontWeight: "bold",
-  },
-  coinEmoji: {
-    fontSize: 24,
-    marginHorizontal: 4,
-  },
-  betcoinsText: {
-    fontSize: 48,
-    fontWeight: "bold",
-  },
-  betcoinsTextMask: {
-    fontSize: 24,
-    fontWeight: "bold",
-    backgroundColor: "transparent",
-  },
-  betcoinsGradient: {
-    flex: 1,
-  },
-  betcoinsTextHidden: {
-    fontSize: 48,
-    fontWeight: "bold",
-    opacity: 0,
-  },
-  rouletteSubtitle: {
-    fontSize: 14,
-    color: "#B8B3BF",
-    fontWeight: "400",
-  },
-  rouletteIconContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  chevronIcon: {
-    marginLeft: 4,
   },
   // Reset Modal Styles
   resetModalContent: {
