@@ -14,49 +14,34 @@ import { CircularIconButton, GradientButton } from "../../components/common";
 import { Container } from "../../infrastructure/di/Container";
 import { ValidationError, AuthenticationError } from "../../domain/errors/CustomErrors";
 
-type RecoveryMethod = 'email' | 'username' | 'phone';
-
 interface MethodConfig {
   subtitle: string;
   placeholder: string;
   apiError: string;
-  keyboardType: 'email-address' | 'default' | 'phone-pad';
+  keyboardType: 'email-address';
 }
 
-const METHOD_CONFIG: Record<RecoveryMethod, MethodConfig> = {
-  email: {
-    subtitle: "Digite o email vinculado a sua conta.",
-    placeholder: "exemplo@email.com.br",
-    apiError: "Endereço de email deve estar vinculado a uma conta",
-    keyboardType: "email-address",
-  },
-  username: {
-    subtitle: "Digite o nome de usuário vinculado a sua conta.",
-    placeholder: "nomedeusuario",
-    apiError: "Nome de usuário deve estar vinculado a uma conta",
-    keyboardType: "default",
-  },
-  phone: {
-    subtitle: "Digite o telefone vinculado a sua conta.",
-    placeholder: "(11) 99999-9999",
-    apiError: "Número de telefone deve estar vinculado a uma conta",
-    keyboardType: "phone-pad",
-  },
+const METHOD_CONFIG: MethodConfig = {
+  subtitle: "Digite o email vinculado a sua conta.",
+  placeholder: "exemplo@email.com.br",
+  apiError: "Endereço de email deve estar vinculado a uma conta",
+  keyboardType: "email-address",
 };
 
 const PasswordResetEmail: React.FC = () => {
-  const [value, setValue] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [apiError, setApiError] = useState<string>("");
   const [touched, setTouched] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RNRouteProp<RootStackParamList, "PasswordResetEmail">>();
-  const { method } = route.params;
+  const { method: methodFromRoute } = route.params;
 
-  const config = METHOD_CONFIG[method];
+  // Independente do que vier na rota, esta tela só suporta recuperação por e-mail.
+  const method: "email" = "email";
+  const config = METHOD_CONFIG;
 
-  // Validações específicas por método
   const validateEmail = (val: string): string => {
     if (!val.trim()) return "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -64,45 +49,16 @@ const PasswordResetEmail: React.FC = () => {
     return "";
   };
 
-  const validateUsername = (val: string): string => {
-    if (!val.trim()) return "";
-    if (val.length < 3) return "O nome de usuário deve ter no mínimo 3 caracteres";
-    const usernameRegex = /^[a-zA-Z0-9_]+$/;
-    if (!usernameRegex.test(val)) return "Use apenas letras, números e underscore";
-    return "";
-  };
-
-  const validatePhone = (val: string): string => {
-    if (!val.trim()) return "";
-    const digits = val.replace(/\D/g, "");
-    if (digits.length !== 11) return "Digite um número de telefone válido";
-    return "";
-  };
-
   const validate = (val: string): string => {
-    switch (method) {
-      case 'email':
-        return validateEmail(val);
-      case 'username':
-        return validateUsername(val);
-      case 'phone':
-        return validatePhone(val);
-      default:
-        return "";
-    }
+    return validateEmail(val);
   };
 
   const handleChange = (val: string) => {
     // Limpa erro da API quando usuário começa a digitar novamente
     if (apiError) setApiError("");
 
-    // Para username: remove espaços e converte para minúsculas
-    let cleanVal = val;
-    if (method === 'username') {
-      cleanVal = val.toLowerCase().replace(/\s/g, "");
-    }
-
-    setValue(cleanVal);
+    const cleanVal = val;
+    setEmail(cleanVal);
 
     if (cleanVal.length > 0 && !touched) {
       setTouched(true);
@@ -119,32 +75,21 @@ const PasswordResetEmail: React.FC = () => {
 
   const handleBlur = () => {
     setTouched(true);
-    setError(validate(value));
+    setError(validate(email));
   };
 
   // Verifica se o formulário é válido
   const isFormValid = (): boolean => {
-    if (!value.trim() || error) return false;
-
-    switch (method) {
-      case 'email':
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(value);
-      case 'username':
-        return value.length >= 3 && /^[a-zA-Z0-9_]+$/.test(value);
-      case 'phone':
-        const digits = value.replace(/\D/g, "");
-        return digits.length === 11;
-      default:
-        return false;
-    }
+    if (!email.trim() || error) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   const handleNext = async () => {
     setTouched(true);
-    const validation = validate(value);
+    const validation = validate(email);
 
-    if (!value.trim()) {
+    if (!email.trim()) {
       setError(getEmptyFieldError());
       return;
     }
@@ -154,17 +99,12 @@ const PasswordResetEmail: React.FC = () => {
       return;
     }
 
-    if (method !== "email") {
-      setApiError("No momento apenas a recuperação por e-mail está disponível.");
-      return;
-    }
-
     setLoading(true);
     setApiError("");
     try {
       const container = Container.getInstance();
-      await container.getRequestPasswordChangeUseCase().execute(value);
-      navigation.navigate("PasswordResetVerification", { method, value });
+      await container.getRequestPasswordChangeUseCase().execute(email);
+      navigation.navigate("PasswordResetVerification", { method, value: email });
     } catch (err: any) {
       const message =
         err instanceof ValidationError || err instanceof AuthenticationError
@@ -177,81 +117,7 @@ const PasswordResetEmail: React.FC = () => {
   };
 
   const getEmptyFieldError = (): string => {
-    switch (method) {
-      case 'email':
-        return "Digite um endereço de email válido";
-      case 'username':
-        return "Digite um nome de usuário válido";
-      case 'phone':
-        return "Digite um número de telefone válido";
-      default:
-        return "Campo obrigatório";
-    }
-  };
-
-  // Renderiza o input baseado no método
-  const renderInput = () => {
-    switch (method) {
-      case 'username':
-        return (
-          <View style={[styles.usernameContainer, error && touched && styles.inputError]}>
-            <Text style={styles.atSymbol}>@</Text>
-            <TextInput
-              style={styles.usernameInput}
-              placeholder={config.placeholder}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor="#6B6B6B"
-              value={value}
-              onChangeText={handleChange}
-              onBlur={handleBlur}
-            />
-          </View>
-        );
-
-      case 'phone':
-        return (
-          <View style={styles.phoneRow}>
-            <View style={[styles.countryCodeContainer, error && touched && styles.inputError]}>
-              <TextInput
-                style={styles.countryCodeInput}
-                value="+55"
-                editable={false}
-                placeholderTextColor="#6B6B6B"
-              />
-            </View>
-            <View style={[styles.phoneContainer, error && touched && styles.inputError]}>
-              <TextInput
-                style={styles.phoneInput}
-                placeholder={config.placeholder}
-                keyboardType="phone-pad"
-                placeholderTextColor="#6B6B6B"
-                value={value}
-                onChangeText={handleChange}
-                onBlur={handleBlur}
-              />
-            </View>
-          </View>
-        );
-
-      case 'email':
-      default:
-        return (
-          <View style={[styles.inputContainer, error && touched && styles.inputError]}>
-            <TextInput
-              style={styles.input}
-              placeholder={config.placeholder}
-              keyboardType={config.keyboardType}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor="#6B6B6B"
-              value={value}
-              onChangeText={handleChange}
-              onBlur={handleBlur}
-            />
-          </View>
-        );
-    }
+    return "Digite um endereço de email válido";
   };
 
   return (
@@ -278,7 +144,19 @@ const PasswordResetEmail: React.FC = () => {
 
           <View style={styles.form}>
             <View style={styles.inputWrapper}>
-              {renderInput()}
+              <View style={[styles.inputContainer, error && touched && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder={config.placeholder}
+                  keyboardType={config.keyboardType}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholderTextColor="#6B6B6B"
+                  value={email}
+                  onChangeText={handleChange}
+                  onBlur={handleBlur}
+                />
+              </View>
               {error && touched && (
                 <Text style={styles.errorText}>{error}</Text>
               )}
@@ -289,6 +167,13 @@ const PasswordResetEmail: React.FC = () => {
           {apiError && (
             <View style={styles.apiErrorContainer}>
               <Text style={styles.apiErrorText}>{apiError}</Text>
+            </View>
+          )}
+          {!!methodFromRoute && methodFromRoute !== 'email' && (
+            <View style={styles.apiErrorContainer}>
+              <Text style={styles.apiErrorText}>
+                No momento, a recuperação de senha está disponível apenas por e-mail.
+              </Text>
             </View>
           )}
         </View>
@@ -356,57 +241,6 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: "#E74C3C",
-  },
-  // Input de username com @
-  usernameContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1C1C1C",
-    borderRadius: 25,
-    paddingHorizontal: 18,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  atSymbol: {
-    color: "#6B6B6B",
-    fontSize: 16,
-    marginRight: 8,
-  },
-  usernameInput: {
-    flex: 1,
-    paddingVertical: 18,
-    color: "#FFFFFF",
-    fontSize: 16,
-  },
-  // Input de telefone com +55
-  phoneRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  countryCodeContainer: {
-    width: 80,
-    backgroundColor: "#1C1C1C",
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  countryCodeInput: {
-    padding: 18,
-    color: "#6B6B6B",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  phoneContainer: {
-    flex: 1,
-    backgroundColor: "#1C1C1C",
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  phoneInput: {
-    padding: 18,
-    color: "#FFFFFF",
-    fontSize: 16,
   },
   errorText: {
     color: "#E74C3C",

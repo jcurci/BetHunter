@@ -11,7 +11,7 @@ import { NavigationProp } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { CircularIconButton } from "../../components/common";
 
-type RecoveryMethod = 'email' | 'username' | 'phone';
+type RecoveryMethod = 'email';
 
 interface MethodOption {
   id: RecoveryMethod;
@@ -21,8 +21,6 @@ interface MethodOption {
 
 const RECOVERY_METHODS: MethodOption[] = [
   { id: 'email', label: 'Endereço de email', icon: 'mail-outline' },
-  { id: 'username', label: 'Nome de usuário', icon: 'person-outline' },
-  { id: 'phone', label: 'Número de telefone', icon: 'smartphone' },
 ];
 
 const PasswordResetMethod: React.FC = () => {

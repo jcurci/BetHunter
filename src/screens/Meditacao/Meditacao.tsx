@@ -44,6 +44,28 @@ const Meditacao: React.FC = () => {
   const [sessionComplete, setSessionComplete] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  const stopAndUnloadAudio = async () => {
+    setIsPlaying(false);
+    const currentSound = soundRef.current;
+
+    if (!currentSound) return;
+
+    try {
+      await currentSound.stopAsync();
+    } catch {}
+
+    try {
+      await currentSound.unloadAsync();
+    } catch {}
+
+    if (soundRef.current === currentSound) {
+      soundRef.current = null;
+    }
+    setSound(null);
+    setIsAudioLoaded(false);
+  };
 
   // === MORPHISM ANIMATION VALUES ===
   // All animations use extremely long durations (30s - 120s) to avoid perceptible loops
@@ -90,9 +112,7 @@ const Meditacao: React.FC = () => {
     
     return () => {
       clearTimeout(timer);
-      if (sound) {
-        sound.unloadAsync();
-      }
+      void stopAndUnloadAudio();
     };
   }, []);
 
@@ -107,11 +127,17 @@ const Meditacao: React.FC = () => {
         MEDITATION_AUDIO,
         { isLooping: true, volume: 0.4 }
       );
+      soundRef.current = newSound;
       setSound(newSound);
       setIsAudioLoaded(true);
     } catch (error) {
       console.log("Error loading audio:", error);
     }
+  };
+
+  const handleGoBack = async () => {
+    await stopAndUnloadAudio();
+    navigation.goBack();
   };
 
   useEffect(() => {
@@ -656,7 +682,7 @@ const Meditacao: React.FC = () => {
       />
 
       <View style={styles.header}>
-        <BackIconButton onPress={() => navigation.goBack()} size={42} />
+        <BackIconButton onPress={handleGoBack} size={42} />
       </View>
 
       <View style={styles.content}>

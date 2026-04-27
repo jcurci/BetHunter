@@ -57,6 +57,14 @@ export const PaywallScreen: React.FC<Props> = ({
     setShowingPaywall(true);
   };
 
+  /** Compra ou restauração válida: onboarding concluído e Home. */
+  const finishAsSubscriber = async (): Promise<void> => {
+    await refresh();
+    await setOnboardingFlowCompleted();
+    setShowingPaywall(false);
+    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+  };
+
   const handleRestore = async () => {
     try {
       setRestoring(true);
@@ -64,7 +72,7 @@ export const PaywallScreen: React.FC<Props> = ({
       await refresh();
       if (success) {
         Alert.alert('Sucesso', 'Assinatura restaurada com sucesso!', [
-          { text: 'OK', onPress: onComplete },
+          { text: 'OK', onPress: () => void finishAsSubscriber() },
         ]);
       } else {
         Alert.alert('Nenhuma assinatura', 'Não encontramos nenhuma assinatura ativa.');
@@ -81,12 +89,10 @@ export const PaywallScreen: React.FC<Props> = ({
       <RevenueCatUI.Paywall
         onDismiss={() => setShowingPaywall(false)}
         onPurchaseCompleted={async () => {
-          await refresh();
-          onComplete();
+          await finishAsSubscriber();
         }}
         onRestoreCompleted={async () => {
-          await refresh();
-          onComplete();
+          await finishAsSubscriber();
         }}
       />
     );

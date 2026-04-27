@@ -110,13 +110,9 @@ const Login: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const webClientId =
-      Platform.OS === 'android' && ENV.GOOGLE_ANDROID_CLIENT_ID
-        ? ENV.GOOGLE_ANDROID_CLIENT_ID
-        : ENV.GOOGLE_WEB_CLIENT_ID;
-
     GoogleSignin.configure({
-      webClientId,
+      // webClientId precisa ser o Web Client ID (audience do idToken validado no backend)
+      webClientId: ENV.GOOGLE_WEB_CLIENT_ID,
       ...(Platform.OS === 'ios' && ENV.GOOGLE_IOS_CLIENT_ID
         ? { iosClientId: ENV.GOOGLE_IOS_CLIENT_ID }
         : {}),
@@ -130,6 +126,9 @@ const Login: React.FC = () => {
         await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       }
       const signInResult = await GoogleSignin.signIn();
+      if (signInResult.type !== "success") {
+        return;
+      }
       const idToken = signInResult.data?.idToken;
 
       if (!idToken) {
