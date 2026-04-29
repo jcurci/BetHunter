@@ -59,6 +59,7 @@ const Home: React.FC = () => {
   const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
   const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
   const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
+  const [statsReady, setStatsReady] = useState<boolean>(false);
   
 
   useEffect(() => {
@@ -86,8 +87,12 @@ const Home: React.FC = () => {
   }, [showBlockSuccessModal]);
 
   const loadData = async () => {
-    await loadBetStreak();
-    await loadDashboard();
+    try {
+      await loadBetStreak();
+      await loadDashboard();
+    } finally {
+      setStatsReady(true);
+    }
   };
 
   const loadDashboard = async () => {
@@ -191,7 +196,13 @@ const Home: React.FC = () => {
         </MaskedView>
       </View>
       
-      <StatsDisplay energy={dashboard?.energy ?? 10} streak={dashboard != null ? `${dashboard.streak}d` : "3d"} />
+      <StatsDisplay 
+        loading={!statsReady}
+        energy={statsReady && dashboard ? dashboard.energy : undefined}
+        streak={statsReady && dashboard ? `${dashboard.streak}d` : undefined}
+        // Quando statsReady=true mas dashboard=null (erro API), 
+        // StatsDisplay mostra 0 energy e "0d" streak como fallback explícito
+      />
     </View>
   );
 
@@ -217,14 +228,25 @@ const Home: React.FC = () => {
         Você está livre de apostas por:
       </Text>
       <TouchableOpacity
-        onPress={handleDaysPress}
-        activeOpacity={canCheckIn ? 0.7 : 1}
+        onPress={statsReady ? handleDaysPress : undefined}
+        activeOpacity={statsReady && canCheckIn ? 0.7 : 1}
+        disabled={!statsReady}
         style={styles.freeOfBetDaysValueWrapper}
       >
-        {renderGradientText(`${betStreak}`, styles.freeOfBetDaysNumber)}
-        {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
+        {!statsReady ? (
+          <View style={styles.daysSkeleton}>
+            <View style={styles.daysNumberPlaceholder} />
+            <View style={styles.daysUnitPlaceholder} />
+          </View>
+        ) : (
+          <>
+            {/* betStreak inicia em 0, se loadBetStreak falhar mantém 0 - fallback honesto */}
+            {renderGradientText(`${betStreak}`, styles.freeOfBetDaysNumber)}
+            {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
+          </>
+        )}
       </TouchableOpacity>
-      {canCheckIn && (
+      {statsReady && canCheckIn && (
         <TouchableOpacity
           onPress={handleDaysPress}
           activeOpacity={0.7}
@@ -603,6 +625,23 @@ const styles = StyleSheet.create({
   freeOfBetDaysUnit: {
     fontSize: 56,
     fontWeight: "bold",
+    marginLeft: 4,
+  },
+  daysSkeleton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  daysNumberPlaceholder: {
+    width: 80,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  daysUnitPlaceholder: {
+    width: 120,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     marginLeft: 4,
   },
 

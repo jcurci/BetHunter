@@ -18,7 +18,6 @@ import { PlanPreviewScreen } from './screens/PlanPreviewScreen';
 import { CounterActivationScreen } from './screens/CounterActivationScreen';
 import { FirstLessonScreen } from './screens/FirstLessonScreen';
 import { CelebrationScreen } from './screens/CelebrationScreen';
-import { PaywallScreen } from './screens/PaywallScreen';
 
 type StepId =
   | 'notifications'
@@ -33,8 +32,7 @@ type StepId =
   | 'planPreview'
   | 'counterActivation'
   | 'firstLesson'
-  | 'celebration'
-  | 'paywall';
+  | 'celebration';
 
 const STEP_ORDER: StepId[] = [
   'notifications',
@@ -50,7 +48,6 @@ const STEP_ORDER: StepId[] = [
   'counterActivation',
   'firstLesson',
   'celebration',
-  'paywall',
 ];
 
 const TOTAL_STEPS = STEP_ORDER.length;
@@ -211,17 +208,6 @@ const OnboardingInner: React.FC = () => {
         <CelebrationScreen
           {...shared}
           onNext={goNext}
-          onBack={goBack}
-        />
-      );
-    case 'paywall':
-      return (
-        <PaywallScreen
-          {...shared}
-          onComplete={async () => {
-            await setOnboardingFlowCompleted();
-            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-          }}
           onBack={goBack}
         />
       );

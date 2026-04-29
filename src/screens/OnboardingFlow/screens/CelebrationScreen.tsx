@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import RevenueCatUI from 'react-native-purchases-ui';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import { useOnboarding } from '../OnboardingContext';
@@ -17,6 +20,9 @@ import {
   HORIZONTAL_GRADIENT_COLORS,
   HORIZONTAL_GRADIENT_LOCATIONS,
 } from '../../../config/colors';
+import type { RootStackParamList } from '../../../types/navigation';
+import { useSubscriptionStore } from '../../../storage/subscriptionStore';
+import { setOnboardingFlowCompleted } from '../onboardingStorage';
 
 type Props = {
   currentStep: number;
@@ -184,6 +190,9 @@ export const CelebrationScreen: React.FC<Props> = ({
   onNext,
   onBack,
 }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [showingPaywall, setShowingPaywall] = useState(false);
+  const refresh = useSubscriptionStore((s) => s.refresh);
   const { betcoinsEarned, xpEarned, streak } = useOnboarding();
 
   // Hero animations
@@ -274,6 +283,17 @@ export const CelebrationScreen: React.FC<Props> = ({
     ]).start();
   }, []);
 
+  const finishAsSubscriber = async (): Promise<void> => {
+    await refresh();
+    await setOnboardingFlowCompleted();
+    setShowingPaywall(false);
+    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+  };
+
+  const handleViewPlan = () => {
+    setShowingPaywall(true);
+  };
+
   const emojiDeg = emojiRotate.interpolate({
     inputRange: [-0.15, 0],
     outputRange: ['-20deg', '0deg'],
@@ -294,6 +314,20 @@ export const CelebrationScreen: React.FC<Props> = ({
       })),
     [],
   );
+
+  if (showingPaywall) {
+    return (
+      <RevenueCatUI.Paywall
+        onDismiss={() => setShowingPaywall(false)}
+        onPurchaseCompleted={async () => {
+          await finishAsSubscriber();
+        }}
+        onRestoreCompleted={async () => {
+          await finishAsSubscriber();
+        }}
+      />
+    );
+  }
 
   return (
     <>
@@ -414,7 +448,7 @@ export const CelebrationScreen: React.FC<Props> = ({
             { opacity: buttonFade, transform: [{ translateY: buttonSlide }] },
           ]}
         >
-          <TouchableOpacity onPress={onNext} activeOpacity={0.9}>
+          <TouchableOpacity onPress={handleViewPlan} activeOpacity={0.9}>
             <LinearGradient
               colors={[...HORIZONTAL_GRADIENT_COLORS]}
               locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}

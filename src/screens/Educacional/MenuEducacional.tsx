@@ -30,6 +30,7 @@ const XP_GRADIENT_LOCATIONS = [0.0, 0.15, 0.32, 0.62] as const;
 const MenuEducacional: React.FC = () => {
   const [user, setUser] = useState< | null>(null);
   const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
+  const [statsReady, setStatsReady] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
@@ -44,6 +45,8 @@ const MenuEducacional: React.FC = () => {
       setDashboard({ energy: result.energy, streak: result.streak });
     } catch (error: any) {
       console.log('ℹ️ LoadDashboard:', error.message);
+    } finally {
+      setStatsReady(true);
     }
   };
 
@@ -72,7 +75,13 @@ const MenuEducacional: React.FC = () => {
             </View>
           </View>
           <View style={styles.headerRight}>
-            <StatsDisplay energy={dashboard?.energy ?? 10} streak={dashboard != null ? `${dashboard.streak}d` : '3d'} />
+            <StatsDisplay 
+              loading={!statsReady}
+              energy={statsReady && dashboard ? dashboard.energy : undefined}
+              streak={statsReady && dashboard ? `${dashboard.streak}d` : undefined}
+              // Quando statsReady=true mas dashboard=null (erro API), 
+              // StatsDisplay mostra 0 energy e "0d" streak como fallback explícito
+            />
           </View>
         </View>
 
@@ -121,17 +130,27 @@ const MenuEducacional: React.FC = () => {
           </TouchableOpacity> */}
 
           {/* Streak Counter */}
-          <DayCounter
-            useFireIcons={true}
-            activeFires={Math.min(dashboard?.streak ?? 0, 7)}
-            totalFires={7}
-            finalNumber={
-              dashboard != null && (dashboard.streak ?? 0) > 7
-                ? (dashboard.streak ?? 0)
-                : undefined
-            }
-            style={styles.streakCounter}
-          />
+          {!statsReady ? (
+            <View style={[styles.streakCounter, styles.streakCounterSkeleton]}>
+              <View style={styles.streakSkeletonContainer}>
+                {Array.from({ length: 7 }).map((_, index) => (
+                  <View key={index} style={styles.fireIconPlaceholder} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <DayCounter
+              useFireIcons={true}
+              activeFires={Math.min(dashboard?.streak ?? 0, 7)}
+              totalFires={7}
+              finalNumber={
+                dashboard != null && (dashboard.streak ?? 0) > 7
+                  ? (dashboard.streak ?? 0)
+                  : undefined
+              }
+              style={styles.streakCounter}
+            />
+          )}
 
           {/* Opções Section */}
           <View style={styles.optionsSection}>
@@ -289,6 +308,23 @@ const styles = StyleSheet.create({
   },
   streakCounter: {
     marginBottom: 20,
+  },
+  streakCounterSkeleton: {
+    height: 60,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  streakSkeletonContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  fireIconPlaceholder: {
+    width: 32,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   xpCard: {
     width: "100%",

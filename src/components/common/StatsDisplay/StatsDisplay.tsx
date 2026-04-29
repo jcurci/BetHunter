@@ -7,25 +7,45 @@ interface StatsDisplayProps {
   energy?: number;
   streak?: string;
   style?: ViewStyle;
+  loading?: boolean;
 }
 
 const StatsDisplay: React.FC<StatsDisplayProps> = ({ 
-  energy = 10, 
-  streak = "3d",
-  style 
+  energy, 
+  streak,
+  style,
+  loading = false
 }) => {
+  if (loading) {
+    return (
+      <View style={[styles.statsContainer, style]}>
+        {/* Energia - Loading */}
+        <View style={styles.statRow}>
+          <Raio width={13} height={19} style={styles.iconSpacing} />
+          <View style={styles.placeholder} />
+        </View>
+        
+        {/* Streak - Loading */}
+        <View style={[styles.statRow, styles.streakContainer]}>
+          <Fogo width={17} height={20} style={styles.iconSpacing} />
+          <View style={styles.placeholder} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.statsContainer, style]}>
       {/* Energia */}
       <View style={styles.statRow}>
         <Raio width={13} height={19} style={styles.iconSpacing} />
-        <Text style={styles.statText}>{energy}</Text>
+        <Text style={styles.statText}>{energy ?? 0}</Text>
       </View>
       
       {/* Streak */}
       <View style={[styles.statRow, styles.streakContainer]}>
         <Fogo width={17} height={20} style={styles.iconSpacing} />
-        <Text style={styles.statText}>{streak}</Text>
+        <Text style={styles.statText}>{streak ?? "0d"}</Text>
       </View>
     </View>
   );
@@ -52,6 +72,12 @@ const styles = StyleSheet.create({
   },
   iconSpacing: {
     marginRight: 6,
+  },
+  placeholder: {
+    width: 32,
+    height: 18,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
 });
 
