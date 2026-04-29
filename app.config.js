@@ -1,21 +1,18 @@
 // import { ExpoConfig, ConfigContext } from 'expo/config';
-const { readFileSync, existsSync } = require('fs');
-const { resolve } = require('path');
+const { readFileSync, existsSync } = require("fs");
+const { resolve } = require("path");
 
 function loadDotenv() {
-  const paths = [
-    resolve(__dirname, '.env'),
-    resolve(__dirname, '..', '.env'),
-  ];
+  const paths = [resolve(__dirname, ".env"), resolve(__dirname, "..", ".env")];
   for (const p of paths) {
     if (!existsSync(p)) continue;
-    for (const line of readFileSync(p, 'utf8').split('\n')) {
+    for (const line of readFileSync(p, "utf8").split("\n")) {
       const t = line.trim();
-      if (!t || t.startsWith('#')) continue;
-      const eq = t.indexOf('=');
+      if (!t || t.startsWith("#")) continue;
+      const eq = t.indexOf("=");
       if (eq === -1) continue;
       const key = t.slice(0, eq).trim();
-      if (!key.startsWith('EXPO_PUBLIC_')) continue;
+      if (!key.startsWith("EXPO_PUBLIC_")) continue;
       let val = t.slice(eq + 1).trim();
       if (
         (val.startsWith('"') && val.endsWith('"')) ||
@@ -32,8 +29,8 @@ function loadDotenv() {
 
 loadDotenv();
 
-const GOOGLE_SIGNIN_PKG = '@react-native-google-signin/google-signin';
-const IOS_SUFFIX = '.apps.googleusercontent.com';
+const GOOGLE_SIGNIN_PKG = "@react-native-google-signin/google-signin";
+const IOS_SUFFIX = ".apps.googleusercontent.com";
 
 function iosUrlSchemeFromClientId(clientId) {
   if (!clientId || !clientId.endsWith(IOS_SUFFIX)) return null;
@@ -43,13 +40,11 @@ function iosUrlSchemeFromClientId(clientId) {
 
 module.exports = ({ config }) => {
   const apiBaseUrl =
-    process.env.EXPO_PUBLIC_API_BASE_URL || 'http://127.0.0.1:3000';
-  const googleWebClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
-  const googleIosClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+    process.env.EXPO_PUBLIC_API_BASE_URL || "http://127.0.0.1:3000";
+  const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
   const googleAndroidClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
 
   const iosUrlScheme = iosUrlSchemeFromClientId(googleIosClientId);
 
