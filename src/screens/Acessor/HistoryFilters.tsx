@@ -8,9 +8,16 @@ import {
   Modal as RNModal,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import { CircularIconButton } from "../../components/common";
+import {
+  BACKGROUND_GRADIENT_COLORS,
+  BACKGROUND_GRADIENT_LOCATIONS,
+  SHADOW_OVERLAY_COLORS,
+  BUTTON_INNER_BACKGROUND,
+} from "../../config/colors";
 
 // Configuração do calendário em Português
 LocaleConfig.locales['pt-br'] = {
@@ -132,22 +139,46 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
       onRequestClose={onClose}
     >
       <BlurView intensity={40} tint="dark" style={styles.blurOverlay}>
+        {/* Background com gradiente radial estilo identidade do app */}
+        <LinearGradient
+          colors={BACKGROUND_GRADIENT_COLORS}
+          locations={BACKGROUND_GRADIENT_LOCATIONS}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.backgroundLayer}
+          pointerEvents="none"
+        />
+        <LinearGradient
+          colors={SHADOW_OVERLAY_COLORS}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.5, y: 0 }}
+          style={styles.backgroundLayer}
+          pointerEvents="none"
+        />
+        <LinearGradient
+          colors={SHADOW_OVERLAY_COLORS}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0.5, y: 0 }}
+          style={styles.backgroundLayer}
+          pointerEvents="none"
+        />
+
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.header}>
             <CircularIconButton onPress={onClose} size={48}>
-              <Icon name="close" size={24} color="#FFFFFF" />
+              <Icon name="close" size={22} color="#FFFFFF" />
             </CircularIconButton>
 
             <Text style={styles.headerTitle}>Filtros</Text>
 
             <View style={styles.headerActions}>
               <CircularIconButton onPress={handleClearFilters} size={48}>
-                <Icon name="delete-outline" size={22} color="#FFFFFF" />
+                <Icon name="delete-outline" size={20} color="#FFFFFF" />
               </CircularIconButton>
 
               <CircularIconButton onPress={handleApply} size={48}>
-                <Icon name="check" size={24} color="#FFFFFF" />
+                <Icon name="check" size={22} color="#FFFFFF" />
               </CircularIconButton>
             </View>
           </View>
@@ -416,7 +447,10 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
 const styles = StyleSheet.create({
   blurOverlay: {
     flex: 1,
-    backgroundColor: "rgba(5, 3, 7, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+  },
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalContainer: {
     flex: 1,
@@ -427,13 +461,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 40,
+    marginBottom: 32,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
+    fontSize: 24,
+    fontWeight: "bold",
     color: "#FFFFFF",
-    fontStyle: "italic",
+    letterSpacing: 0.3,
   },
   headerActions: {
     flexDirection: "row",
@@ -448,27 +482,29 @@ const styles = StyleSheet.create({
   tipoContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 32,
+    gap: 12,
+    marginBottom: 28,
   },
   tipoButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    width: "45%",
-    height: 57,
+    height: 56,
     borderRadius: 28,
-    backgroundColor: "transparent",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(255,255,255,0.10)",
   },
   tipoButtonActive: {
+    backgroundColor: "#26233A",
     borderColor: "#D783D8",
   },
   tipoButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#A7A3AE",
+    color: "#A09CAB",
   },
   tipoButtonTextActive: {
     color: "#FFFFFF",
@@ -482,21 +518,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
-    color: "#A7A3AE",
+    color: "#A09CAB",
     marginBottom: 8,
   },
   dateButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 57,
+    height: 56,
     paddingHorizontal: 16,
     borderRadius: 28,
-    backgroundColor: "transparent",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(255,255,255,0.10)",
   },
   dateButtonActive: {
     borderColor: "#D783D8",
@@ -507,21 +543,21 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   dateSeparator: {
-    fontSize: 14,
-    color: "#A7A3AE",
+    fontSize: 13,
+    color: "#A09CAB",
     marginHorizontal: 12,
-    marginBottom: 14,
+    marginBottom: 18,
   },
   calendarContainer: {
     marginBottom: 24,
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: "#14121B",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
     overflow: "hidden",
   },
   calendar: {
-    borderRadius: 16,
+    borderRadius: 20,
   },
   categorySection: {
     marginTop: 8,
@@ -536,12 +572,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 57,
+    height: 56,
     paddingHorizontal: 20,
     borderRadius: 28,
-    backgroundColor: "transparent",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
+    borderColor: "rgba(255,255,255,0.10)",
   },
   categoryButtonActive: {
     borderColor: "#D783D8",
@@ -553,10 +589,10 @@ const styles = StyleSheet.create({
   },
   categoryDropdown: {
     marginTop: 16,
-    borderRadius: 24,
-    backgroundColor: "#131019",
+    borderRadius: 22,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     maxHeight: 260,
     overflow: "hidden",
   },
@@ -576,8 +612,8 @@ const styles = StyleSheet.create({
     marginRight: 18,
   },
   categoryDropdownText: {
-    fontSize: 16,
-    color: "#A7A3AE",
+    fontSize: 15,
+    color: "#A09CAB",
     fontWeight: "500",
   },
   categoryDropdownTextActive: {

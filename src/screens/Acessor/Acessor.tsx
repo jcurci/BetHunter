@@ -14,6 +14,15 @@ import {
 import { LineChart } from "react-native-chart-kit";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  HORIZONTAL_GRADIENT_COLORS,
+  HORIZONTAL_GRADIENT_LOCATIONS,
+  BACKGROUND_GRADIENT_COLORS,
+  BACKGROUND_GRADIENT_LOCATIONS,
+  SHADOW_OVERLAY_COLORS,
+  BUTTON_INNER_BACKGROUND,
+} from "../../config/colors";
 
 // Configuração do calendário em Português
 LocaleConfig.locales['pt-br'] = {
@@ -457,19 +466,33 @@ const Acessor: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-
-
-        {/* Título */}
-        <Text style={styles.title}>Meu{"\n"}Acessor</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit={false}>
+              Meu{"\n"}Acessor
+            </Text>
+          </View>
+        </View>
 
         {/* Controle de Período */}
         <View style={styles.periodSelector}>
           <TouchableOpacity
-            style={[styles.periodButtonInline, styles.periodButtonInlineActive]}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={() => setSelectedPeriod("mensal")}
+            style={styles.periodButtonOuter}
           >
-            <Text style={styles.periodButtonInlineText}>Mensal</Text>
+            <LinearGradient
+              colors={HORIZONTAL_GRADIENT_COLORS}
+              locations={HORIZONTAL_GRADIENT_LOCATIONS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.periodButtonGradient}
+            >
+              <View style={styles.periodButtonInnerActive}>
+                <Text style={styles.periodButtonTextActive}>Mensal</Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.periodButtonInline}
@@ -488,94 +511,252 @@ const Acessor: React.FC = () => {
           </View>
         )}
 
-        {/* Gráfico Container */}
-        <View style={styles.chartContainer}>
-          <View style={styles.chartGradientBg}>
-            <LineChart
-              data={chartData}
-              width={SCREEN_WIDTH - 40}
-              height={280}
-              chartConfig={{
-                backgroundColor: "#14121B",
-                backgroundGradientFrom: "#14121B",
-                backgroundGradientTo: "#14121B",
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(255, 111, 157, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(167, 163, 174, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                propsForDots: {
-                  r: "6",
-                  strokeWidth: "0",
-                  fill: "#FF8FA5",
-                },
-                propsForBackgroundLines: {
-                  strokeDasharray: "",
-                  stroke: "transparent",
-                },
-                strokeWidth: 3,
-              }}
-              bezier
-              withInnerLines={false}
-              withOuterLines={false}
-              withVerticalLines={false}
-              withHorizontalLines={false}
-              withDots={true}
-              withShadow={false}
-              style={styles.chart}
-              segments={4}
-            />
-          </View>
+        {/* Gráfico — card glassmorphic */}
+        <View style={styles.chartCard}>
+          <LinearGradient
+            colors={BACKGROUND_GRADIENT_COLORS}
+            locations={BACKGROUND_GRADIENT_LOCATIONS}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={SHADOW_OVERLAY_COLORS}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.5, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={SHADOW_OVERLAY_COLORS}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0.5, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          <LineChart
+            data={chartData}
+            width={SCREEN_WIDTH - 40}
+            height={260}
+            chartConfig={{
+              backgroundColor: "transparent",
+              backgroundGradientFrom: "#14121B",
+              backgroundGradientFromOpacity: 0,
+              backgroundGradientTo: "#14121B",
+              backgroundGradientToOpacity: 0,
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(255, 144, 165, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(167, 163, 174, ${opacity})`,
+              style: {
+                borderRadius: 16,
+              },
+              propsForDots: {
+                r: "5",
+                strokeWidth: "0",
+                fill: "#FF90A5",
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: "",
+                stroke: "transparent",
+              },
+              strokeWidth: 3,
+            }}
+            bezier
+            withInnerLines={false}
+            withOuterLines={false}
+            withVerticalLines={false}
+            withHorizontalLines={false}
+            withDots={true}
+            withShadow={false}
+            style={styles.chart}
+            segments={4}
+          />
         </View>
 
         {/* Valores - Entradas e Saídas */}
         <View style={styles.valuesContainer}>
           {/* Entradas */}
-          <View style={styles.valueBoxContainer}>
-            <View style={styles.valueBox}>
-              <View style={styles.valueHeader}>
-                <Text style={styles.valueLabelEntrada}>Entradas </Text>
-                <Icon name="trending-up" size={20} color="#6BCB77" />
-              </View>
-              <Text style={styles.valueAmount}>
-                <Text style={styles.currencySymbol}>R$ </Text>
-                <Text style={styles.cents}>
-                  {totalEntradas.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+          <LinearGradient
+            colors={["#4A4855", "#2A2835", "#1A1825", "#2A2835", "#4A4855"]}
+            locations={[0, 0.25, 0.5, 0.75, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.valueBorderGradient}
+          >
+            <View style={styles.valueBoxContainer}>
+              <View style={styles.valueBox}>
+                <View style={styles.valueHeader}>
+                  <Text style={styles.valueLabelEntrada}>Entradas </Text>
+                  <Icon name="trending-up" size={20} color="#6BCB77" />
+                </View>
+                <Text style={styles.valueAmount}>
+                  <Text style={styles.currencySymbol}>R$ </Text>
+                  <Text style={styles.cents}>
+                    {totalEntradas.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </Text>
                 </Text>
-              </Text>
+              </View>
             </View>
-          </View>
+          </LinearGradient>
 
           {/* Saídas */}
-          <View style={styles.valueBoxContainer}>
-            <View style={styles.valueBox}>
-              <View style={styles.valueHeader}>
-                <Text style={styles.valueLabelSaida}>Saídas </Text>
-                <Icon name="trending-down" size={20} color="#FF6B9D" />
-              </View>
-              <Text style={[styles.valueAmount, styles.valueAmountExit]}>
-                <Text style={styles.currencySymbol}>R$ </Text>
-                <Text style={styles.cents}>
-                  {totalSaidas.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+          <LinearGradient
+            colors={["#4A4855", "#2A2835", "#1A1825", "#2A2835", "#4A4855"]}
+            locations={[0, 0.25, 0.5, 0.75, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.valueBorderGradient}
+          >
+            <View style={styles.valueBoxContainer}>
+              <View style={styles.valueBox}>
+                <View style={styles.valueHeader}>
+                  <Text style={styles.valueLabelSaida}>Saídas </Text>
+                  <Icon name="trending-down" size={20} color="#FF6B9D" />
+                </View>
+                <Text style={[styles.valueAmount, styles.valueAmountExit]}>
+                  <Text style={styles.currencySymbol}>R$ </Text>
+                  <Text style={styles.cents}>
+                    {totalSaidas.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </Text>
                 </Text>
-              </Text>
+              </View>
             </View>
+          </LinearGradient>
+        </View>
+
+        {/* Entrada/Saída mais recente */}
+        <View style={styles.recentSection}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <Text style={styles.sectionTitle}>Entrada mais recente</Text>
+              <Text style={styles.sectionSubtitle}>Sua última movimentação</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.verMaisButton}
+              onPress={() => navigation.navigate("HistoryList")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.verMaisText}>Ver Histórico</Text>
+              <Icon name="chevron-right" size={18} color="#A09CAB" />
+            </TouchableOpacity>
           </View>
+
+          <View style={styles.recentCardWrapper}>
+            <LinearGradient
+              colors={BACKGROUND_GRADIENT_COLORS}
+              locations={BACKGROUND_GRADIENT_LOCATIONS}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={SHADOW_OVERLAY_COLORS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.5, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={SHADOW_OVERLAY_COLORS}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0.5, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {latestEntry ? (
+              <LinearGradient
+                colors={[...HORIZONTAL_GRADIENT_COLORS]}
+                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.recentCardBorder}
+              >
+                <TouchableOpacity style={styles.recentCard} activeOpacity={0.85}>
+                  <View style={styles.recentCardLeft}>
+                    <View style={styles.recentIconCircle}>
+                      <Icon
+                        name={latestEntry.categoria?.icone || "wallet"}
+                        size={22}
+                        color="#D783D8"
+                      />
+                    </View>
+                    <View style={styles.recentInfo}>
+                      <Text style={styles.recentCategory} numberOfLines={1}>
+                        {latestEntry.categoria?.nome || "Sem categoria"}
+                      </Text>
+                      <Text style={styles.recentDescription} numberOfLines={1}>
+                        {latestEntry.descricao}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.recentCardRight}>
+                    <Text style={styles.recentDate}>
+                      {latestEntry.data.toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.recentAmount,
+                        latestEntry.tipo === "entrada" && styles.recentAmountEntrada,
+                      ]}
+                    >
+                      {`${latestEntry.tipo === "entrada" ? "+" : "-"}R$ ${Number(latestEntry.valor).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </LinearGradient>
+            ) : (
+              <View style={[styles.recentCard, styles.recentCardEmpty]}>
+                <Text style={styles.recentEmptyText}>
+                  Adicione uma entrada para visualizar aqui.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Botões */}
+        <View style={styles.buttonsContainer}>
+          <View style={styles.buttonWrapper}>
+            <GradientButton
+              title="Nova Entrada"
+              onPress={() => setShowEntryModal(true)}
+              icon={<NovaEntradaIcon width={22} height={22} />}
+              containerStyle={styles.actionButtonContainer}
+              buttonStyle={styles.actionButtonInner}
+              textStyle={styles.actionButtonText}
+            />
+          </View>
+          <View style={styles.buttonWrapper}>
+            <GradientButton
+              title="Nova Saída"
+              onPress={() => setShowEntryModalSaida(true)}
+              icon={<NovaCategoriaIcon width={22} height={22} />}
+              containerStyle={styles.actionButtonContainer}
+              buttonStyle={styles.actionButtonInner}
+              textStyle={styles.actionButtonText}
+            />
+          </View>
+
         </View>
 
         {/* Categorias */}
         <View style={styles.categoriesSection}>
-          <View style={styles.categoriesHeader}>
-            <View>
-              <Text style={styles.categoriesTitle}>Categorias</Text>
-              <Text style={styles.categoriesSubtitle}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderLeft}>
+              <Text style={styles.sectionTitle}>Categorias</Text>
+              <Text style={styles.sectionSubtitle}>
                 Cadastre, edite, e confira categorias
               </Text>
             </View>
@@ -585,7 +766,7 @@ const Acessor: React.FC = () => {
               activeOpacity={0.8}
             >
               <Text style={styles.verMaisText}>Ver mais</Text>
-              <Icon name="chevron-right" size={20} color="#A7A3AE" />
+              <Icon name="chevron-right" size={18} color="#A09CAB" />
             </TouchableOpacity>
           </View>
 
@@ -606,87 +787,6 @@ const Acessor: React.FC = () => {
               onPress={() => navigation.navigate("EmConstrucao")}
             />
           </View>
-        </View>
-
-        {/* Entrada/Saída mais recente */}
-        <View style={styles.recentSection}>
-          <View style={styles.recentHeader}>
-            <Text style={styles.recentTitle}>Entrada mais recente</Text>
-            <TouchableOpacity
-              style={styles.verHistoricoButton}
-              onPress={() => navigation.navigate("HistoryList")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.verHistoricoText}>Ver Histórico</Text>
-              <Icon name="chevron-right" size={16} color="#A7A3AE" />
-            </TouchableOpacity>
-          </View>
-
-          {latestEntry ? (
-            <TouchableOpacity style={styles.recentCard} activeOpacity={1}>
-              <View style={styles.recentCardLeft}>
-                <View style={styles.recentIconCircle}>
-                  <Icon
-                    name={latestEntry.categoria?.icone || "wallet"}
-                    size={24}
-                    color="#D783D8"
-                  />
-                </View>
-                <View style={styles.recentInfo}>
-                  <Text style={styles.recentCategory}>
-                    {latestEntry.categoria?.nome || "Sem categoria"}
-                  </Text>
-                  <Text style={styles.recentDescription}>
-                    {latestEntry.descricao}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.recentCardRight}>
-                <Text style={styles.recentDate}>
-                  {latestEntry.data.toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </Text>
-                <Text style={[
-                  styles.recentAmount,
-                  latestEntry.tipo === 'entrada' && styles.recentAmountEntrada
-                ]}>
-                  {`${latestEntry.tipo === 'entrada' ? '+' : '-'}R$ ${Number(latestEntry.valor).toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={[styles.recentCard, styles.recentCardEmpty]}>
-              <Text style={styles.recentEmptyText}>
-                Adicione uma entrada para visualizar aqui.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Botões */}
-        <View style={styles.buttonsContainer}>
-          <View style={styles.buttonWrapper}>
-            <GradientButton
-              title="Nova Entrada"
-              onPress={() => setShowEntryModal(true)}
-              icon={<NovaEntradaIcon width={24} height={24} />}
-            />
-          </View>
-          <View style={styles.buttonWrapper}>
-            <GradientButton
-              title="Nova Saída"
-              onPress={() => setShowEntryModalSaida(true)}
-              icon={<NovaCategoriaIcon width={24} height={24} />}
-            />
-          </View>
-
         </View>
       </ScrollView>
 
@@ -853,30 +953,38 @@ const Acessor: React.FC = () => {
             )}
           </View>
 
-          <TouchableOpacity
-            onPress={handleSaveEntry}
-            disabled={!entryValue || !entryDescription || !selectedCategoryId || isSaving}
-            activeOpacity={0.85}
+          <LinearGradient
+            colors={[...HORIZONTAL_GRADIENT_COLORS]}
+            locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={[
-              styles.modalSaveButton,
+              styles.modalSaveButtonBorder,
               (!entryValue || !entryDescription || !selectedCategoryId || isSaving) &&
               styles.modalSaveButtonDisabled,
             ]}
           >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text
-                style={[
-                  styles.modalSaveButtonText,
-                  (!entryValue || !entryDescription || !selectedCategoryId) &&
-                  styles.modalSaveButtonTextDisabled,
-                ]}
-              >
-                Salvar
-              </Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSaveEntry}
+              disabled={!entryValue || !entryDescription || !selectedCategoryId || isSaving}
+              activeOpacity={0.85}
+              style={styles.modalSaveButton}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text
+                  style={[
+                    styles.modalSaveButtonText,
+                    (!entryValue || !entryDescription || !selectedCategoryId) &&
+                    styles.modalSaveButtonTextDisabled,
+                  ]}
+                >
+                  Salvar
+                </Text>
+              )}
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       </Modal>
 
@@ -1042,30 +1150,38 @@ const Acessor: React.FC = () => {
             )}
           </View>
 
-          <TouchableOpacity
-            onPress={handleSaveSaida}
-            disabled={!saidaValue || !saidaDescription || !selectedCategoryIdSaida || isSaving}
-            activeOpacity={0.85}
+          <LinearGradient
+            colors={[...HORIZONTAL_GRADIENT_COLORS]}
+            locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={[
-              styles.modalSaveButton,
+              styles.modalSaveButtonBorder,
               (!saidaValue || !saidaDescription || !selectedCategoryIdSaida || isSaving) &&
               styles.modalSaveButtonDisabled,
             ]}
           >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text
-                style={[
-                  styles.modalSaveButtonText,
-                  (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
-                  styles.modalSaveButtonTextDisabled,
-                ]}
-              >
-                Salvar
-              </Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSaveSaida}
+              disabled={!saidaValue || !saidaDescription || !selectedCategoryIdSaida || isSaving}
+              activeOpacity={0.85}
+              style={styles.modalSaveButton}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text
+                  style={[
+                    styles.modalSaveButtonText,
+                    (!saidaValue || !saidaDescription || !selectedCategoryIdSaida) &&
+                    styles.modalSaveButtonTextDisabled,
+                  ]}
+                >
+                  Salvar
+                </Text>
+              )}
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       </Modal>
 
@@ -1184,24 +1300,32 @@ const Acessor: React.FC = () => {
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={handleSaveCategory}
-            disabled={!isFormValid}
-            activeOpacity={0.85}
+          <LinearGradient
+            colors={[...HORIZONTAL_GRADIENT_COLORS]}
+            locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={[
-              styles.modalSaveButton,
+              styles.modalSaveButtonBorder,
               !isFormValid && styles.modalSaveButtonDisabled,
             ]}
           >
-            <Text
-              style={[
-                styles.modalSaveButtonText,
-                !isFormValid && styles.modalSaveButtonTextDisabled,
-              ]}
+            <TouchableOpacity
+              onPress={handleSaveCategory}
+              disabled={!isFormValid}
+              activeOpacity={0.85}
+              style={styles.modalSaveButton}
             >
-              Salvar
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.modalSaveButtonText,
+                  !isFormValid && styles.modalSaveButtonTextDisabled,
+                ]}
+              >
+                Salvar
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       </Modal>
 
@@ -1261,14 +1385,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  titleContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
   title: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginTop: 60,
-    marginBottom: 40,
-
+    lineHeight: 28,
+    flexWrap: "wrap",
   },
+
+  // Loading
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1277,60 +1415,112 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: "#A7A3AE",
+    color: "#A09CAB",
     fontSize: 14,
   },
+
+  // Section headers (compartilhado)
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#A09CAB",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 16,
+  },
+  sectionHeaderLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+
+  // Period selector
   periodSelector: {
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: 20,
+  },
+  periodButtonOuter: {
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  periodButtonGradient: {
+    borderRadius: 24,
+    padding: 1,
+  },
+  periodButtonInnerActive: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 23,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  periodButtonTextActive: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   periodButtonInline: {
     paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#2C2A35",
+    borderColor: "rgba(255,255,255,0.10)",
     backgroundColor: "#14121B",
-  },
-  periodButtonInlineActive: {
-    borderColor: "#D783D8",
   },
   periodButtonInlineText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: "#A09CAB",
+    fontSize: 15,
     fontWeight: "600",
   },
-  chartContainer: {
-    marginBottom: 40,
-    overflow: "visible",
+
+  // Chart card glassmorphic
+  chartCard: {
+    marginBottom: 24,
+    overflow: "hidden",
     borderRadius: 24,
-    backgroundColor: "#14121B",
-    position: "relative",
-  },
-  chartGradientBg: {
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingTop: 16,
+    paddingBottom: 8,
     paddingHorizontal: 0,
+    backgroundColor: "#000000",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
   },
   chart: {
-    marginVertical: 8,
+    marginVertical: 4,
     borderRadius: 16,
+    backgroundColor: "transparent",
   },
+
+  // Values
   valuesContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 60,
-    gap: 16,
+    marginBottom: 36,
+    gap: 14,
+  },
+  valueBorderGradient: {
+    flex: 1,
+    borderRadius: 22,
+    padding: 1,
+    overflow: "hidden",
   },
   valueBoxContainer: {
     flex: 1,
-    backgroundColor: "#14121B",
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderRadius: 21,
+    padding: 18,
   },
   valueBox: {
     flex: 1,
@@ -1338,20 +1528,20 @@ const styles = StyleSheet.create({
   valueHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   valueLabelEntrada: {
-    fontSize: 16,
-    color: "#569158",
-    fontWeight: "500",
+    fontSize: 14,
+    color: "#6BCB77",
+    fontWeight: "600",
   },
   valueLabelSaida: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#FF6B9D",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   valueAmount: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#6BCB77",
   },
@@ -1359,42 +1549,27 @@ const styles = StyleSheet.create({
     color: "#FF6B9D",
   },
   currencySymbol: {
-    fontSize: 20,
+    fontSize: 16,
     color: "#EAEAE5",
   },
   cents: {
-    fontSize: 20,
+    fontSize: 18,
     color: "#EAEAE5",
   },
 
   // Categorias Section
   categoriesSection: {
-    marginBottom: 40,
-  },
-  categoriesHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  categoriesTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  categoriesSubtitle: {
-    fontSize: 14,
-    color: "#A7A3AE",
+    marginBottom: 140,
   },
   verMaisButton: {
     flexDirection: "row",
     alignItems: "center",
   },
   verMaisText: {
-    fontSize: 14,
-    color: "#A7A3AE",
-    marginRight: 4,
+    fontSize: 13,
+    color: "#A09CAB",
+    fontWeight: "500",
+    marginRight: 2,
   },
   categoriesCards: {
     flexDirection: "row",
@@ -1404,41 +1579,34 @@ const styles = StyleSheet.create({
 
   // Recent Transaction Section
   recentSection: {
-    marginBottom: 60,
+    marginBottom: 36,
   },
-  recentHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+  recentCardWrapper: {
+    borderRadius: 24,
+    padding: 16,
+    overflow: "hidden",
+    backgroundColor: "#000000",
   },
-  recentTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  verHistoricoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  verHistoricoText: {
-    fontSize: 12,
-    color: "#A7A3AE",
-    marginRight: 2,
+  recentCardBorder: {
+    borderRadius: 18,
+    padding: 1,
+    overflow: "hidden",
   },
   recentCard: {
-    backgroundColor: "#14121B",
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderRadius: 17,
+    padding: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   recentCardEmpty: {
     justifyContent: "center",
+    borderRadius: 18,
+    padding: 18,
   },
   recentEmptyText: {
-    color: "#A7A3AE",
+    color: "#A09CAB",
     fontSize: 14,
     textAlign: "center",
     width: "100%",
@@ -1449,9 +1617,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recentIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#201F2A",
     justifyContent: "center",
     alignItems: "center",
@@ -1462,20 +1630,21 @@ const styles = StyleSheet.create({
   },
   recentCategory: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
     marginBottom: 4,
   },
   recentDescription: {
     fontSize: 12,
-    color: "#A7A3AE",
+    color: "#A09CAB",
   },
   recentCardRight: {
     alignItems: "flex-end",
+    marginLeft: 12,
   },
   recentDate: {
     fontSize: 12,
-    color: "#A7A3AE",
+    color: "#A09CAB",
     marginBottom: 4,
   },
   recentAmount: {
@@ -1491,10 +1660,21 @@ const styles = StyleSheet.create({
   buttonsContainer: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 160,
+    marginBottom: 36,
   },
   buttonWrapper: {
     flex: 1,
+  },
+  actionButtonContainer: {
+    width: "100%",
+  },
+  actionButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+  },
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
 
   // Modal Styles
@@ -1513,13 +1693,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2C2A35",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
   },
   textInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: "#FFFFFF",
   },
   typeContainer: {
@@ -1542,18 +1725,18 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: "#2C2A35",
-    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
   },
   typeButtonActive: {
-    backgroundColor: "#2C2A35",
+    backgroundColor: "#26233A",
     borderColor: "#D783D8",
   },
   typeButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#A7A3AE",
+    color: "#A09CAB",
   },
   typeButtonTextActive: {
     color: "#FFFFFF",
@@ -1568,7 +1751,7 @@ const styles = StyleSheet.create({
   },
   iconsSubtitle: {
     fontSize: 14,
-    color: "#A7A3AE",
+    color: "#A09CAB",
   },
   iconsGrid: {
     flexDirection: "row",
@@ -1594,7 +1777,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#2C2A35",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1615,20 +1800,15 @@ const styles = StyleSheet.create({
   },
   categorySelectButton: {
     marginTop: 12,
-    borderRadius: 32,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    backgroundColor: "#131019",
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 12,
   },
   categorySelectButtonActive: {
     borderColor: "#D783D8",
@@ -1680,30 +1860,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
   },
-  modalSaveButton: {
+  modalSaveButtonBorder: {
     width: "100%",
     borderRadius: 32,
-    paddingVertical: 18,
-    backgroundColor: "#131019",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.06)",
+    padding: 1,
+    marginTop: 12,
+    overflow: "hidden",
+  },
+  modalSaveButton: {
+    width: "100%",
+    borderRadius: 31,
+    paddingVertical: 17,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 18,
   },
   modalSaveButtonDisabled: {
     opacity: 0.45,
   },
   modalSaveButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   },
   modalSaveButtonTextDisabled: {
     color: "#8C8895",
@@ -1711,13 +1890,15 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 52,
     height: 52,
-    borderRadius: 12,
-    backgroundColor: "#2C2A35",
+    borderRadius: 14,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
     justifyContent: "center",
     alignItems: "center",
   },
   iconButtonSelected: {
-    backgroundColor: "#3D3A48",
+    backgroundColor: "#26233A",
     borderWidth: 2,
     borderColor: "#D783D8",
   },
@@ -1734,7 +1915,7 @@ const styles = StyleSheet.create({
   },
   successMessage: {
     fontSize: 16,
-    color: "#A7A3AE",
+    color: "#A09CAB",
     textAlign: "center",
   },
 });

@@ -4,15 +4,22 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import HistoryFilters, { FilterOptions, Category } from "./HistoryFilters";
+import { CircularIconButton } from "../../components/common";
+import {
+  BACKGROUND_GRADIENT_COLORS,
+  BACKGROUND_GRADIENT_LOCATIONS,
+  SHADOW_OVERLAY_COLORS,
+  BUTTON_INNER_BACKGROUND,
+} from "../../config/colors";
 
 // Clean Architecture imports
 import { Container } from "../../infrastructure/di/Container";
@@ -167,23 +174,18 @@ const HistoryList: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            activeOpacity={0.85}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          <CircularIconButton onPress={() => navigation.goBack()} size={48}>
+            <Icon name="arrow-left" size={22} color="#FFFFFF" />
+          </CircularIconButton>
 
           <Text style={styles.headerTitle}>Histórico</Text>
 
-          <TouchableOpacity
-            style={[styles.headerButton, hasActiveFilters && styles.headerButtonActive]}
-            activeOpacity={0.85}
-            onPress={() => setShowFiltersModal(true)}
-          >
-            <Icon name="tune-vertical" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={hasActiveFilters && styles.filterDot}>
+            <CircularIconButton onPress={() => setShowFiltersModal(true)} size={48}>
+              <Icon name="tune-vertical" size={20} color="#FFFFFF" />
+            </CircularIconButton>
+            {hasActiveFilters && <View style={styles.filterIndicator} />}
+          </View>
         </View>
 
         {isLoading ? (
@@ -193,11 +195,33 @@ const HistoryList: React.FC = () => {
           </View>
         ) : filteredEntries.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {hasActiveFilters
-                ? "Nenhum lançamento encontrado com os filtros aplicados."
-                : "Você ainda não possui lançamentos."}
-            </Text>
+            <View style={styles.emptyCard}>
+              <LinearGradient
+                colors={BACKGROUND_GRADIENT_COLORS}
+                locations={BACKGROUND_GRADIENT_LOCATIONS}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <LinearGradient
+                colors={SHADOW_OVERLAY_COLORS}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.5, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <LinearGradient
+                colors={SHADOW_OVERLAY_COLORS}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0.5, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Icon name="file-search-outline" size={36} color="#A09CAB" />
+              <Text style={styles.emptyText}>
+                {hasActiveFilters
+                  ? "Nenhum lançamento encontrado com os filtros aplicados."
+                  : "Você ainda não possui lançamentos."}
+              </Text>
+            </View>
           </View>
         ) : (
           <ScrollView
@@ -206,44 +230,55 @@ const HistoryList: React.FC = () => {
             showsVerticalScrollIndicator={false}
           >
             {filteredEntries.map((entry) => (
-              <View key={entry.id} style={styles.card}>
-                <View style={styles.cardLeft}>
-                  <View style={styles.iconCircle}>
-                    <Icon
-                      name={entry.categoria?.icone || "wallet"}
-                      size={28}
-                      color="#D783D8"
-                    />
+              <LinearGradient
+                key={entry.id}
+                colors={["#4A4855", "#2A2835", "#1A1825", "#2A2835", "#4A4855"]}
+                locations={[0, 0.25, 0.5, 0.75, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.cardBorder}
+              >
+                <View style={styles.card}>
+                  <View style={styles.cardLeft}>
+                    <View style={styles.iconCircle}>
+                      <Icon
+                        name={entry.categoria?.icone || "wallet"}
+                        size={26}
+                        color="#D783D8"
+                      />
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {entry.categoria?.nome || "Sem categoria"}
+                      </Text>
+                      <Text style={styles.cardSubtitle} numberOfLines={1}>
+                        {entry.descricao}
+                      </Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.cardTitle}>
-                      {entry.categoria?.nome || "Sem categoria"}
-                    </Text>
-                    <Text style={styles.cardSubtitle} numberOfLines={1}>
-                      {entry.descricao}
-                    </Text>
-                  </View>
-                </View>
 
-                <View style={styles.cardRight}>
-                  <Text style={styles.cardDate}>
-                    {entry.data.toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </Text>
-                  <Text style={[
-                    styles.cardAmount,
-                    entry.tipo === 'entrada' && styles.cardAmountEntrada
-                  ]}>
-                    {`${entry.tipo === 'entrada' ? '+' : '-'}R$ ${Number(entry.valor).toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`}
-                  </Text>
+                  <View style={styles.cardRight}>
+                    <Text style={styles.cardDate}>
+                      {entry.data.toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cardAmount,
+                        entry.tipo === "entrada" && styles.cardAmountEntrada,
+                      ]}
+                    >
+                      {`${entry.tipo === "entrada" ? "+" : "-"}R$ ${Number(entry.valor).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </LinearGradient>
             ))}
           </ScrollView>
         )}
@@ -263,42 +298,38 @@ const HistoryList: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#050307",
+    backgroundColor: "#000",
   },
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 32,
-  },
-  headerButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#14121B",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 12,
-  },
-  headerButtonActive: {
-    borderColor: "#D783D8",
+    marginBottom: 28,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: "800",
+    fontSize: 24,
+    fontWeight: "bold",
     color: "#FFFFFF",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  filterDot: {
+    position: "relative",
+  },
+  filterIndicator: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#D783D8",
+    borderWidth: 2,
+    borderColor: "#000",
   },
   loadingContainer: {
     flex: 1,
@@ -307,64 +338,70 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    color: "#A7A3AE",
-    fontSize: 16,
+    color: "#A09CAB",
+    fontSize: 15,
   },
   list: {
     flex: 1,
   },
   listContent: {
-    gap: 16,
+    gap: 14,
     paddingBottom: 40,
+  },
+  cardBorder: {
+    borderRadius: 22,
+    padding: 1,
+    overflow: "hidden",
   },
   card: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#14121B",
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+    borderRadius: 21,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   cardLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 14,
+    flex: 1,
+  },
+  cardInfo: {
     flex: 1,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#201F2A",
     justifyContent: "center",
     alignItems: "center",
   },
   cardTitle: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     marginBottom: 4,
   },
   cardSubtitle: {
-    color: "#A7A3AE",
-    fontSize: 13,
-    maxWidth: 180,
+    color: "#A09CAB",
+    fontSize: 12,
   },
   cardRight: {
     alignItems: "flex-end",
     gap: 6,
+    marginLeft: 12,
   },
   cardDate: {
-    color: "#FFFFFF",
-    fontSize: 13,
+    color: "#A09CAB",
+    fontSize: 12,
   },
   cardAmount: {
     color: "#FF6B6B",
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   cardAmountEntrada: {
     color: "#6BCB77",
@@ -374,8 +411,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  emptyCard: {
+    width: "100%",
+    minHeight: 180,
+    borderRadius: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    backgroundColor: "#000",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
   emptyText: {
-    color: "#A7A3AE",
+    color: "#A09CAB",
     fontSize: 14,
     textAlign: "center",
   },

@@ -85,7 +85,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoNotifications (55.0.20):
+  - ExpoNotifications (55.0.21):
     - ExpoModulesCore
   - ExpoStoreReview (9.0.9):
     - ExpoModulesCore
@@ -2471,7 +2471,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: 55f75eca6499bb9e4231ebad6f3e9cb8f99c0296
   ExpoLinearGradient: 809102bdb979f590083af49f7fa4805cd931bd58
   ExpoModulesCore: 9e6a5514828e7dd5ded9e99d33557be2d284e660
-  ExpoNotifications: 2e854c961b10f4a642d5159422f73f8561542ba7
+  ExpoNotifications: bfecef3258a7c8fdde4d999181adf2e530e44b73
   ExpoStoreReview: 32bb43b6fae9c8db3e33cad69996dff3785eef5f
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   GoogleSignIn: fcee2257188d5eda57a5e2b6a715550ffff9206d
@@ -2561,6 +2561,6 @@ SPEC CHECKSUMS:
   RNWorklets: bf1b71c9d21741508451cc31240eba37366831d9
   Yoga: 5934998fbeaef7845dbf698f698518695ab4cd1a
 
-PODFILE CHECKSUM: 63b4a63d88c32843aa2d0346b2aa155d70f1aa6c
+PODFILE CHECKSUM: f35e490d44165361d4f595d296c2874b23cbd409
 
 COCOAPODS: 1.16.2
