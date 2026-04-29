@@ -27,6 +27,7 @@ import {
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
 import { useAuthStore } from "../../storage/authStore";
+import { Container } from "../../infrastructure/di/Container";
 
 // Assets
 const IconBook = require("../../assets/icon-book.png");
@@ -141,6 +142,8 @@ const Cursos = () => {
   const user = authStore.user;
   const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [statsReady, setStatsReady] = useState<boolean>(false);
+  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
@@ -159,6 +162,7 @@ const Cursos = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      await loadDashboard();
 
       // Usuário já vem do authStore, não precisa mais buscar
 
@@ -182,6 +186,18 @@ const Cursos = () => {
       setError("Erro ao carregar lições. Tente novamente.");
     } finally {
       setLoading(false);
+      setStatsReady(true);
+    }
+  };
+
+  const loadDashboard = async () => {
+    try {
+      const container = Container.getInstance();
+      const useCase = container.getLoadDashboardUseCase();
+      const result = await useCase.execute();
+      setDashboard({ energy: result.energy, streak: result.streak });
+    } catch (error: any) {
+      console.log("LoadDashboard:", error?.message ?? error);
     }
   };
 
@@ -316,7 +332,13 @@ const Cursos = () => {
             <BackIconButton onPress={() => navigation.goBack()} size={42} />
             <Text style={styles.headerTitle}>Cursos</Text>
           </View>
-          <StatsDisplay energy={10} streak="3d" />
+          <StatsDisplay 
+            loading={!statsReady}
+            energy={statsReady && dashboard ? dashboard.energy : undefined}
+            streak={statsReady && dashboard ? `${dashboard.streak}d` : undefined}
+            // Quando statsReady=true mas dashboard=null (erro API), 
+            // StatsDisplay mostra 0 energy e "0d" streak como fallback explícito
+          />
         </View>
 
         <View style={styles.headerBottom}>
