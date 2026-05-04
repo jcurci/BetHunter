@@ -19,7 +19,9 @@ import {
 } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 import { useAuthStore } from "../../storage/authStore";
+import { useSubscriptionStore } from "../../storage/subscriptionStore";
 import { AuthUser } from "../../domain/entities/User";
+import { logoutUser } from "../../services/revenueCat";
 
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -76,6 +78,24 @@ const MinhaConta: React.FC = () => {
   const getUserHandle = (name: string | undefined): string => {
     if (!name) return "usuario";
     return name.toLowerCase().replace(/\s+/g, "");
+  };
+
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await logoutUser();
+    } catch (e) {
+      console.warn("Erro ao deslogar do RevenueCat:", e);
+    }
+
+    try {
+      await useSubscriptionStore.getState().refresh();
+    } catch {}
+
+    try {
+      await authStore.logout();
+    } finally {
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+    }
   };
 
   return (
@@ -195,9 +215,7 @@ const MinhaConta: React.FC = () => {
               <MenuItem
                 icon="log-out"
                 label="Sair"
-                onPress={() => {
-                  // TODO: Implementar logout
-                }}
+                onPress={handleLogout}
                 iconColor="#FF4444"
                 textColor="#FF4444"
                 showSeparator={false}

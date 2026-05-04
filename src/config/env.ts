@@ -55,10 +55,25 @@ function resolveGoogleAndroidClientId(): string {
   return '';
 }
 
+function resolveRevenueCatApiKey(): string {
+  const value = extra.REVENUECAT_API_KEY;
+  if (value && typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (__DEV__) {
+    console.warn(
+      '[ENV] EXPO_PUBLIC_REVENUECAT_API_KEY não definida. RevenueCat não funcionará.',
+    );
+  }
+  return '';
+}
+
 export const ENV = {
   API_BASE_URL: resolveApiBaseUrl(),
   GOOGLE_WEB_CLIENT_ID: resolveGoogleWebClientId(),
   GOOGLE_IOS_CLIENT_ID: resolveGoogleIosClientId(),
   GOOGLE_ANDROID_CLIENT_ID: resolveGoogleAndroidClientId(),
+  REVENUECAT_API_KEY: resolveRevenueCatApiKey(),
   TOKEN_KEY: '@BetHunter:token',
 } as const;

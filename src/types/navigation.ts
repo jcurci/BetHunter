@@ -37,6 +37,7 @@ export type RootStackParamList = {
   MinhaConta: undefined;
   DetalhesPessoais: undefined;
   CustomerCenter: undefined;
+  Paywall: undefined;
 };
 
 export type NavigationProp = RNNavigationProp<RootStackParamList>;

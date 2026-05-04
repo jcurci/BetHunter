@@ -26,10 +26,13 @@ import {
 } from "../../config/colors";
 import { RadialGradientBackground } from "../../components";
 import { useAuthStore } from "../../storage/authStore";
+import { useSubscriptionStore } from "../../storage/subscriptionStore";
 import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { ENV } from "../../config/env";
+import { identifyUser } from "../../services/revenueCat";
+import { isOnboardingFlowCompleted } from "../OnboardingFlow/onboardingStorage";
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -119,6 +122,21 @@ const Login: React.FC = () => {
     });
   }, []);
 
+  const resolvePostLoginRoute = async (userId: string): Promise<"OnboardingFlow" | "Home" | "Paywall"> => {
+    const onboardingDone = await isOnboardingFlowCompleted();
+    if (!onboardingDone) return "OnboardingFlow";
+
+    try {
+      await identifyUser(userId);
+    } catch (e) {
+      console.warn("Failed to identify user in RevenueCat:", e);
+    }
+
+    await useSubscriptionStore.getState().refresh();
+    const { isPremium } = useSubscriptionStore.getState();
+    return isPremium ? "Home" : "Paywall";
+  };
+
   const handleGoogleLogin = async (): Promise<void> => {
     setGoogleLoading(true);
     try {
@@ -140,6 +158,8 @@ const Login: React.FC = () => {
       const loginWithGoogleUseCase = container.getLoginWithGoogleUseCase();
       const session = await loginWithGoogleUseCase.execute(idToken);
 
+      let userId: string | undefined;
+
       if (session.user && session.user.id) {
         const userMapeado = {
           id: session.user.id,
@@ -149,11 +169,16 @@ const Login: React.FC = () => {
           betcoins: 0,
         };
         await authStore.login(session.accessToken, userMapeado);
+        userId = session.user.id;
       } else {
         await authStore.setToken(session.accessToken);
       }
 
-      navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });
+      const route = userId
+        ? await resolvePostLoginRoute(userId)
+        : "OnboardingFlow";
+
+      navigation.reset({ index: 0, routes: [{ name: route }] });
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         return;
@@ -180,6 +205,8 @@ const Login: React.FC = () => {
       const loginUseCase = container.getLoginUseCase();
       const session = await loginUseCase.execute(email, password);
 
+      let userId: string | undefined;
+
       if (session.user && session.user.id) {
         const userMapeado = {
           id: session.user.id,
@@ -189,11 +216,16 @@ const Login: React.FC = () => {
           betcoins: 0,
         };
         await authStore.login(session.accessToken, userMapeado);
+        userId = session.user.id;
       } else {
         await authStore.setToken(session.accessToken);
       }
 
-      navigation.navigate("Home");
+      const route = userId
+        ? await resolvePostLoginRoute(userId)
+        : "OnboardingFlow";
+
+      navigation.reset({ index: 0, routes: [{ name: route }] });
     } catch (error: unknown) {
       console.error("Erro ao fazer login:", error);
       if (error instanceof ValidationError) {

@@ -5,8 +5,9 @@ import Purchases, {
   CustomerInfo,
   LOG_LEVEL,
 } from 'react-native-purchases';
+import { ENV } from '../config/env';
 
-const API_KEY = 'test_XRnfEBeCyBAiAckEbLAdYxjECkJ';
+const API_KEY = ENV.REVENUECAT_API_KEY;
 const ENTITLEMENT_ID = 'Bethunter Premium';
 
 let isConfigured = false;

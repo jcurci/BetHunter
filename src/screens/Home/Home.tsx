@@ -41,6 +41,7 @@ import CursosIcon from "../../assets/home/cursos.svg";
 
 import { Container } from "../../infrastructure/di/Container";
 import { useAuthStore } from "../../storage/authStore";
+import { useDashboardStore } from "../../storage/dashboardStore";
 import { NavigationProp } from "../../types/navigation";
 
 // Constants
@@ -50,21 +51,32 @@ const { BetBlocker, BetBlocking } = NativeModules;
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((s) => s.user);
+  
+  // Dashboard store
+  const { 
+    dashboard, 
+    betStreak, 
+    canCheckIn, 
+    isLoading, 
+    loadAll, 
+    updateAfterCheckIn 
+  } = useDashboardStore();
+  
+  // Modal states
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
-  const [betStreak, setBetStreak] = useState<number>(0);
-  const [canCheckIn, setCanCheckIn] = useState<boolean>(false);
   const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
   const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
-  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
-  const [statsReady, setStatsReady] = useState<boolean>(false);
+  
+  // Calcula statsReady baseado no store
+  const statsReady = !isLoading && dashboard !== null;
   
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadAll();
+  }, [loadAll]);
 
   // Auto-close reset confirm modal after 3 seconds
   useEffect(() => {
@@ -86,37 +98,6 @@ const Home: React.FC = () => {
     }
   }, [showBlockSuccessModal]);
 
-  const loadData = async () => {
-    try {
-      await loadBetStreak();
-      await loadDashboard();
-    } finally {
-      setStatsReady(true);
-    }
-  };
-
-  const loadDashboard = async () => {
-    try {
-      const container = Container.getInstance();
-      const useCase = container.getLoadDashboardUseCase();
-      const result = await useCase.execute();
-      setDashboard({ energy: result.energy, streak: result.streak });
-    } catch (error: any) {
-      console.log("LoadDashboard:", error?.message ?? error);
-    }
-  };
-
-  const loadBetStreak = async () => {
-    try {
-      const container = Container.getInstance();
-      const useCase = container.getGetBetStreakStatusUseCase();
-      const result = await useCase.execute();
-      setBetStreak(result.betStreak);
-      setCanCheckIn(result.canCheckIn);
-    } catch (error: any) {
-      console.log("BetCheckIn status:", error?.message ?? error);
-    }
-  };
 
   const handleDaysPress = () => {
     if (canCheckIn) {
@@ -129,9 +110,9 @@ const Home: React.FC = () => {
   const handleCheckIn = async () => {
     try {
       const container = Container.getInstance();
-      await container.getBetCheckInUseCase().execute();
+      const result = await container.getBetCheckInUseCase().execute();
       setShowCheckInModal(false);
-      await loadBetStreak();
+      updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
     }
@@ -447,7 +428,7 @@ const Home: React.FC = () => {
                 await container.getResetBetStreakUseCase().execute();
                 setShowResetModal(false);
                 setShowResetConfirmModal(true);
-                await loadBetStreak();
+                await loadAll();
               } catch (error: any) {
                 console.log("ResetBetStreak:", error?.message ?? error);
               }
@@ -517,8 +498,7 @@ const Home: React.FC = () => {
                 await container.getResetBetStreakUseCase().execute();
                 setShowCheckInModal(false);
                 setShowResetConfirmModal(true);
-                await loadBetStreak();
-                await loadDashboard();
+                await loadAll();
               } catch (error: any) {
                 console.log("BetCheckIn apostou (reset):", error?.message ?? error);
                 setShowCheckInModal(false);

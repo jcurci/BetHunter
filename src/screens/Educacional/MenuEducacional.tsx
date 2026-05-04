@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import { Container } from "../../infrastructure/di/Container";
 import { useAuthStore } from "../../storage/authStore";
+import { useDashboardStore } from "../../storage/dashboardStore";
 
 // Assets
 const bookIcon = require("../../assets/icon-book.png");
@@ -29,27 +30,18 @@ import {
 } from "../../config/colors";
 
 const MenuEducacional: React.FC = () => {
-  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
-  const [statsReady, setStatsReady] = useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((state) => state.user);
+  
+  // Dashboard store
+  const { dashboard, isLoading, loadAll } = useDashboardStore();
+  
+  // Calcula statsReady baseado no store
+  const statsReady = !isLoading && dashboard !== null;
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
-    try {
-      const container = Container.getInstance();
-      const loadDashboardUseCase = container.getLoadDashboardUseCase();
-      const result = await loadDashboardUseCase.execute();
-      setDashboard({ energy: result.energy, streak: result.streak });
-    } catch (error: any) {
-      console.log("ℹ️ LoadDashboard:", error.message);
-    } finally {
-      setStatsReady(true);
-    }
-  };
+    loadAll();
+  }, [loadAll]);
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { initRevenueCat } from "./src/services/revenueCat";
+import { initRevenueCat, identifyUser } from "./src/services/revenueCat";
 import {
   useSubscriptionStore,
   setupCustomerInfoListener,
@@ -41,6 +41,7 @@ import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
 import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
 import CustomerCenter from "./src/screens/CustomerCenter/CustomerCenter";
+import Paywall from "./src/screens/Paywall/Paywall";
 import { RootStackParamList } from "./src/types/navigation";
 import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardingStorage";
@@ -50,33 +51,69 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const isPremium = useSubscriptionStore((s) => s.isPremium);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const prevIsPremiumRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     const init = async () => {
-      // TODO: descomentar após testes — lógica real de rota inicial
-      // const onboardingDone = await isOnboardingFlowCompleted();
-      // if (!onboardingDone) {
-      //   setInitialRoute('OnboardingFlow');
-      //   setIsReady(true);
-      //   return;
-      // }
-      // await useAuthStore.getState().initialize();
-      // const { isAuthenticated } = useAuthStore.getState();
-      // setInitialRoute(isAuthenticated ? 'Home' : 'Login');
+      await initRevenueCat();
 
-      setInitialRoute('Login');
+      const onboardingDone = await isOnboardingFlowCompleted();
+      if (!onboardingDone) {
+        setInitialRoute('OnboardingFlow');
+        setIsReady(true);
+        return;
+      }
+
+      await useAuthStore.getState().initialize();
+      const { isAuthenticated: authed, user } = useAuthStore.getState();
+
+      if (!authed) {
+        setInitialRoute('Login');
+        setIsReady(true);
+        return;
+      }
+
+      if (user?.id) {
+        try {
+          await identifyUser(user.id);
+        } catch (e) {
+          console.warn('Failed to identify user in RevenueCat:', e);
+        }
+      }
+
+      await useSubscriptionStore.getState().refresh();
+      const { isPremium: premium } = useSubscriptionStore.getState();
+
+      setInitialRoute(premium ? 'Home' : 'Paywall');
       setIsReady(true);
     };
     init();
   }, []);
 
   useEffect(() => {
-    initRevenueCat().then(() => {
-      useSubscriptionStore.getState().refresh();
-    });
     const removeListener = setupCustomerInfoListener();
     return removeListener;
   }, []);
+
+  // Redirect to Paywall when subscription expires while using the app
+  useEffect(() => {
+    if (prevIsPremiumRef.current === null) {
+      prevIsPremiumRef.current = isPremium;
+      return;
+    }
+
+    if (prevIsPremiumRef.current && !isPremium && isAuthenticated) {
+      navigationRef.current?.reset({
+        index: 0,
+        routes: [{ name: 'Paywall' }],
+      });
+    }
+
+    prevIsPremiumRef.current = isPremium;
+  }, [isPremium, isAuthenticated]);
 
   if (!isReady) {
     return (
@@ -87,7 +124,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
       <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen
@@ -326,6 +363,14 @@ const App: React.FC = () => {
           component={CustomerCenter}
           options={{
             headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="Paywall"
+          component={Paywall}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
           }}
         />
       </Stack.Navigator>

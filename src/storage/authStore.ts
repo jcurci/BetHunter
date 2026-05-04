@@ -86,6 +86,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user: null,
         isAuthenticated: false,
       });
+
+      // Limpa cache do dashboard quando usuário faz logout
+      try {
+        const { useDashboardStore } = await import('./dashboardStore');
+        useDashboardStore.getState().invalidate();
+        console.log('✅ [AuthStore] Cache do dashboard invalidado no logout');
+      } catch (error) {
+        console.error('⚠️ [AuthStore] Erro ao invalidar cache do dashboard:', error);
+      }
     } catch (error) {
       console.error('❌ [AuthStore] Erro ao fazer logout:', error);
       throw error;
