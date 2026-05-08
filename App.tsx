@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initRevenueCat, identifyUser } from "./src/services/revenueCat";
 import {
   useSubscriptionStore,
@@ -123,9 +124,10 @@ const App: React.FC = () => {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <StatusBar style="auto" />
-      <Stack.Navigator initialRouteName={initialRoute}>
+    <SafeAreaProvider>
+      <NavigationContainer ref={navigationRef}>
+        <StatusBar style="auto" />
+        <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen
           name="OnboardingFlow"
           component={OnboardingFlow}
@@ -366,7 +368,8 @@ const App: React.FC = () => {
           }}
         />
       </Stack.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 };
 

@@ -3,6 +3,7 @@ import { View, StyleSheet, Pressable, Text, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import Icon from "react-native-vector-icons/Ionicons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
 import { RootStackParamList, NavigationProp } from "../../../types/navigation";
 import { HORIZONTAL_GRADIENT_COLORS, HORIZONTAL_GRADIENT_LOCATIONS } from "../../../config/colors";
@@ -117,7 +118,7 @@ const Footer: React.FC = () => {
   );
 
   return (
-    <View style={styles.footerContainer}>
+    <SafeAreaView edges={["bottom"]} style={styles.footerContainer}>
       <TabButton
         routeName="Home"
         iconName="home"
@@ -142,7 +143,7 @@ const Footer: React.FC = () => {
         isActive={isActive("Acessor")}
         onPress={() => handleNavigate("Acessor")}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -152,15 +153,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     backgroundColor: "#05040A",
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 0,
     borderTopWidth: 1,
     borderTopColor: "#333",
     width: "100%",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   tabButton: {
     alignItems: "center",

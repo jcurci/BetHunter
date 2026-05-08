@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 140,
+    paddingBottom: 28,
   },
 
   // Streak

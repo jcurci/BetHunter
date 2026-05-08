@@ -297,7 +297,8 @@ const Home: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.mainContainer}>
         <ScrollView
-          style={styles.container}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Background Gradient - Radial Effect */}
@@ -546,10 +547,14 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
-  container: {
+  scroll: {
     flex: 1,
-    padding: 20,
-    paddingBottom: 160,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    flexGrow: 1,
   },
 
   // Background
@@ -725,7 +730,7 @@ const styles = StyleSheet.create({
   // Continue Box (reuses roulette visual)
   continueBoxOuter: {
     marginVertical: 20,
-    marginBottom: 60,
+    marginBottom: 24,
   },
   rouletteBox: {
     borderRadius: 24,
