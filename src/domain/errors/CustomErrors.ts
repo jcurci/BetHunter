@@ -11,3 +11,10 @@ export class AuthenticationError extends Error {
     this.name = 'AuthenticationError';
   }
 }
+
+export class ServerError extends Error {
+  constructor(message: string = 'Erro no servidor') {
+    super(message);
+    this.name = 'ServerError';
+  }
+}

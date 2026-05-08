@@ -19,6 +19,7 @@ import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
 import { Container } from "../../infrastructure/di/Container";
 import { AuthenticationError, ValidationError } from "../../domain/errors/CustomErrors";
+import { useAuthStore } from "../../storage/authStore";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -111,11 +112,30 @@ const SignUpPassword: React.FC = () => {
     setLoading(true);
     try {
       const container = Container.getInstance();
-      const createPasswordUseCase = container.getCreatePasswordUseCase();
-      await createPasswordUseCase.execute(email, password);
+
+      const registerUseCase = container.getRegisterUseCase();
+      await registerUseCase.execute({
+        email,
+        name,
+        username,
+        cellphone: phone,
+        password,
+      });
+
+      const loginUseCase = container.getLoginUseCase();
+      const session = await loginUseCase.execute(email, password);
+
+      await useAuthStore.getState().login(session.accessToken, {
+        id: session.user?.id ?? '',
+        name: session.user?.name ?? '',
+        email: session.user?.email ?? '',
+        points: 0,
+        betcoins: 0,
+      });
+
       navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });
     } catch (error: unknown) {
-      console.error("Erro ao criar senha:", error);
+      console.error("Erro ao criar conta:", error);
       if (error instanceof ValidationError || error instanceof AuthenticationError) {
         Alert.alert("Erro", error.message);
       } else {
@@ -128,10 +148,10 @@ const SignUpPassword: React.FC = () => {
 
   return (
     <OnboardingLayout
-      currentStep={3}
-      totalSteps={4}
+      currentStep={2}
+      totalSteps={3}
       onBack={() => navigation.goBack()}
-      stepLabel="4 de 4 — Senha"
+      stepLabel="3 de 3 — Senha"
     >
       <KeyboardAvoidingView
         style={styles.flex}

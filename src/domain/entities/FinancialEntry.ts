@@ -1,4 +1,4 @@
-import { TransactionType, mapApiTypeToFrontend } from './FinancialCategory';
+import { TransactionType, mapApiTypeToFrontend, mapFrontendTypeToApi } from './FinancialCategory';
 
 export interface FinancialEntry {
   id: string;
@@ -12,31 +12,31 @@ export interface FinancialEntry {
 
 // Request para criar uma entrada financeira
 export interface CreateFinancialEntryRequest {
-  category_id: string;
+  categoryId: string;
+  type: TransactionType;
   balance: number;
   description: string;
-  created_at: Date;
+  createdAt: Date;
 }
 
-// Resposta da API
+// Resposta da API (espelha FinancialEntryResponseDto do NestJS)
 export interface FinancialEntryApiResponse {
   id: string;
-  user_id: string;
-  category_id: string;
-  category_type: TransactionType;
-  category_icon_src: string;
-  category_description: string;
+  userId: string;
+  categoryId: string;
+  type: TransactionType;
+  category: { iconSrc: string; description: string } | null;
   balance: number;
   description: string;
-  created_at: string;
+  createdAt: string;
 }
 
 // Filtros para buscar entradas
 export interface FinancialEntryFilters {
-  start_date?: string;
-  end_date?: string;
+  startDate?: string;
+  endDate?: string;
   type?: TransactionType;
-  category_id?: string;
+  categoryId?: string;
 }
 
 // Mapper de resposta da API para entidade do frontend
@@ -45,14 +45,16 @@ export const mapEntryFromApi = (apiResponse: FinancialEntryApiResponse): Financi
     id: apiResponse.id,
     valor: apiResponse.balance.toString(),
     descricao: apiResponse.description || '',
-    data: new Date(apiResponse.created_at),
-    tipo: mapApiTypeToFrontend(apiResponse.category_type),
-    categoria: {
-      id: apiResponse.category_id,
-      nome: apiResponse.category_description,
-      icone: apiResponse.category_icon_src,
-    },
-    createdAt: apiResponse.created_at,
+    data: new Date(apiResponse.createdAt),
+    tipo: mapApiTypeToFrontend(apiResponse.type),
+    categoria: apiResponse.category
+      ? {
+          id: apiResponse.categoryId,
+          nome: apiResponse.category.description,
+          icone: apiResponse.category.iconSrc,
+        }
+      : null,
+    createdAt: apiResponse.createdAt,
   };
 };
 
@@ -61,12 +63,14 @@ export const mapEntryToApi = (
   valor: string,
   descricao: string,
   data: Date,
-  categoryId: string
+  categoryId: string,
+  tipo: 'entrada' | 'saida',
 ): CreateFinancialEntryRequest => {
   return {
-    category_id: categoryId,
+    categoryId,
+    type: mapFrontendTypeToApi(tipo),
     balance: parseFloat(valor) || 0,
     description: descricao,
-    created_at: data,
+    createdAt: data,
   };
 };

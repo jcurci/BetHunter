@@ -13,7 +13,6 @@ import Login from "./src/screens/Login/Login";
 import {
   SignUpName,
   SignUpContact,
-  SignUpVerification,
   SignUpPassword,
 } from "./src/screens/SignUp";
 import { PasswordResetMethod, PasswordResetEmail, PasswordResetVerification, PasswordResetNewPassword } from "./src/screens/PasswordReset";
@@ -151,13 +150,6 @@ const App: React.FC = () => {
         <Stack.Screen
           name="SignUpContact"
           component={SignUpContact}
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="SignUpVerification"
-          component={SignUpVerification}
           options={{
             headerShown: false,
           }}

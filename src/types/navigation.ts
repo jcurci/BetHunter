@@ -5,7 +5,6 @@ export type RootStackParamList = {
   Login: undefined;
   SignUpName: undefined;
   SignUpContact: { name: string; username: string };
-  SignUpVerification: { name: string; username: string; email: string; phone: string };
   SignUpPassword: { name: string; username: string; email: string; phone: string };
   PasswordResetMethod: undefined;
   PasswordResetEmail: { method: 'email' | 'username' | 'phone' };

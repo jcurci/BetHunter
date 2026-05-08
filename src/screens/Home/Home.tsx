@@ -9,6 +9,7 @@ import {
   NativeModules,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -69,6 +70,7 @@ const Home: React.FC = () => {
   const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
   const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
   const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
+  const [isCheckInSubmitting, setIsCheckInSubmitting] = useState<boolean>(false);
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
@@ -108,13 +110,17 @@ const Home: React.FC = () => {
   };
 
   const handleCheckIn = async () => {
+    setShowCheckInModal(false);
+    setIsCheckInSubmitting(true);
     try {
       const container = Container.getInstance();
       const result = await container.getBetCheckInUseCase().execute();
-      setShowCheckInModal(false);
       updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
+      Alert.alert("Erro", "Não foi possível registrar o check-in. Tente novamente.");
+    } finally {
+      setIsCheckInSubmitting(false);
     }
   };
 
@@ -211,7 +217,7 @@ const Home: React.FC = () => {
       <TouchableOpacity
         onPress={statsReady ? handleDaysPress : undefined}
         activeOpacity={statsReady && canCheckIn ? 0.7 : 1}
-        disabled={!statsReady}
+        disabled={!statsReady || isCheckInSubmitting}
         style={styles.freeOfBetDaysValueWrapper}
       >
         {!statsReady ? (
@@ -219,6 +225,8 @@ const Home: React.FC = () => {
             <View style={styles.daysNumberPlaceholder} />
             <View style={styles.daysUnitPlaceholder} />
           </View>
+        ) : isCheckInSubmitting ? (
+          <ActivityIndicator size="small" color="#B8A8E8" />
         ) : (
           <>
             {/* betStreak inicia em 0, se loadBetStreak falhar mantém 0 - fallback honesto */}
@@ -489,6 +497,7 @@ const Home: React.FC = () => {
           <GradientBorderButton
             label="Não apostei"
             onPress={handleCheckIn}
+            loading={isCheckInSubmitting}
           />
           <GradientBorderButton
             label="Apostou"
@@ -504,6 +513,7 @@ const Home: React.FC = () => {
                 setShowCheckInModal(false);
               }
             }}
+            disabled={isCheckInSubmitting}
           />
         </View>
       </Modal>

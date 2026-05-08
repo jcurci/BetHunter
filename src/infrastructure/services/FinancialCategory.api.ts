@@ -5,7 +5,7 @@ import { AuthenticationError } from '../../domain/errors/CustomErrors';
 export class FinancialCategoryApi {
   async findAll(): Promise<FinancialCategory[]> {
     try {
-      const url = '/financial_categories';
+      const url = '/financial-categories';
       console.log('🔗 FinancialCategoryApi.findAll - Fazendo requisição para:', url);
 
       const response = await apiClient.get<FinancialCategoryApiResponse[]>(url);

@@ -9,12 +9,12 @@ export interface FinancialCategory {
 // Tipo usado pela API
 export type TransactionType = 'INCOME' | 'EXPENSE';
 
-// Resposta da API
+// Resposta da API (NestJS serializa DTO em camelCase — ver FinancialCategoryResponse no backend)
 export interface FinancialCategoryApiResponse {
   id: string;
-  type: TransactionType;
   description: string;
-  icon_src: string;
+  iconSrc: string;
+  isDefault: boolean;
 }
 
 // Mapeamento de tipos API <-> Frontend
@@ -30,9 +30,10 @@ export const mapFrontendTypeToApi = (tipo: 'entrada' | 'saida'): TransactionType
 export const mapCategoryFromApi = (apiResponse: FinancialCategoryApiResponse): FinancialCategory => {
   return {
     id: apiResponse.id,
-    nome: apiResponse.description,
-    descricao: apiResponse.description,
-    tipo: mapApiTypeToFrontend(apiResponse.type),
-    icone: apiResponse.icon_src,
+    nome: apiResponse.description ?? '',
+    descricao: apiResponse.description ?? '',
+    // Backend não tipifica categoria; o tipo da movimentação vem do lançamento (financial-entry).
+    tipo: 'entrada',
+    icone: apiResponse.iconSrc ?? '',
   };
 };

@@ -8,10 +8,10 @@ import {
   ScrollView,
   TextInput,
   Image,
+  useWindowDimensions,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import Icon from "react-native-vector-icons/Feather";
-import IconMaterial from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Footer, StatsDisplay, Avatar, BackIconButton, Modal, GradientBorderButton } from "../../components";
@@ -28,10 +28,17 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
 import { useAuthStore } from "../../storage/authStore";
 import { Container } from "../../infrastructure/di/Container";
+import { CourseProgress } from "../../domain/entities/CourseProgress";
+import { AuthenticationError, ServerError } from "../../domain/errors/CustomErrors";
 
 // Assets
 const IconBook = require("../../assets/icon-book.png");
-const IconFire = require("../../assets/icon-fire.png");
+
+const DEFAULT_MODULE_GRADIENT = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+
+/** Alinhado a `scrollContent.paddingHorizontal` */
+const SCROLL_HORIZONTAL_PADDING = 20;
+const GRID_COLUMN_GAP = 12;
 
 interface LearningModule {
   id: string;
@@ -45,98 +52,33 @@ interface LearningModule {
   points?: number;
 }
 
-const MOCK_LEARNING_MODULES: LearningModule[] = [
-  {
-    id: "fundamentos",
-    title: "Fundamentos",
-    progress: "1/4",
-    percentage: 25,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: true,
-    description: "Curso sobre os fundamentos da educação financeira",
-    stars: "3/12",
-    points: 10,
-  },
-  {
-    id: "pratica-dinheiro",
-    title: "Prática com Dinheiro",
-    progress: "0/10",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Aprenda a gerenciar seu dinheiro na prática",
-    stars: "0/30",
-    points: 25,
-  },
-  {
-    id: "conhecimento-aplicado",
-    title: "Conhecimento Aplicado",
-    progress: "0/15",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Aplicação prática dos conhecimentos adquiridos",
-    stars: "0/45",
-    points: 30,
-  },
-  {
-    id: "objetivos-planejamento",
-    title: "Objetivos e Planejamento",
-    progress: "0/8",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Defina metas e planeje seu futuro financeiro",
-    stars: "0/24",
-    points: 20,
-  },
-  {
-    id: "investimentos-baixo-risco",
-    title: "Investimentos de Baixo Risco",
-    progress: "0/30",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Investimentos seguros para iniciantes",
-    stars: "0/90",
-    points: 50,
-  },
-  {
-    id: "investimentos-alto-risco",
-    title: "Investimentos de Alto Risco",
-    progress: "0/44",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Investimentos avançados e de maior retorno",
-    stars: "0/132",
-    points: 75,
-  },
-  {
-    id: "criptomoedas-basico",
-    title: "Criptomoedas: Básico",
-    progress: "0/12",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Introdução ao mundo das criptomoedas",
-    stars: "0/36",
-    points: 30,
-  },
-  {
-    id: "criptomoedas-intermediario",
-    title: "Criptomoedas: Intermediário",
-    progress: "0/18",
-    percentage: 0,
-    gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-    hasProgress: false,
-    description: "Aprofunde seus conhecimentos em cripto",
-    stars: "0/54",
-    points: 45,
-  },
-];
+function mapCourseProgressToLearningModule(course: CourseProgress): LearningModule {
+  return {
+    id: course.id,
+    title: course.title,
+    progress: `${course.modulesCompleted}/${course.modulesQuantity}`,
+    percentage: course.moduleCompletionPercentage,
+    gradientColors: [...DEFAULT_MODULE_GRADIENT],
+    hasProgress: course.modulesCompleted > 0,
+    description: course.description,
+    stars: `${course.userStars}/${course.possibleStars}`,
+    points: course.betcoins,
+  };
+}
+
+/** Exibição no modal de curso: primeira letra maiúscula, restante minúscula (valor em estado/API inalterado). */
+function formatCourseModalTitle(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+}
 
 const Cursos = () => {
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.floor(
+    (windowWidth - SCROLL_HORIZONTAL_PADDING * 2 - GRID_COLUMN_GAP) / 2,
+  );
+
   const navigation = useNavigation<NavigationProp>();
   const authStore = useAuthStore();
   const user = authStore.user;
@@ -164,26 +106,17 @@ const Cursos = () => {
       setLoading(true);
       await loadDashboard();
 
-      // Usuário já vem do authStore, não precisa mais buscar
-
-      // Serviço de lições temporariamente offline.
-      // Quando estiver disponível novamente, reative as linhas abaixo para utilizar os dados reais:
-      // const lessonUseCase = container.getLessonUseCase();
-      // const lessons = await lessonUseCase.getUserLessons();
-      // const mappedLessons = lessons.map((lesson) => ({
-      //   id: lesson.id,
-      //   title: lesson.title,
-      //   progress: `${lesson.completedTopics}/${lesson.totalTopics}`,
-      //   percentage: lesson.progressPercent,
-      //   gradientColors: ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"],
-      //   hasProgress: lesson.completedTopics > 0,
-      // }));
-
-      setLearningModules(MOCK_LEARNING_MODULES);
+      const container = Container.getInstance();
+      const courses = await container.getGetCoursesWithProgressUseCase().execute();
+      setLearningModules(courses.map(mapCourseProgressToLearningModule));
       setError(null);
     } catch (error) {
       console.error("Error loading data:", error);
-      setError("Erro ao carregar lições. Tente novamente.");
+      const message =
+        error instanceof ServerError || error instanceof AuthenticationError
+          ? error.message
+          : "Erro ao carregar lições. Tente novamente.";
+      setError(message);
     } finally {
       setLoading(false);
       setStatsReady(true);
@@ -201,18 +134,18 @@ const Cursos = () => {
     }
   };
 
-  const renderProgressBar = (percentage: number, hasProgress: boolean, gradientColors: string[]) => {
+  const renderProgressBar = (percentage: number, _hasProgress: boolean, gradientColors: string[]) => {
     return (
-      <View style={styles.progressBarContainer}>
-        <View style={styles.progressBar}>
+      <View style={[styles.progressBarRow, { width: cardWidth - 16 }]}>
+        <View style={styles.progressBarTrack}>
           <LinearGradient
             colors={gradientColors as any}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={[styles.progressFill, { width: `${percentage}%` }]}
+            style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, percentage))}%` }]}
           />
-          <Text style={styles.percentageText}>{percentage}%</Text>
         </View>
+        <Text style={styles.percentageText}>{percentage}%</Text>
       </View>
     );
   };
@@ -250,22 +183,33 @@ const Cursos = () => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
+  const titleTextProps = {
+    numberOfLines: 3 as const,
+    ellipsizeMode: "tail" as const,
+  };
+
   const renderModuleCard = (module: LearningModule) => (
     <TouchableOpacity
       key={module.id}
-      style={styles.moduleCard}
+      style={[styles.moduleCard, { width: cardWidth }]}
       onPress={() => handleModulePress(module)}
     >
       <View style={styles.containerTitle}>
         <MaskedView
-          maskElement={<Text style={styles.moduleTitle}>{module.title}</Text>}
+          style={styles.maskedTitle}
+          maskElement={
+            <Text {...titleTextProps} style={styles.moduleTitle}>
+              {module.title}
+            </Text>
+          }
         >
           <LinearGradient
             colors={module.gradientColors as any}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
+            style={styles.gradientTitleUnderlay}
           >
-            <Text style={[styles.moduleTitle, { opacity: 0 }]}>
+            <Text {...titleTextProps} style={[styles.moduleTitle, styles.moduleTitleInvisible]}>
               {module.title}
             </Text>
           </LinearGradient>
@@ -306,10 +250,16 @@ const Cursos = () => {
               </View>
             ) : filteredModules.length > 0 ? (
               filteredModules.map(renderModuleCard)
-            ) : (
+            ) : searchQuery.trim().length > 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
                   Nenhum curso encontrado para "{searchQuery}"
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  Nenhum curso disponível no momento.
                 </Text>
               </View>
             )}
@@ -380,9 +330,8 @@ const Cursos = () => {
       <Modal
         visible={isModalVisible}
         onClose={handleCloseModal}
-        size="small"
-        title={selectedModule?.title || ""}
-        subtitle={selectedModule?.description || ""}
+        size="medium"
+        title={formatCourseModalTitle(selectedModule?.title || "")}
         headerActions={{
           right: [
             {
@@ -393,23 +342,17 @@ const Cursos = () => {
         }}
       >
         <View style={styles.modalContent}>
-          {/* Stats Row */}
+          {!!selectedModule?.description?.trim() && (
+            <Text style={styles.modalCourseDescription}>{selectedModule.description}</Text>
+          )}
+
           <View style={styles.modalStatsRow}>
             <View style={styles.modalStatItem}>
               <Text style={styles.modalStatValue}>{selectedModule?.progress || "0/0"}</Text>
               <Image source={IconBook} style={styles.modalStatIcon} resizeMode="contain" />
             </View>
-            <View style={styles.modalStatItem}>
-              <Text style={styles.modalStatValue}>{selectedModule?.stars || "0/0"}</Text>
-              <IconMaterial name="star" size={24} color="#FFD700" />
-            </View>
-            <View style={styles.modalStatItem}>
-              <Text style={styles.modalStatValue}>{selectedModule?.points || 0}</Text>
-              <Image source={IconFire} style={styles.modalStatIcon} resizeMode="contain" />
-            </View>
           </View>
 
-          {/* Confirm Button */}
           <GradientBorderButton label="Conferir!" onPress={handleConfirmCourse} />
         </View>
       </Modal>
@@ -522,55 +465,67 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   moduleCard: {
-    width: 168.26,
-    height: 154.42,
+    minHeight: 172,
     backgroundColor: "#2B2935",
     borderRadius: 15,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     marginBottom: 16,
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "stretch",
   },
   moduleTitleGradient: {
     marginBottom: 12,
   },
+  maskedTitle: {
+    width: "100%",
+    alignSelf: "stretch",
+  },
+  gradientTitleUnderlay: {
+    alignSelf: "stretch",
+  },
   moduleTitle: {
-    fontSize: 18,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "bold",
     color: "#FFFFFF",
-    paddingBottom: 4,
+    width: "100%",
+    flexShrink: 1,
+  },
+  moduleTitleInvisible: {
+    opacity: 0,
   },
   progressText: {
     fontSize: 12,
     color: "#A09CAB",
-    marginTop: 6,
+    marginTop: 8,
+    marginBottom: 10,
   },
-  progressBarContainer: {
+  progressBarRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    width: 160.81,
-    marginTop: 0,
+    gap: 8,
     alignSelf: "center",
+    marginBottom: 2,
   },
-  progressBar: {
-    width: "100%",
-    height: 53.25,
+  progressBarTrack: {
+    flex: 1,
+    minWidth: 0,
+    height: 32,
     backgroundColor: "#1A1923",
-    borderRadius: 13,
-    position: "relative",
+    borderRadius: 10,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    borderRadius: 13,
+    borderRadius: 10,
   },
   percentageText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "600",
     color: "#A09CAB",
-    position: "absolute",
-    right: 12,
-    bottom: 12,
+    minWidth: 40,
+    textAlign: "right",
   },
   loadingContainer: {
     width: "100%",
@@ -617,25 +572,34 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   containerTitle: {
-    width: 161.87,
-    height: 88.39,
+    width: "100%",
+    minHeight: 70,
+    flexGrow: 1,
     backgroundColor: "#1A1923",
     borderRadius: 13,
     justifyContent: "space-between",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 10,
-    marginBottom: 4,
+    marginBottom: 6,
     alignItems: "flex-start",
-    alignSelf: "center",
+    alignSelf: "stretch",
   },
   modalContent: {
-    paddingTop: 20,
+    paddingTop: 8,
+  },
+  /** Alinhado ao `subtitle` do componente Modal (cor/tamanho tipográficos) */
+  modalCourseDescription: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#A7A3AE",
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: 24,
   },
   modalStatsRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 32,
     marginBottom: 32,
   },
   modalStatItem: {

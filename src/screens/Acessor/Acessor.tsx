@@ -287,8 +287,8 @@ const Acessor: React.FC = () => {
       const dateRange = getMonthDateRange();
 
       const apiEntries = await getEntriesUseCase.execute({
-        start_date: dateRange.start_date,
-        end_date: dateRange.end_date,
+        startDate: dateRange.start_date,
+        endDate: dateRange.end_date,
       });
 
       if (apiEntries && apiEntries.length > 0) {
@@ -366,7 +366,8 @@ const Acessor: React.FC = () => {
         entryValue,
         entryDescription,
         entryDate,
-        selectedCategoryId
+        selectedCategoryId,
+        'entrada',
       );
 
       console.log('✅ Entrada criada com sucesso:', newEntry);
@@ -431,7 +432,8 @@ const Acessor: React.FC = () => {
         saidaValue,
         saidaDescription,
         saidaDate,
-        selectedCategoryIdSaida
+        selectedCategoryIdSaida,
+        'saida',
       );
 
       console.log('✅ Saída criada com sucesso:', newEntry);
@@ -909,14 +911,14 @@ const Acessor: React.FC = () => {
             {showCategoryDropdown && (
               <View style={styles.categoryDropdown}>
                 <ScrollView style={styles.categoryDropdownList}>
-                  {categories.filter((cat) => cat.tipo === 'entrada').length === 0 ? (
+                  {categories.length === 0 ? (
                     <View style={styles.noCategoriesContainer}>
                       <Text style={styles.noCategoriesText}>
-                        Nenhuma categoria de entrada disponível.
+                        Nenhuma categoria disponível.
                       </Text>
                     </View>
                   ) : (
-                    categories.filter((cat) => cat.tipo === 'entrada').map((category) => (
+                    categories.map((category) => (
                       <TouchableOpacity
                         key={category.id}
                         style={[
@@ -1106,14 +1108,14 @@ const Acessor: React.FC = () => {
             {showCategoryDropdownSaida && (
               <View style={styles.categoryDropdown}>
                 <ScrollView style={styles.categoryDropdownList}>
-                  {categories.filter((cat) => cat.tipo === 'saida').length === 0 ? (
+                  {categories.length === 0 ? (
                     <View style={styles.noCategoriesContainer}>
                       <Text style={styles.noCategoriesText}>
-                        Nenhuma categoria de saída disponível.
+                        Nenhuma categoria disponível.
                       </Text>
                     </View>
                   ) : (
-                    categories.filter((cat) => cat.tipo === 'saida').map((category) => (
+                    categories.map((category) => (
                       <TouchableOpacity
                         key={category.id}
                         style={[

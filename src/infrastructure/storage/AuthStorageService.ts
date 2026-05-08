@@ -24,10 +24,6 @@ export class AuthStorageService {
     try {
       await AsyncStorage.setItem(TOKEN_KEY, token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-      
-      console.log('✅ [AuthStorageService] Login salvo');
-      console.log('🔑 Token:', token.substring(0, 20) + '...');
-      console.log('👤 User:', user.email);
     } catch (error) {
       console.error('❌ [AuthStorageService] Erro ao salvar login:', error);
       throw error;

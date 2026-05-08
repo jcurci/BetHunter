@@ -3,9 +3,7 @@ import { LoginUseCase } from "../../domain/usercases/LoginUseCase";
 import { LoginWithGoogleUseCase } from "../../domain/usercases/LoginWithGoogleUseCase";
 import { AuthRepositoryImpl } from "../../domain/data/repositories/AuthRepositoryImpl";
 import { AuthApi } from "../services/Auth.api";
-import { StartRegistrationUseCase } from "../../domain/usercases/signup/StartRegistrationUseCase";
-import { VerifyRegistrationCodeUseCase } from "../../domain/usercases/signup/VerifyRegistrationCodeUseCase";
-import { CreatePasswordUseCase } from "../../domain/usercases/signup/CreatePasswordUseCase";
+import { RegisterUseCase } from "../../domain/usercases/signup/RegisterUseCase";
 import { RegisterRepositoryImpl } from "../../domain/data/repositories/RegisterRepositoryImpl";
 import { RegisterApi } from "../services/Register.api";
 
@@ -31,6 +29,11 @@ import { LoadDashboardUseCase } from "../../domain/usercases/LoadDashboardUseCas
 import { UserRepositoryImpl } from "../../domain/data/repositories/UserRepositoryImpl";
 import { UserApi } from "../services/User.api";
 
+// Courses imports
+import { GetCoursesWithProgressUseCase } from "../../domain/usercases/GetCoursesWithProgressUseCase";
+import { CourseRepositoryImpl } from "../../domain/data/repositories/CourseRepositoryImpl";
+import { CourseApi } from "../services/Course.api";
+
 // Password change (esqueci a senha) imports
 import { RequestPasswordChangeUseCase } from "../../domain/usercases/RequestPasswordChangeUseCase";
 import { VerifyPasswordChangeCodeUseCase } from "../../domain/usercases/VerifyPasswordChangeCodeUseCase";
@@ -41,9 +44,7 @@ export class Container {
 
   private loginUseCase: LoginUseCase | null = null;
   private loginWithGoogleUseCase: LoginWithGoogleUseCase | null = null;
-  private startRegistrationUseCase: StartRegistrationUseCase | null = null;
-  private verifyRegistrationCodeUseCase: VerifyRegistrationCodeUseCase | null = null;
-  private createPasswordUseCase: CreatePasswordUseCase | null = null;
+  private registerUseCase: RegisterUseCase | null = null;
 
   // Bet Streak use cases
   private betCheckInUseCase: BetCheckInUseCase | null = null;
@@ -58,6 +59,8 @@ export class Container {
   // User profile
   private getCurrentUserUseCase: GetCurrentUserUseCase | null = null;
   private loadDashboardUseCase: LoadDashboardUseCase | null = null;
+
+  private getCoursesWithProgressUseCase: GetCoursesWithProgressUseCase | null = null;
 
   // Password change (esqueci a senha)
   private requestPasswordChangeUseCase: RequestPasswordChangeUseCase | null = null;
@@ -98,34 +101,14 @@ export class Container {
     return this.loginWithGoogleUseCase;
   }
 
-  getStartRegistrationUseCase(): StartRegistrationUseCase {
-    if (!this.startRegistrationUseCase) {
+  getRegisterUseCase(): RegisterUseCase {
+    if (!this.registerUseCase) {
       const registerApi = new RegisterApi();
       const registerRepository = new RegisterRepositoryImpl(registerApi);
-      this.startRegistrationUseCase = new StartRegistrationUseCase(registerRepository);
+      this.registerUseCase = new RegisterUseCase(registerRepository);
     }
 
-    return this.startRegistrationUseCase;
-  }
-
-  getVerifyRegistrationCodeUseCase(): VerifyRegistrationCodeUseCase {
-    if (!this.verifyRegistrationCodeUseCase) {
-      const registerApi = new RegisterApi();
-      const registerRepository = new RegisterRepositoryImpl(registerApi);
-      this.verifyRegistrationCodeUseCase = new VerifyRegistrationCodeUseCase(registerRepository);
-    }
-
-    return this.verifyRegistrationCodeUseCase;
-  }
-
-  getCreatePasswordUseCase(): CreatePasswordUseCase {
-    if (!this.createPasswordUseCase) {
-      const registerApi = new RegisterApi();
-      const registerRepository = new RegisterRepositoryImpl(registerApi);
-      this.createPasswordUseCase = new CreatePasswordUseCase(registerRepository);
-    }
-
-    return this.createPasswordUseCase;
+    return this.registerUseCase;
   }
 
   // Bet Streak use cases
@@ -207,6 +190,15 @@ export class Container {
       this.loadDashboardUseCase = new LoadDashboardUseCase(userRepository);
     }
     return this.loadDashboardUseCase;
+  }
+
+  getGetCoursesWithProgressUseCase(): GetCoursesWithProgressUseCase {
+    if (!this.getCoursesWithProgressUseCase) {
+      const courseApi = new CourseApi();
+      const courseRepository = new CourseRepositoryImpl(courseApi);
+      this.getCoursesWithProgressUseCase = new GetCoursesWithProgressUseCase(courseRepository);
+    }
+    return this.getCoursesWithProgressUseCase;
   }
 
   getRequestPasswordChangeUseCase(): RequestPasswordChangeUseCase {

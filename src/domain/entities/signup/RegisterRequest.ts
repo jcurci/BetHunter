@@ -3,5 +3,6 @@ export interface RegisterRequest {
   name: string;
   username: string;
   cellphone: string;
+  password: string;
   gambler?: boolean;
 }

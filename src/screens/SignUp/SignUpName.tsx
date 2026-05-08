@@ -102,9 +102,9 @@ const SignUpName: React.FC = () => {
   return (
     <OnboardingLayout
       currentStep={0}
-      totalSteps={4}
+      totalSteps={3}
       onBack={() => navigation.goBack()}
-      stepLabel="1 de 4 — Nome"
+      stepLabel="1 de 3 — Nome"
     >
       <KeyboardAvoidingView
         style={styles.flex}

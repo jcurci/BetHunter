@@ -11,26 +11,17 @@ import { AuthenticationError } from '../../domain/errors/CustomErrors';
 export class FinancialEntryApi {
   async findAll(filters?: FinancialEntryFilters): Promise<FinancialEntry[]> {
     try {
-      let url = '/financial_entries';
-      
-      // Se há filtros, usar o endpoint /filter
-      if (filters && (filters.start_date || filters.end_date || filters.type || filters.category_id)) {
-        url = '/financial_entries/filter';
+      let url = '/financial-entries';
+
+      if (filters && (filters.startDate || filters.endDate || filters.type || filters.categoryId)) {
+        url = '/financial-entries/filter';
         const params = new URLSearchParams();
-        
-        if (filters.start_date) {
-          params.append('start_date', filters.start_date);
-        }
-        if (filters.end_date) {
-          params.append('end_date', filters.end_date);
-        }
-        if (filters.type) {
-          params.append('type', filters.type);
-        }
-        if (filters.category_id) {
-          params.append('category_id', filters.category_id);
-        }
-        
+
+        if (filters.startDate) params.append('startDate', filters.startDate);
+        if (filters.endDate) params.append('endDate', filters.endDate);
+        if (filters.type) params.append('type', filters.type);
+        if (filters.categoryId) params.append('categoryId', filters.categoryId);
+
         url = `${url}?${params.toString()}`;
       }
 
@@ -71,7 +62,8 @@ export class FinancialEntryApi {
         throw new AuthenticationError('Token inválido ou expirado. Faça login novamente.');
       }
       if (error.response.status === 404) {
-        throw new AuthenticationError('Endpoint não encontrado. Verifique a configuração.');
+        const serverMsg = error.response.data?.message || '';
+        throw new AuthenticationError(serverMsg || 'Recurso não encontrado. Verifique a configuração.');
       }
       if (error.response.status === 500) {
         throw new AuthenticationError('Erro no servidor. Tente novamente mais tarde.');
@@ -83,15 +75,16 @@ export class FinancialEntryApi {
 
   async create(request: CreateFinancialEntryRequest): Promise<FinancialEntry> {
     try {
-      const url = '/financial_entries';
+      const url = '/financial-entries';
       console.log('🔗 FinancialEntryApi.create - Fazendo requisição para:', url);
       console.log('📦 FinancialEntryApi.create - Dados:', request);
 
       const response = await apiClient.post<FinancialEntryApiResponse>(url, {
-        category_id: request.category_id,
+        categoryId: request.categoryId,
+        type: request.type,
         balance: request.balance,
         description: request.description,
-        created_at: request.created_at.toISOString().split('T')[0], // Formato YYYY-MM-DD
+        createdAt: request.createdAt.toISOString(),
       });
 
       console.log('✅ FinancialEntryApi.create - Entrada criada:', response.data);
@@ -131,7 +124,8 @@ export class FinancialEntryApi {
         throw new AuthenticationError('Token inválido ou expirado. Faça login novamente.');
       }
       if (error.response.status === 404) {
-        throw new AuthenticationError('Categoria não encontrada. Selecione outra categoria.');
+        const serverMsg = error.response.data?.message || '';
+        throw new AuthenticationError(serverMsg || 'Recurso não encontrado. Tente novamente.');
       }
       if (error.response.status === 500) {
         throw new AuthenticationError('Erro no servidor. Tente novamente mais tarde.');

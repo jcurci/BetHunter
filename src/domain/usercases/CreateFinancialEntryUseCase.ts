@@ -1,5 +1,5 @@
 import { FinancialEntryRepository } from '../repositories/FinancialEntryRepository';
-import { FinancialEntry, CreateFinancialEntryRequest } from '../entities/FinancialEntry';
+import { FinancialEntry, mapEntryToApi } from '../entities/FinancialEntry';
 import { ValidationError } from '../errors/CustomErrors';
 
 export class CreateFinancialEntryUseCase {
@@ -9,9 +9,9 @@ export class CreateFinancialEntryUseCase {
     valor: string,
     descricao: string,
     data: Date,
-    categoryId: string
+    categoryId: string,
+    tipo: 'entrada' | 'saida',
   ): Promise<FinancialEntry> {
-    // Validações
     if (!valor || valor.trim() === '') {
       throw new ValidationError('Valor é obrigatório');
     }
@@ -33,12 +33,7 @@ export class CreateFinancialEntryUseCase {
       throw new ValidationError('Data inválida');
     }
 
-    const request: CreateFinancialEntryRequest = {
-      category_id: categoryId,
-      balance: valorNumerico,
-      description: descricao.trim(),
-      created_at: data,
-    };
+    const request = mapEntryToApi(valor, descricao.trim(), data, categoryId, tipo);
 
     return this.financialEntryRepository.create(request);
   }

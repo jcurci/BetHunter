@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Alert,
   TouchableOpacity,
   Animated,
   Easing,
@@ -16,8 +15,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
-import { Container } from "../../infrastructure/di/Container";
-import { AuthenticationError, ValidationError } from "../../domain/errors/CustomErrors";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -29,7 +26,6 @@ const SignUpContact: React.FC = () => {
   const [phone, setPhone] = useState("");
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({ email: false, phone: false });
   const [emailFocused, setEmailFocused] = useState(false);
   const [phoneFocused, setPhoneFocused] = useState(false);
@@ -98,7 +94,7 @@ const SignUpContact: React.FC = () => {
     !emailError &&
     !phoneError;
 
-  const handleNext = async () => {
+  const handleNext = () => {
     setTouched({ email: true, phone: true });
     const emailV = validateEmail(email);
     const phoneV = validatePhone(phone);
@@ -106,40 +102,20 @@ const SignUpContact: React.FC = () => {
     setPhoneError(phoneV || (!phone.trim() ? "Digite um número de telefone válido" : ""));
     if (emailV || phoneV || !email.trim() || !phone.trim()) return;
 
-    setLoading(true);
-    try {
-      const container = Container.getInstance();
-      const startRegistrationUseCase = container.getStartRegistrationUseCase();
-      await startRegistrationUseCase.execute({
-        email: email.trim(),
-        name,
-        username,
-        cellphone: phoneDigits,
-      });
-      navigation.navigate("SignUpVerification", {
-        name,
-        username,
-        email: email.trim(),
-        phone: phoneDigits,
-      });
-    } catch (error: unknown) {
-      console.error("Erro ao iniciar cadastro:", error);
-      if (error instanceof ValidationError || error instanceof AuthenticationError) {
-        Alert.alert("Erro", error.message);
-      } else {
-        Alert.alert("Erro", "Erro ao iniciar cadastro. Verifique os dados e tente novamente.");
-      }
-    } finally {
-      setLoading(false);
-    }
+    navigation.navigate("SignUpPassword", {
+      name,
+      username,
+      email: email.trim(),
+      phone: phoneDigits,
+    });
   };
 
   return (
     <OnboardingLayout
       currentStep={1}
-      totalSteps={4}
+      totalSteps={3}
       onBack={() => navigation.goBack()}
-      stepLabel="2 de 4 — Contato"
+      stepLabel="2 de 3 — Contato"
     >
       <KeyboardAvoidingView
         style={styles.flex}
@@ -204,9 +180,9 @@ const SignUpContact: React.FC = () => {
         <View style={styles.footer}>
           <TouchableOpacity
             onPress={handleNext}
-            disabled={!isFormValid || loading}
+            disabled={!isFormValid}
             activeOpacity={0.85}
-            style={[styles.continueBtn, (!isFormValid || loading) && styles.continueBtnDisabled]}
+            style={[styles.continueBtn, !isFormValid && styles.continueBtnDisabled]}
           >
             <LinearGradient
               colors={[...HORIZONTAL_GRADIENT_COLORS]}
@@ -215,7 +191,7 @@ const SignUpContact: React.FC = () => {
               end={{ x: 1, y: 0 }}
               style={styles.continueGradient}
             >
-              <Text style={styles.continueBtnText}>{loading ? "Enviando..." : "Próximo"}</Text>
+              <Text style={styles.continueBtnText}>Próximo</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
