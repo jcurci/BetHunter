@@ -10,7 +10,7 @@ export type RootStackParamList = {
   PasswordResetEmail: { method: 'email' | 'username' | 'phone' };
   PasswordResetVerification: { method: 'email' | 'username' | 'phone'; value: string };
   PasswordResetNewPassword: { method: 'email' | 'username' | 'phone'; value: string; code: string };
-  Home: undefined;
+  Home: { openBlockFlow?: boolean };
   Roulette: undefined;
   MenuEducacional: undefined;
   Cursos: undefined;
@@ -34,6 +34,8 @@ export type RootStackParamList = {
   PersonalityTestIntro: undefined;
   PersonalityTestQuestion: undefined;
   MinhaConta: undefined;
+  SobreNos: undefined;
+  SejaParceiro: undefined;
   DetalhesPessoais: undefined;
   CustomerCenter: undefined;
   Paywall: undefined;

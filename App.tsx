@@ -40,6 +40,8 @@ import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
 import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
+import SobreNos from "./src/screens/MinhaConta/SobreNos";
+import SejaParceiro from "./src/screens/MinhaConta/SejaParceiro";
 import CustomerCenter from "./src/screens/CustomerCenter/CustomerCenter";
 import Paywall from "./src/screens/Paywall/Paywall";
 import { RootStackParamList } from "./src/types/navigation";
@@ -348,6 +350,20 @@ const App: React.FC = () => {
         <Stack.Screen
           name="MinhaConta"
           component={MinhaConta}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SobreNos"
+          component={SobreNos}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SejaParceiro"
+          component={SejaParceiro}
           options={{
             headerShown: false,
           }}
