@@ -38,6 +38,7 @@ import { CourseApi } from "../services/Course.api";
 import { RequestPasswordChangeUseCase } from "../../domain/usercases/RequestPasswordChangeUseCase";
 import { VerifyPasswordChangeCodeUseCase } from "../../domain/usercases/VerifyPasswordChangeCodeUseCase";
 import { ConfirmPasswordChangeUseCase } from "../../domain/usercases/ConfirmPasswordChangeUseCase";
+import { SubmitBettingHouseReportUseCase } from "../../domain/usercases/SubmitBettingHouseReportUseCase";
 
 export class Container {
   private static instance: Container;
