@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,17 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  TextInput,
+  Keyboard,
+  InteractionManager,
+  Animated,
+  Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/Entypo";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import MaskedView from "@react-native-masked-view/masked-view";
 
 // Components
@@ -41,6 +47,7 @@ import CursosIcon from "../../assets/home/cursos.svg";
 // Domain & Infrastructure
 
 import { Container } from "../../infrastructure/di/Container";
+import { ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
 import { NavigationProp } from "../../types/navigation";
@@ -48,6 +55,16 @@ import { CourseProgress } from "../../domain/entities/CourseProgress";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
+
+type BlockFlowStep = "choices" | "report";
+
+/** Saudação segundo o relógio local do dispositivo (pt-BR). */
+function periodGreetingLabel(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Bom dia,";
+  if (hour >= 12 && hour < 18) return "Boa tarde,";
+  return "Boa noite,";
+}
 
 const { BetBlocker, BetBlocking } = NativeModules;
 const Home: React.FC = () => {
@@ -68,6 +85,34 @@ const Home: React.FC = () => {
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
+  const [showBlockFlowModal, setShowBlockFlowModal] = useState<boolean>(false);
+  const [blockFlowStep, setBlockFlowStep] = useState<BlockFlowStep>("choices");
+  const blockFlowFade = useRef(new Animated.Value(1)).current;
+  const [reportHouseName, setReportHouseName] = useState<string>("");
+  const [reportHouseUrl, setReportHouseUrl] = useState<string>("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState<boolean>(false);
+
+  const animateBlockFlowToStep = useCallback(
+    (step: BlockFlowStep) => {
+      Keyboard.dismiss();
+      Animated.timing(blockFlowFade, {
+        toValue: 0,
+        duration: 90,
+        useNativeDriver: true,
+        easing: Easing.linear,
+      }).start(({ finished }) => {
+        if (!finished) return;
+        setBlockFlowStep(step);
+        Animated.timing(blockFlowFade, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }).start();
+      });
+    },
+    [blockFlowFade]
+  );
   const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
   const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
   const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
@@ -75,6 +120,8 @@ const Home: React.FC = () => {
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
+
+  const [greetingLine, setGreetingLine] = useState<string>(() => periodGreetingLabel());
 
   // Current course in progress (for "Continue de onde parou" card)
   const [currentCourse, setCurrentCourse] = useState<CourseProgress | null>(null);
@@ -96,6 +143,12 @@ const Home: React.FC = () => {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setGreetingLine(periodGreetingLabel());
+    }, []),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -181,11 +234,62 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleActivateBlockFlow = () => {
+    setShowBlockFlowModal(false);
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        if (Platform.OS === "ios" && BetBlocking?.openBlockingFlow) {
+          try {
+            BetBlocking.openBlockingFlow();
+          } catch (e: unknown) {
+            console.warn("BetBlocking.openBlockingFlow", e);
+          }
+          return;
+        }
+        setShowBlockModal(true);
+      }, 400);
+    });
+  };
+
+  const closeBlockFlowModal = (): void => {
+    if (isSubmittingReport) return;
+    setShowBlockFlowModal(false);
+    setBlockFlowStep("choices");
+    blockFlowFade.setValue(1);
+    setReportHouseName("");
+    setReportHouseUrl("");
+  };
+
+  const handleSubmitBettingHouseReport = async (): Promise<void> => {
+    Keyboard.dismiss();
+    setIsSubmittingReport(true);
+    try {
+      const useCase = Container.getInstance().getSubmitBettingHouseReportUseCase();
+      await useCase.execute(reportHouseName, reportHouseUrl);
+      closeBlockFlowModal();
+      Alert.alert(
+        "Obrigado!",
+        "Recebemos sua denúncia. Vamos avaliar para incluir na lista de bloqueio."
+      );
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message : "Não foi possível enviar. Tente novamente.";
+      if (error instanceof ValidationError) {
+        Alert.alert("Atenção", msg);
+      } else {
+        Alert.alert("Erro", msg);
+      }
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+
 
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.greetingContainer}>
-        <Text style={styles.greetingText}>Bom dia,</Text>
+        <Text style={styles.greetingText}>{greetingLine}</Text>
         <MaskedView
           maskElement={
             <Text style={[styles.greetingText, { backgroundColor: 'transparent' }]}>
@@ -298,11 +402,9 @@ const Home: React.FC = () => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => {
-            if (Platform.OS === "ios" && BetBlocking) {
-              BetBlocking.openBlockingFlow();
-            } else {
-              setShowBlockModal(true);
-            }
+            blockFlowFade.setValue(1);
+            setBlockFlowStep("choices");
+            setShowBlockFlowModal(true);
           }}
           activeOpacity={0.85}
         >
@@ -453,6 +555,116 @@ const Home: React.FC = () => {
       </View>
       
       <Footer />
+
+      <Modal
+        visible={showBlockFlowModal}
+        onClose={closeBlockFlowModal}
+        size="big"
+        title="Proteção e denúncias"
+        subtitle="Configure o bloqueio neste dispositivo ou nos informe um site ou app para incluir na lista."
+      >
+        <Animated.View style={{ opacity: blockFlowFade }}>
+          {blockFlowStep === "choices" ? (
+            <View style={styles.blockActionModalContent}>
+              <View style={styles.blockChoiceCard}>
+                <View style={styles.blockChoiceHeader}>
+                  <View style={styles.blockChoiceIconCircle}>
+                    <MaterialCommunityIcons
+                      name="shield-lock-outline"
+                      size={26}
+                      color="#C9A7E8"
+                    />
+                  </View>
+                  <View style={styles.blockChoiceHeaderText}>
+                    <Text style={styles.blockChoiceTitle}>
+                      {Platform.OS === "ios"
+                        ? "Proteção neste iPhone"
+                        : "Ativar bloqueio (VPN)"}
+                    </Text>
+                    <Text style={styles.blockChoiceDesc}>
+                      {Platform.OS === "ios"
+                        ? "Abre Tempo de Uso para escolher apps e aplicar bloqueios."
+                        : "Instalação do perfil VPN para filtrar sites de apostas no dispositivo."}
+                    </Text>
+                  </View>
+                </View>
+                <GradientBorderButton
+                  label={Platform.OS === "ios" ? "Configurar bloqueio" : "Ativar bloqueio"}
+                  onPress={handleActivateBlockFlow}
+                />
+              </View>
+
+              <View style={styles.blockActionOrRow}>
+                <View style={styles.blockActionOrLine} />
+                <Text style={styles.blockActionOrText}>ou</Text>
+                <View style={styles.blockActionOrLine} />
+              </View>
+
+              <View style={[styles.blockChoiceCard, styles.blockChoiceCardMuted]}>
+                <View style={styles.blockChoiceHeader}>
+                  <View style={[styles.blockChoiceIconCircle, styles.blockChoiceIconCircleMuted]}>
+                    <MaterialCommunityIcons
+                      name="flag-outline"
+                      size={26}
+                      color="#E8B07A"
+                    />
+                  </View>
+                  <View style={styles.blockChoiceHeaderText}>
+                    <Text style={styles.blockChoiceTitle}>Informar casa de apostas</Text>
+                    <Text style={styles.blockChoiceDesc}>
+                      Envie o nome e a URL para avaliarmos e incluir na lista de bloqueio.
+                    </Text>
+                  </View>
+                </View>
+                <GradientBorderButton
+                  label="Denunciar casa de apostas"
+                  onPress={() => animateBlockFlowToStep("report")}
+                />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.reportForm}>
+              <TouchableOpacity
+                style={styles.blockFlowBackButton}
+                onPress={() => animateBlockFlowToStep("choices")}
+                disabled={isSubmittingReport}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10 }}
+              >
+                <MaterialCommunityIcons name="chevron-left" size={22} color="#9E9AA8" />
+                <Text style={styles.blockFlowBackText}>Voltar às opções</Text>
+              </TouchableOpacity>
+              <Text style={styles.reportLabel}>Nome da casa</Text>
+              <TextInput
+                style={styles.reportInput}
+                value={reportHouseName}
+                onChangeText={setReportHouseName}
+                placeholder='Ex.: "Nome da casa"'
+                placeholderTextColor="#726E7C"
+                autoCapitalize="sentences"
+                editable={!isSubmittingReport}
+              />
+              <Text style={styles.reportLabel}>URL</Text>
+              <TextInput
+                style={styles.reportInput}
+                value={reportHouseUrl}
+                onChangeText={setReportHouseUrl}
+                placeholder="exemplo.com ou https://..."
+                placeholderTextColor="#726E7C"
+                keyboardType="url"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isSubmittingReport}
+              />
+              <GradientBorderButton
+                label="Enviar denúncia"
+                onPress={() => void handleSubmitBettingHouseReport()}
+                loading={isSubmittingReport}
+              />
+            </View>
+          )}
+        </Animated.View>
+      </Modal>
 
       {/* Modal de Confirmação de Reset */}
       <Modal
@@ -781,6 +993,118 @@ const styles = StyleSheet.create({
   blockModalContent: {
     alignItems: "center",
     paddingTop: 10,
+  },
+  blockActionModalContent: {
+    width: "100%",
+    paddingTop: 4,
+    paddingBottom: Platform.OS === "ios" ? 28 : 20,
+    gap: 20,
+    alignSelf: "stretch",
+  },
+  blockChoiceCard: {
+    width: "100%",
+    backgroundColor: "#14121B",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#2F2A3E",
+    padding: 18,
+    gap: 16,
+  },
+  blockChoiceCardMuted: {
+    borderColor: "#3A3428",
+    backgroundColor: "#121018",
+  },
+  blockChoiceHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+  },
+  blockChoiceIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(168, 120, 220, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  blockChoiceIconCircleMuted: {
+    backgroundColor: "rgba(232, 176, 122, 0.12)",
+  },
+  blockChoiceHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 2,
+  },
+  blockChoiceTitle: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  blockChoiceDesc: {
+    color: "#A09CAB",
+    fontSize: 13,
+    marginTop: 6,
+    lineHeight: 19,
+  },
+  blockActionOrRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 2,
+    width: "100%",
+  },
+  blockActionOrLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  blockActionOrText: {
+    color: "#726E7C",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  reportForm: {
+    paddingTop: 4,
+    gap: 10,
+    width: "100%",
+    alignSelf: "stretch",
+  },
+  blockFlowBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 2,
+    marginBottom: 6,
+    paddingVertical: 4,
+    paddingRight: 8,
+    opacity: 0.92,
+  },
+  blockFlowBackText: {
+    color: "#9E9AA8",
+    fontSize: 15,
+    fontWeight: "600",
+    marginLeft: -2,
+  },
+  reportLabel: {
+    color: "#B8B3BF",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  reportInput: {
+    backgroundColor: "#201F2A",
+    borderWidth: 1,
+    borderColor: "#34303D",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === "ios" ? 14 : 10,
+    color: "#FFFFFF",
+    fontSize: 15,
+    marginBottom: 8,
+    width: "100%",
   },
   checkInModalContent: {
     alignItems: "center",

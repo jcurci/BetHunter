@@ -55,6 +55,10 @@ import { ModuleCourseProgressApi } from "../services/ModuleCourseProgress.api";
 import { RequestPasswordChangeUseCase } from "../../domain/usercases/RequestPasswordChangeUseCase";
 import { VerifyPasswordChangeCodeUseCase } from "../../domain/usercases/VerifyPasswordChangeCodeUseCase";
 import { ConfirmPasswordChangeUseCase } from "../../domain/usercases/ConfirmPasswordChangeUseCase";
+import { SubmitBettingHouseReportUseCase } from "../../domain/usercases/SubmitBettingHouseReportUseCase";
+import { BettingHouseReportApi } from "../services/BettingHouseReport.api";
+import { BettingHouseReportRepositoryImpl } from "../../domain/data/repositories/BettingHouseReportRepositoryImpl";
+
 export class Container {
   private static instance: Container;
 
@@ -87,6 +91,8 @@ export class Container {
   private requestPasswordChangeUseCase: RequestPasswordChangeUseCase | null = null;
   private verifyPasswordChangeCodeUseCase: VerifyPasswordChangeCodeUseCase | null = null;
   private confirmPasswordChangeUseCase: ConfirmPasswordChangeUseCase | null = null;
+
+  private submitBettingHouseReportUseCase: SubmitBettingHouseReportUseCase | null = null;
 
   private authApi: AuthApi | null = null;
   private authRepository: AuthRepositoryImpl | null = null;
@@ -289,5 +295,18 @@ export class Container {
       this.confirmPasswordChangeUseCase = new ConfirmPasswordChangeUseCase(this.authRepository!);
     }
     return this.confirmPasswordChangeUseCase;
+  }
+
+  getSubmitBettingHouseReportUseCase(): SubmitBettingHouseReportUseCase {
+    if (!this.submitBettingHouseReportUseCase) {
+      const bettingHouseReportApi = new BettingHouseReportApi();
+      const bettingHouseReportRepository = new BettingHouseReportRepositoryImpl(
+        bettingHouseReportApi,
+      );
+      this.submitBettingHouseReportUseCase = new SubmitBettingHouseReportUseCase(
+        bettingHouseReportRepository,
+      );
+    }
+    return this.submitBettingHouseReportUseCase;
   }
 }
