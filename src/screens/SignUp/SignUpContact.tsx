@@ -74,15 +74,17 @@ const SignUpContact: React.FC = () => {
 
   const handleEmailChange = (v: string) => {
     setEmail(v);
-    if (v.length > 0 && !touched.email) setTouched(p => ({ ...p, email: true }));
-    if (touched.email || v.length > 0) setEmailError(v.trim() ? validateEmail(v) : "");
+    if (touched.email) {
+      setEmailError(v.trim() ? validateEmail(v) : "");
+    }
   };
 
   const handlePhoneChange = (v: string) => {
     const masked = applyPhoneMask(v);
     setPhone(masked);
-    if (masked.length > 0 && !touched.phone) setTouched(p => ({ ...p, phone: true }));
-    if (touched.phone || masked.length > 0) setPhoneError(masked.trim() ? validatePhone(masked) : "");
+    if (touched.phone) {
+      setPhoneError(masked.trim() ? validatePhone(masked) : "");
+    }
   };
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

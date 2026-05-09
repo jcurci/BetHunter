@@ -25,6 +25,7 @@ import {
   HORIZONTAL_GRADIENT_COLORS,
   HORIZONTAL_GRADIENT_LOCATIONS,
 } from "../../config/colors";
+import { resetLocalOnboardingStateForNewAccount } from "../OnboardingFlow/onboardingStorage";
 
 interface ValidationErrors {
   password?: string;
@@ -133,6 +134,7 @@ const SignUpPassword: React.FC = () => {
         betcoins: 0,
       });
 
+      await resetLocalOnboardingStateForNewAccount();
       navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });
     } catch (error: unknown) {
       console.error("Erro ao criar conta:", error);

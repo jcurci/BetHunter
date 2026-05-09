@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { AppLoadingScreen } from "./src/components/AppLoadingScreen";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -50,6 +50,9 @@ import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardi
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+/** DEV: extra ms no AppLoadingScreen antes de entrar no app. Ponha `0` para desligar. */
+const DEBUG_SPLASH_HOLD_MS = __DEV__ ? 2500 : 0;
+
 const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
@@ -60,12 +63,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
+      const finishBoot = async (route: keyof RootStackParamList) => {
+        if (__DEV__ && DEBUG_SPLASH_HOLD_MS > 0) {
+          await new Promise<void>((resolve) => setTimeout(resolve, DEBUG_SPLASH_HOLD_MS));
+        }
+        setInitialRoute(route);
+        setIsReady(true);
+      };
+
       await initRevenueCat();
 
       const onboardingDone = await isOnboardingFlowCompleted();
       if (!onboardingDone) {
-        setInitialRoute('OnboardingFlow');
-        setIsReady(true);
+        await finishBoot("OnboardingFlow");
         return;
       }
 
@@ -73,8 +83,7 @@ const App: React.FC = () => {
       const { isAuthenticated: authed, user } = useAuthStore.getState();
 
       if (!authed) {
-        setInitialRoute('Login');
-        setIsReady(true);
+        await finishBoot("Login");
         return;
       }
 
@@ -89,8 +98,7 @@ const App: React.FC = () => {
       await useSubscriptionStore.getState().refresh();
       const { isPremium: premium } = useSubscriptionStore.getState();
 
-      setInitialRoute(premium ? 'Home' : 'Paywall');
-      setIsReady(true);
+      await finishBoot(premium ? "Home" : "Paywall");
     };
     init();
   }, []);
@@ -118,11 +126,7 @@ const App: React.FC = () => {
   }, [isPremium, isAuthenticated]);
 
   if (!isReady) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#D783D8" />
-      </View>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

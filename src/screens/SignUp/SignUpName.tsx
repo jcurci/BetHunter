@@ -67,8 +67,7 @@ const SignUpName: React.FC = () => {
 
   const handleNameChange = (v: string) => {
     setName(v);
-    if (v.length > 0 && !touched.name) setTouched(p => ({ ...p, name: true }));
-    if (touched.name || v.length > 0) {
+    if (touched.name) {
       setErrors(p => ({ ...p, name: v.trim() ? validateName(v) : undefined }));
     }
   };
@@ -76,8 +75,7 @@ const SignUpName: React.FC = () => {
   const handleUsernameChange = (v: string) => {
     const clean = v.toLowerCase().replace(/\s/g, "");
     setUsername(clean);
-    if (clean.length > 0 && !touched.username) setTouched(p => ({ ...p, username: true }));
-    if (touched.username || clean.length > 0) {
+    if (touched.username) {
       setErrors(p => ({ ...p, username: clean ? validateUsername(clean) : undefined }));
     }
   };

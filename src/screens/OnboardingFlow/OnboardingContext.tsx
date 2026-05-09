@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProfileResult } from './calculateProfile';
-
-const STORAGE_KEY = '@bethunter_onboarding';
+import { ONBOARDING_DRAFT_KEY } from './onboardingStorage';
 
 export type QuizAnswers = {
   frequency: string | null;
@@ -64,13 +63,13 @@ type OnboardingProviderProps = { children: ReactNode };
 
 async function persistState(state: OnboardingState) {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    await AsyncStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(state));
   } catch { /* silent */ }
 }
 
 async function loadState(): Promise<OnboardingState | null> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const raw = await AsyncStorage.getItem(ONBOARDING_DRAFT_KEY);
     if (raw) return JSON.parse(raw) as OnboardingState;
   } catch { /* silent */ }
   return null;
