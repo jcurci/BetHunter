@@ -245,6 +245,7 @@ const MenuEducacional: React.FC = () => {
               <IconCard
                 icon={<EmojiHappy width={24} height={24} />}
                 title={"Parceiros\nBethunter"}
+                onPress={() => navigation.navigate("SejaParceiro")}
               />
             </View>
           </View>

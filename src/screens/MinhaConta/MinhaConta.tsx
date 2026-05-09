@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/Feather";
@@ -20,7 +19,6 @@ import {
 import { NavigationProp } from "../../types/navigation";
 import { useAuthStore } from "../../storage/authStore";
 import { useSubscriptionStore } from "../../storage/subscriptionStore";
-import { AuthUser } from "../../domain/entities/User";
 import { logoutUser } from "../../services/revenueCat";
 
 import {
@@ -181,36 +179,26 @@ const MinhaConta: React.FC = () => {
                 label="Conta"
                 onPress={() => navigation.navigate("Profile")}
               />
-             
-              <MenuItem
-                icon="help-circle"
-                label="Ajuda"
-                onPress={() => { }}
-              />
-              
             </MenuSection>
 
             <MenuSection>
-              <MenuItem
-                icon="shield"
-                label="Segurança"
-                onPress={() => { }}
-              />
               <MenuItem
                 icon="bell"
                 label="Configurações de Notificação"
                 onPress={() => navigation.navigate("Notifications")}
               />
-             
-             
-              
             </MenuSection>
 
             <MenuSection>
               <MenuItem
+                icon="briefcase"
+                label="Seja Parceiro"
+                onPress={() => navigation.navigate("SejaParceiro")}
+              />
+              <MenuItem
                 icon="info"
                 label="Sobre Nós"
-                onPress={() => { }}
+                onPress={() => navigation.navigate("SobreNos")}
               />
               <MenuItem
                 icon="log-out"

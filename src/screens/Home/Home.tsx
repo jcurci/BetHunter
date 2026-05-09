@@ -17,7 +17,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/Entypo";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -50,7 +51,7 @@ import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
-import { NavigationProp } from "../../types/navigation";
+import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { CourseProgress } from "../../domain/entities/CourseProgress";
 
 // Constants
@@ -69,6 +70,7 @@ function periodGreetingLabel(): string {
 const { BetBlocker, BetBlocking } = NativeModules;
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProp<RootStackParamList, "Home">>();
   const user = useAuthStore((s) => s.user);
   
   // Dashboard store
@@ -139,6 +141,16 @@ const Home: React.FC = () => {
       // Non-critical — card simply won't render
     }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.openBlockFlow !== true) return;
+      blockFlowFade.setValue(1);
+      setBlockFlowStep("choices");
+      setShowBlockFlowModal(true);
+      navigation.setParams({ openBlockFlow: undefined });
+    }, [navigation, route.params?.openBlockFlow, blockFlowFade])
+  );
 
   useEffect(() => {
     loadAll();
