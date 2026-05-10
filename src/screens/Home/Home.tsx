@@ -142,6 +142,10 @@ const Home: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
   useFocusEffect(
     useCallback(() => {
       if (route.params?.openBlockFlow !== true) return;
@@ -149,12 +153,8 @@ const Home: React.FC = () => {
       setBlockFlowStep("choices");
       setShowBlockFlowModal(true);
       navigation.setParams({ openBlockFlow: undefined });
-    }, [navigation, route.params?.openBlockFlow, blockFlowFade])
+    }, [navigation, route.params?.openBlockFlow, blockFlowFade]),
   );
-
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
 
   useFocusEffect(
     useCallback(() => {
