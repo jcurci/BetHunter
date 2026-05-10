@@ -33,13 +33,28 @@ import { UserApi } from "../services/User.api";
 import { GetCoursesWithProgressUseCase } from "../../domain/usercases/GetCoursesWithProgressUseCase";
 import { CourseRepositoryImpl } from "../../domain/data/repositories/CourseRepositoryImpl";
 import { CourseApi } from "../services/Course.api";
+import { GetCourseModulesUseCase } from "../../domain/usercases/GetCourseModulesUseCase";
+import { CourseModuleRepositoryImpl } from "../../domain/data/repositories/CourseModuleRepositoryImpl";
+import { CourseModuleApi } from "../services/CourseModule.api";
+
+// Quiz imports
+import { GetUnansweredQuestionsUseCase } from "../../domain/usercases/GetUnansweredQuestionsUseCase";
+import { QuizQuestionRepositoryImpl } from "../../domain/data/repositories/QuizQuestionRepositoryImpl";
+import { QuizQuestionApi } from "../services/QuizQuestion.api";
+
+// Course Material imports
+import { GetCourseMaterialUseCase } from "../../domain/usercases/GetCourseMaterialUseCase";
+import { CourseMaterialRepositoryImpl } from "../../domain/data/repositories/CourseMaterialRepositoryImpl";
+import { CourseMaterialApi } from "../services/CourseMaterial.api";
+import { SubmitQuizModuleUseCase } from "../../domain/usercases/SubmitQuizModuleUseCase";
+import { CompleteCourseModuleUseCase } from "../../domain/usercases/CompleteCourseModuleUseCase";
+import { ModuleCourseProgressRepositoryImpl } from "../../domain/data/repositories/ModuleCourseProgressRepositoryImpl";
+import { ModuleCourseProgressApi } from "../services/ModuleCourseProgress.api";
 
 // Password change (esqueci a senha) imports
 import { RequestPasswordChangeUseCase } from "../../domain/usercases/RequestPasswordChangeUseCase";
 import { VerifyPasswordChangeCodeUseCase } from "../../domain/usercases/VerifyPasswordChangeCodeUseCase";
 import { ConfirmPasswordChangeUseCase } from "../../domain/usercases/ConfirmPasswordChangeUseCase";
-import { SubmitBettingHouseReportUseCase } from "../../domain/usercases/SubmitBettingHouseReportUseCase";
-
 export class Container {
   private static instance: Container;
 
@@ -62,6 +77,11 @@ export class Container {
   private loadDashboardUseCase: LoadDashboardUseCase | null = null;
 
   private getCoursesWithProgressUseCase: GetCoursesWithProgressUseCase | null = null;
+  private getCourseModulesUseCase: GetCourseModulesUseCase | null = null;
+  private getUnansweredQuestionsUseCase: GetUnansweredQuestionsUseCase | null = null;
+  private getCourseMaterialUseCase: GetCourseMaterialUseCase | null = null;
+  private submitQuizModuleUseCase: SubmitQuizModuleUseCase | null = null;
+  private completeCourseModuleUseCase: CompleteCourseModuleUseCase | null = null;
 
   // Password change (esqueci a senha)
   private requestPasswordChangeUseCase: RequestPasswordChangeUseCase | null = null;
@@ -200,6 +220,51 @@ export class Container {
       this.getCoursesWithProgressUseCase = new GetCoursesWithProgressUseCase(courseRepository);
     }
     return this.getCoursesWithProgressUseCase;
+  }
+
+  getGetCourseModulesUseCase(): GetCourseModulesUseCase {
+    if (!this.getCourseModulesUseCase) {
+      const courseModuleApi = new CourseModuleApi();
+      const courseModuleRepository = new CourseModuleRepositoryImpl(courseModuleApi);
+      this.getCourseModulesUseCase = new GetCourseModulesUseCase(courseModuleRepository);
+    }
+    return this.getCourseModulesUseCase;
+  }
+
+  getGetUnansweredQuestionsUseCase(): GetUnansweredQuestionsUseCase {
+    if (!this.getUnansweredQuestionsUseCase) {
+      const quizApi = new QuizQuestionApi();
+      const quizRepository = new QuizQuestionRepositoryImpl(quizApi);
+      this.getUnansweredQuestionsUseCase = new GetUnansweredQuestionsUseCase(quizRepository);
+    }
+    return this.getUnansweredQuestionsUseCase;
+  }
+
+  getGetCourseMaterialUseCase(): GetCourseMaterialUseCase {
+    if (!this.getCourseMaterialUseCase) {
+      const courseMaterialApi = new CourseMaterialApi();
+      const courseMaterialRepository = new CourseMaterialRepositoryImpl(courseMaterialApi);
+      this.getCourseMaterialUseCase = new GetCourseMaterialUseCase(courseMaterialRepository);
+    }
+    return this.getCourseMaterialUseCase;
+  }
+
+  getSubmitQuizModuleUseCase(): SubmitQuizModuleUseCase {
+    if (!this.submitQuizModuleUseCase) {
+      const progressApi = new ModuleCourseProgressApi();
+      const progressRepo = new ModuleCourseProgressRepositoryImpl(progressApi);
+      this.submitQuizModuleUseCase = new SubmitQuizModuleUseCase(progressRepo);
+    }
+    return this.submitQuizModuleUseCase;
+  }
+
+  getCompleteCourseModuleUseCase(): CompleteCourseModuleUseCase {
+    if (!this.completeCourseModuleUseCase) {
+      const progressApi = new ModuleCourseProgressApi();
+      const progressRepo = new ModuleCourseProgressRepositoryImpl(progressApi);
+      this.completeCourseModuleUseCase = new CompleteCourseModuleUseCase(progressRepo);
+    }
+    return this.completeCourseModuleUseCase;
   }
 
   getRequestPasswordChangeUseCase(): RequestPasswordChangeUseCase {

@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   TextInput,
   Image,
   useWindowDimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import Icon from "react-native-vector-icons/Feather";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Footer, StatsDisplay, Avatar, BackIconButton, Modal, GradientBorderButton } from "../../components";
 import { NavigationProp } from "../../types/navigation";
@@ -92,16 +92,18 @@ const Cursos = () => {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const { isSaved, toggleSave } = useSavedCoursesStore();
 
-  useEffect(() => {
-    loadData();
+  const loadDashboard = useCallback(async () => {
+    try {
+      const container = Container.getInstance();
+      const useCase = container.getLoadDashboardUseCase();
+      const result = await useCase.execute();
+      setDashboard({ energy: result.energy, streak: result.streak });
+    } catch (error: any) {
+      console.log("LoadDashboard:", error?.message ?? error);
+    }
   }, []);
 
-  // Filtrar módulos baseado na pesquisa
-  const filteredModules = learningModules.filter((module) =>
-    module.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       await loadDashboard();
@@ -121,18 +123,17 @@ const Cursos = () => {
       setLoading(false);
       setStatsReady(true);
     }
-  };
+  }, [loadDashboard]);
 
-  const loadDashboard = async () => {
-    try {
-      const container = Container.getInstance();
-      const useCase = container.getLoadDashboardUseCase();
-      const result = await useCase.execute();
-      setDashboard({ energy: result.energy, streak: result.streak });
-    } catch (error: any) {
-      console.log("LoadDashboard:", error?.message ?? error);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      void loadData();
+    }, [loadData]),
+  );
+
+  const filteredModules = learningModules.filter((module) =>
+    module.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const renderProgressBar = (percentage: number, _hasProgress: boolean, gradientColors: string[]) => {
     return (
@@ -162,9 +163,12 @@ const Cursos = () => {
 
   const handleConfirmCourse = () => {
     if (selectedModule) {
-      const moduleTitle = selectedModule.title.toLowerCase().replace(/\s+/g, "-");
       setIsModalVisible(false);
-      navigation.navigate("Quiz", { title: moduleTitle, moduleData: selectedModule });
+      navigation.navigate("CourseModules", {
+        courseId: selectedModule.id,
+        courseTitle: selectedModule.title,
+        modulesCompleted: parseInt(selectedModule.progress.split("/")[0]) || 0,
+      });
     }
   };
 
@@ -226,7 +230,7 @@ const Cursos = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={["top"]} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

@@ -6,22 +6,32 @@ import {
   SafeAreaView,
   TouchableOpacity,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { NavigationProp, RouteProp, RootStackParamList } from "../../types/navigation";
+import { NavigationProp, RootStackParamList } from "../../types/navigation";
 
 const QuizResult = () => {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute();
-  const { score = 0, total = 0 } = (route.params as { score: number; total: number }) || {};
+  const route = useRoute<RouteProp<RootStackParamList, "QuizResult">>();
+  const { score = 0, total = 0, stars, accuracy } = route.params ?? {
+    score: 0,
+    total: 0,
+  };
   const [userName, setUserName] = useState("Usuário");
 
   useEffect(() => {
-  
-    
-  }, []);
+    if (__DEV__) {
+      console.warn('[BetHunter] QuizResult — params na rota (= o que navegou desde Quiz)', {
+        paramsDaRota: route.params,
+      });
+    }
+  }, [route.params]);
 
-  const passed = score / total >= 0.6; // regra simples: 60%
+  const passed = total > 0 ? score / total >= 0.6 : false;
+  const accuracyLine =
+    typeof accuracy === "number" && Number.isFinite(accuracy)
+      ? `${Math.round(accuracy * 100)}% acertos`
+      : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -49,6 +59,10 @@ const QuizResult = () => {
             ? `Parabéns, ${userName}! Você passou!`
             : `Boa, ${userName}! Você está no caminho certo.`}
         </Text>
+        {typeof stars === "number" && Number.isFinite(stars) ? (
+          <Text style={styles.metaLine}>{`★ ${stars} estrela(s) neste quiz`}</Text>
+        ) : null}
+        {accuracyLine ? <Text style={styles.metaLine}>{accuracyLine}</Text> : null}
       </View>
 
       <View style={styles.footer}>
@@ -130,6 +144,12 @@ const styles = StyleSheet.create({
     color: "#A09CAB",
     fontSize: 16,
     marginTop: 8,
+    textAlign: "center",
+  },
+  metaLine: {
+    color: "#8E8A96",
+    fontSize: 14,
+    marginTop: 10,
     textAlign: "center",
   },
   footer: {

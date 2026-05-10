@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { Footer, StatsDisplay, Avatar, DayCounter, IconCard } from "../../components";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import { Container } from "../../infrastructure/di/Container";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
+import { CourseProgress } from "../../domain/entities/CourseProgress";
 
 // Assets
 const bookIcon = require("../../assets/icon-book.png");
@@ -39,9 +40,31 @@ const MenuEducacional: React.FC = () => {
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
 
+  // Current course in progress (for "Curso atual" card)
+  const [currentCourse, setCurrentCourse] = useState<CourseProgress | null>(null);
+
+  const loadCurrentCourse = useCallback(async () => {
+    try {
+      const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
+      const inProgress = courses.find(
+        (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
+      );
+      const notStarted = courses.find((c) => c.modulesCompleted === 0);
+      setCurrentCourse(inProgress ?? notStarted ?? courses[0] ?? null);
+    } catch {
+      // Non-critical — card simply won't render
+    }
+  }, []);
+
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadCurrentCourse();
+    }, [loadCurrentCourse]),
+  );
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";
@@ -53,7 +76,7 @@ const MenuEducacional: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -142,56 +165,67 @@ const MenuEducacional: React.FC = () => {
 
               <Text style={styles.continueBoxTitle}>Curso atual</Text>
 
-              <LinearGradient
-                colors={[...HORIZONTAL_GRADIENT_COLORS]}
-                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.continueCardBorder}
-              >
-                <TouchableOpacity
-                  style={styles.continueCardInner}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate("Cursos")}
+              {currentCourse && (
+                <LinearGradient
+                  colors={[...HORIZONTAL_GRADIENT_COLORS]}
+                  locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.continueCardBorder}
                 >
-                  <View style={styles.continueTextContainer}>
-                    <MaskedView
-                      style={styles.continueTitleMask}
-                      maskElement={
-                        <Text
-                          style={[styles.continueTitle, { backgroundColor: "transparent" }]}
-                        >
-                          Fundamentos
-                        </Text>
-                      }
-                    >
-                      <LinearGradient
-                        colors={HORIZONTAL_GRADIENT_COLORS}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
+                  <TouchableOpacity
+                    style={styles.continueCardInner}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      navigation.navigate("CourseModules", {
+                        courseId: currentCourse.id,
+                        courseTitle: currentCourse.title,
+                        modulesCompleted: currentCourse.modulesCompleted,
+                      })
+                    }
+                  >
+                    <View style={styles.continueTextContainer}>
+                      <MaskedView
+                        style={styles.continueTitleMask}
+                        maskElement={
+                          <Text
+                            style={[styles.continueTitle, { backgroundColor: "transparent" }]}
+                            numberOfLines={1}
+                          >
+                            {currentCourse.title}
+                          </Text>
+                        }
                       >
-                        <Text style={[styles.continueTitle, { opacity: 0 }]}>
-                          Fundamentos
-                        </Text>
-                      </LinearGradient>
-                    </MaskedView>
-                    <Text style={styles.continueProgress}>1/4</Text>
-                  </View>
+                        <LinearGradient
+                          colors={HORIZONTAL_GRADIENT_COLORS}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                        >
+                          <Text style={[styles.continueTitle, { opacity: 0 }]} numberOfLines={1}>
+                            {currentCourse.title}
+                          </Text>
+                        </LinearGradient>
+                      </MaskedView>
+                      <Text style={styles.continueProgress}>
+                        {currentCourse.modulesCompleted}/{currentCourse.modulesQuantity}
+                      </Text>
+                    </View>
 
-                  <View style={styles.arrowContainer}>
-                    <Image
-                      source={require("../../assets/Icon-seta-efeito.png")}
-                      style={styles.arrowEffect}
-                      resizeMode="contain"
-                    />
-                    <Image
-                      source={require("../../assets/Icon-seta.png")}
-                      style={styles.arrow}
-                      resizeMode="contain"
-                    />
-                  </View>
-                </TouchableOpacity>
-              </LinearGradient>
+                    <View style={styles.arrowContainer}>
+                      <Image
+                        source={require("../../assets/Icon-seta-efeito.png")}
+                        style={styles.arrowEffect}
+                        resizeMode="contain"
+                      />
+                      <Image
+                        source={require("../../assets/Icon-seta.png")}
+                        style={styles.arrow}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </TouchableOpacity>
+                </LinearGradient>
+              )}
             </View>
           </View>
 

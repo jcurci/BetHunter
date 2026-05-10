@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -20,8 +20,11 @@ const CursosSalvos: React.FC = () => {
   const { savedCourses, removeCourse } = useSavedCoursesStore();
 
   const handleModulePress = (course: SavedCourse) => {
-    const moduleTitle = course.title.toLowerCase().replace(/\s+/g, "-");
-    navigation.navigate("Quiz", { title: moduleTitle, moduleData: course });
+    navigation.navigate("CourseModules", {
+      courseId: course.id,
+      courseTitle: course.title,
+      modulesCompleted: parseInt(course.progress?.split("/")[0] ?? "0") || 0,
+    });
   };
 
   const handleRemoveCourse = (courseId: string) => {
@@ -79,7 +82,7 @@ const CursosSalvos: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={["top"]} style={styles.container}>
       <View style={styles.headerContainer}>
         <View style={styles.header}>
           <BackIconButton onPress={() => navigation.goBack()} size={42} />

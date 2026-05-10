@@ -14,9 +14,11 @@ export type RootStackParamList = {
   Roulette: undefined;
   MenuEducacional: undefined;
   Cursos: undefined;
+  CourseModules: { courseId: string; courseTitle: string; modulesCompleted: number };
   Ranking: undefined;
-  Quiz: { title: string; moduleData: any };
-  QuizResult: { score: number; total: number };
+  Quiz: { moduleId: string; moduleTitle: string };
+  MaterialReader: { moduleId: string; moduleTitle: string };
+  QuizResult: { score: number; total: number; stars?: number; accuracy?: number };
   Graficos: undefined;
   Config: undefined;
   Profile: undefined;

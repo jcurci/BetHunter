@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   NativeModules,
@@ -11,8 +10,9 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/Entypo";
 import MaskedView from "@react-native-masked-view/masked-view";
 
@@ -44,6 +44,7 @@ import { Container } from "../../infrastructure/di/Container";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
 import { NavigationProp } from "../../types/navigation";
+import { CourseProgress } from "../../domain/entities/CourseProgress";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
@@ -74,11 +75,33 @@ const Home: React.FC = () => {
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
-  
+
+  // Current course in progress (for "Continue de onde parou" card)
+  const [currentCourse, setCurrentCourse] = useState<CourseProgress | null>(null);
+
+  const loadCurrentCourse = useCallback(async () => {
+    try {
+      const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
+      // Prefer the course actively in progress; fall back to the first not yet started
+      const inProgress = courses.find(
+        (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
+      );
+      const notStarted = courses.find((c) => c.modulesCompleted === 0);
+      setCurrentCourse(inProgress ?? notStarted ?? courses[0] ?? null);
+    } catch {
+      // Non-critical — card simply won't render
+    }
+  }, []);
 
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadCurrentCourse();
+    }, [loadCurrentCourse]),
+  );
 
   // Auto-close reset confirm modal after 3 seconds
   useEffect(() => {
@@ -294,7 +317,7 @@ const Home: React.FC = () => {
 
 
   return (  
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.mainContainer}>
         <ScrollView
           style={styles.scroll}
@@ -376,21 +399,32 @@ const Home: React.FC = () => {
                 style={StyleSheet.absoluteFill}
               />
               <Text style={styles.continueBoxTitle}>Continue de onde parou</Text>
-              <LinearGradient
-                colors={[...HORIZONTAL_GRADIENT_COLORS]}
-                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.continueCardBorder}
-              >
-                <TouchableOpacity
-                  style={styles.continueCardInner}
-                  activeOpacity={0.85}
+              {currentCourse && (
+                <LinearGradient
+                  colors={[...HORIZONTAL_GRADIENT_COLORS]}
+                  locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.continueCardBorder}
                 >
-                  <Text style={styles.continueText}>Fundamentos: 1/4</Text>
-                  <Icon name="chevron-right" size={22} color="#B8B3BF" />
-                </TouchableOpacity>
-              </LinearGradient>
+                  <TouchableOpacity
+                    style={styles.continueCardInner}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      navigation.navigate("CourseModules", {
+                        courseId: currentCourse.id,
+                        courseTitle: currentCourse.title,
+                        modulesCompleted: currentCourse.modulesCompleted,
+                      })
+                    }
+                  >
+                    <Text style={styles.continueText} numberOfLines={1}>
+                      {currentCourse.title}: {currentCourse.modulesCompleted}/{currentCourse.modulesQuantity}
+                    </Text>
+                    <Icon name="chevron-right" size={22} color="#B8B3BF" />
+                  </TouchableOpacity>
+                </LinearGradient>
+              )}
             </View>
           </View>
 

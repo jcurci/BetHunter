@@ -26,6 +26,8 @@ import Notifications from "./src/screens/Config/Notifications";
 import Roulette from "./src/screens/Roulette/Roulette";
 import MenuEducacional from "./src/screens/Educacional/MenuEducacional";
 import Cursos from "./src/screens/Educacional/Cursos";
+import CourseModules from "./src/screens/Educacional/CourseModules";
+import MaterialReader from "./src/screens/Educacional/MaterialReader";
 import Ranking from "./src/screens/Educacional/Ranking";
 import QuizPage from "./src/screens/Quiz/QuizPage";
 import Graficos from "./src/screens/Graficos/Graficos";
@@ -255,8 +257,22 @@ const App: React.FC = () => {
           }}
         />
         <Stack.Screen
+          name="CourseModules"
+          component={CourseModules}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="Ranking"
           component={Ranking}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="MaterialReader"
+          component={MaterialReader}
           options={{
             headerShown: false,
           }}
