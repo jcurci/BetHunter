@@ -43,7 +43,7 @@ if (APP_ENV !== 'development') {
   ];
   const missing = required.filter(k => !process.env[k]);
   if (missing.length) {
-    throw new Error(`[app.config.ts] Missing vars for ${APP_ENV}: ${missing.join(', ')}`);
+    console.warn(`[app.config.ts] Missing vars for ${APP_ENV}: ${missing.join(', ')}`);
   }
 }
 

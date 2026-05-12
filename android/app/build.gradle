@@ -52,10 +52,17 @@ android {
         }
         release {
             if (keystorePropertiesFile.exists()) {
+                // Local dev: read from android/keystore.properties (gitignored)
                 storeFile file(keystoreProperties['MYAPP_UPLOAD_STORE_FILE'])
                 storePassword keystoreProperties['MYAPP_UPLOAD_STORE_PASSWORD']
                 keyAlias keystoreProperties['MYAPP_UPLOAD_KEY_ALIAS']
                 keyPassword keystoreProperties['MYAPP_UPLOAD_KEY_PASSWORD']
+            } else if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                // EAS Build: credentials injected as Gradle properties
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
             }
         }
     }
