@@ -39,6 +39,9 @@ yarn-error.*
 # Lock files (yarn.lock kept out; package-lock.json committed so EAS uses npm)
 yarn.lock
 
+# EAS local credentials (contains keystore passwords — never commit)
+credentials.json
+
 # IDE
 .idea/
 .vscode/
