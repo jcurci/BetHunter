@@ -32,6 +32,7 @@ import { ValidationError } from "../../domain/errors/CustomErrors";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import { ENV } from "../../config/env";
 import { identifyUser } from "../../services/revenueCat";
+import type { CustomerInfo } from "react-native-purchases";
 import { isOnboardingFlowCompleted } from "../OnboardingFlow/onboardingStorage";
 
 const Login: React.FC = () => {
@@ -126,13 +127,17 @@ const Login: React.FC = () => {
     const onboardingDone = await isOnboardingFlowCompleted();
     if (!onboardingDone) return "OnboardingFlow";
 
+    let rcInfo: CustomerInfo | null = null;
     try {
-      await identifyUser(userId);
+      rcInfo = await identifyUser(userId);
     } catch (e) {
-      console.warn("Failed to identify user in RevenueCat:", e);
+      console.warn('[REVENUECAT] identifyUser failed at login, falling back to getCustomerInfo', e);
     }
-
-    await useSubscriptionStore.getState().refresh();
+    if (rcInfo) {
+      useSubscriptionStore.getState().setFromCustomerInfo(rcInfo);
+    } else {
+      await useSubscriptionStore.getState().refresh();
+    }
     const { isPremium } = useSubscriptionStore.getState();
     return isPremium ? "Home" : "Paywall";
   };

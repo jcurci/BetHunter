@@ -195,6 +195,7 @@ const CourseModules: React.FC = () => {
   const [statsReady, setStatsReady] = useState(false);
   const [modulesCompletedCount, setModulesCompletedCount] = useState(initialModulesCompleted);
   const completedFallbackRef = useRef(initialModulesCompleted);
+  const [claimingRewardId, setClaimingRewardId] = useState<string | null>(null);
 
   useEffect(() => {
     completedFallbackRef.current = initialModulesCompleted;
@@ -209,10 +210,22 @@ const CourseModules: React.FC = () => {
 
   const loadDashboard = useCallback(async () => {
     try {
-      const result = await Container.getInstance()
-        .getLoadDashboardUseCase()
-        .execute();
-      setDashboard({ energy: result.energy, streak: result.streak });
+      const container = Container.getInstance();
+      let energy = 0;
+      let streak = 0;
+      try {
+        const dash = await container.getLoadDashboardUseCase().execute();
+        energy = dash.energy;
+      } catch {
+        /* energia não crítica */
+      }
+      try {
+        const bet = await container.getGetBetStreakStatusUseCase().execute();
+        streak = bet.betStreak;
+      } catch {
+        /* streak não crítico */
+      }
+      setDashboard({ energy, streak });
     } catch {
       // Non-critical
     }
@@ -287,8 +300,33 @@ const CourseModules: React.FC = () => {
       navigation.navigate('Quiz', { moduleId: module.id, moduleTitle: module.title });
     } else if (module.moduleType === 'MATERIAL') {
       navigation.navigate('MaterialReader', { moduleId: module.id, moduleTitle: module.title });
+    } else if (module.moduleType === 'REWARD') {
+      void handleClaimReward(module.id);
     }
-    // TODO: REWARD → reward modal/screen
+  };
+
+  const handleClaimReward = async (rewardModuleId: string): Promise<void> => {
+    if (claimingRewardId !== null) return;
+    setClaimingRewardId(rewardModuleId);
+    try {
+      const result = await Container.getInstance()
+        .getClaimRewardUseCase()
+        .execute(rewardModuleId);
+      Alert.alert(
+        'Baú de Recompensa',
+        `Você recebeu ${result.energyReceived} de energia!`,
+        [{ text: 'Ótimo!', onPress: () => void loadData() }],
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao coletar recompensa.';
+      if (msg.includes('já coletou') || msg.includes('já coletado')) {
+        Alert.alert('Baú de Recompensa', 'Você já coletou esta recompensa.');
+      } else {
+        Alert.alert('Erro', msg);
+      }
+    } finally {
+      setClaimingRewardId(null);
+    }
   };
 
   const totalHeight =

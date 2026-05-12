@@ -79,21 +79,19 @@ const MinhaConta: React.FC = () => {
   };
 
   const handleLogout = async (): Promise<void> => {
+    // Clear auth first so the expiration guard sees isAuthenticated=false
+    // before RC.logOut() fires the listener (which sets isPremium=false)
+    try {
+      await authStore.logout();
+    } catch {}
+
     try {
       await logoutUser();
     } catch (e) {
       console.warn("Erro ao deslogar do RevenueCat:", e);
     }
 
-    try {
-      await useSubscriptionStore.getState().refresh();
-    } catch {}
-
-    try {
-      await authStore.logout();
-    } finally {
-      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-    }
+    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   };
 
   return (

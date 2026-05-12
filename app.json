@@ -28,6 +28,19 @@
     "web": {
       "favicon": "./src/assets/logo-img/logo_full.png"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "API_BASE_URL": "http://10.0.2.2:3000",
+      "GOOGLE_WEB_CLIENT_ID": "1058790722417-070a7rh7rib75970luhs57holfd09css.apps.googleusercontent.com",
+      "GOOGLE_IOS_CLIENT_ID": "1058790722417-qk1jkb8tg3ark49fmstc2h7pqbtn0ahq.apps.googleusercontent.com",
+      "GOOGLE_ANDROID_CLIENT_ID": "1058790722417-ont4hmrcb9babd7t8d2ulv3kq6ond3tp.apps.googleusercontent.com",
+      "REVENUECAT_IOS_API_KEY": "test_XRnfEBeCyBAiAckEbLAdYxjECkJ",
+      "REVENUECAT_ANDROID_API_KEY": "goog_fNOKXdnJLtOuUGVwnDYUbyphqOH",
+      "REVENUECAT_DEFAULT_OFFERING_IDENTIFIER": "default",
+      "eas": {
+        "projectId": "c259097b-80d5-4522-8ee4-e2b621f2bb58"
+      }
+    },
+    "owner": "rickqueiroz"
   }
 }

@@ -17,7 +17,8 @@ interface DashboardStore {
   lastFetchedBetStreak: number | null;  // timestamp ms
 
   // Actions
-  loadAll: () => Promise<void>;          // busca os dois em paralelo (com TTL)
+  /** Com `force=true`, ignora TTL e atualiza dashboard + bet streak. */
+  loadAll: (force?: boolean) => Promise<void>;
   loadDashboard: (force?: boolean) => Promise<void>;
   loadBetStreak: (force?: boolean) => Promise<void>;
   updateAfterCheckIn: (betStreak: number, nextCheckInAt: string) => void;
@@ -39,19 +40,23 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   lastFetchedBetStreak: null,
 
   /**
-   * Carrega dashboard e bet streak em paralelo, respeitando TTL
+   * Carrega dashboard e bet streak em paralelo, respeitando TTL (a menos que force=true)
    */
-  loadAll: async () => {
+  loadAll: async (force = false) => {
     const state = get();
     const now = Date.now();
     
     // Verifica se precisa buscar dashboard
-    const needsDashboard = state.lastFetchedDashboard === null || 
-                          (now - state.lastFetchedDashboard) >= TTL;
-    
+    const needsDashboard =
+      force ||
+      state.lastFetchedDashboard === null ||
+      now - state.lastFetchedDashboard >= TTL;
+
     // Verifica se precisa buscar bet streak
-    const needsBetStreak = state.lastFetchedBetStreak === null || 
-                          (now - state.lastFetchedBetStreak) >= TTL;
+    const needsBetStreak =
+      force ||
+      state.lastFetchedBetStreak === null ||
+      now - state.lastFetchedBetStreak >= TTL;
 
     // Se ambos ainda estão frescos, não faz nada
     if (!needsDashboard && !needsBetStreak) {

@@ -325,9 +325,7 @@ const Home: React.FC = () => {
       <StatsDisplay 
         loading={!statsReady}
         energy={statsReady && dashboard ? dashboard.energy : undefined}
-        streak={statsReady && dashboard ? `${dashboard.streak}d` : undefined}
-        // Quando statsReady=true mas dashboard=null (erro API), 
-        // StatsDisplay mostra 0 energy e "0d" streak como fallback explícito
+        streak={statsReady ? `${betStreak}d` : undefined}
       />
     </View>
   );
@@ -695,7 +693,7 @@ const Home: React.FC = () => {
                 await container.getResetBetStreakUseCase().execute();
                 setShowResetModal(false);
                 setShowResetConfirmModal(true);
-                await loadAll();
+                await loadAll(true);
               } catch (error: any) {
                 console.log("ResetBetStreak:", error?.message ?? error);
               }
@@ -766,7 +764,7 @@ const Home: React.FC = () => {
                 await container.getResetBetStreakUseCase().execute();
                 setShowCheckInModal(false);
                 setShowResetConfirmModal(true);
-                await loadAll();
+                await loadAll(true);
               } catch (error: any) {
                 console.log("BetCheckIn apostou (reset):", error?.message ?? error);
                 setShowCheckInModal(false);

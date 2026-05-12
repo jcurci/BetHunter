@@ -55,16 +55,38 @@ function resolveGoogleAndroidClientId(): string {
   return '';
 }
 
-function resolveRevenueCatApiKey(): string {
-  const value = extra.REVENUECAT_API_KEY;
+function resolveRevenueCatIosApiKey(): string {
+  const value = extra.REVENUECAT_IOS_API_KEY;
   if (value && typeof value === 'string') {
     return value.trim();
   }
 
   if (__DEV__) {
     console.warn(
-      '[ENV] EXPO_PUBLIC_REVENUECAT_API_KEY não definida. RevenueCat não funcionará.',
+      '[ENV] Defina EXPO_PUBLIC_REVENUECAT_IOS_API_KEY (appl_…) ou o legado EXPO_PUBLIC_REVENUECAT_API_KEY.',
     );
+  }
+  return '';
+}
+
+function resolveRevenueCatAndroidApiKey(): string {
+  const value = extra.REVENUECAT_ANDROID_API_KEY;
+  if (value && typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (__DEV__) {
+    console.warn(
+      '[ENV] Defina EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY (goog_…) ou o legado EXPO_PUBLIC_REVENUECAT_API_KEY.',
+    );
+  }
+  return '';
+}
+
+function resolveRevenueCatDefaultOfferingIdentifier(): string {
+  const value = extra.REVENUECAT_DEFAULT_OFFERING_IDENTIFIER;
+  if (value && typeof value === 'string') {
+    return value.trim();
   }
   return '';
 }
@@ -74,6 +96,8 @@ export const ENV = {
   GOOGLE_WEB_CLIENT_ID: resolveGoogleWebClientId(),
   GOOGLE_IOS_CLIENT_ID: resolveGoogleIosClientId(),
   GOOGLE_ANDROID_CLIENT_ID: resolveGoogleAndroidClientId(),
-  REVENUECAT_API_KEY: resolveRevenueCatApiKey(),
+  REVENUECAT_IOS_API_KEY: resolveRevenueCatIosApiKey(),
+  REVENUECAT_ANDROID_API_KEY: resolveRevenueCatAndroidApiKey(),
+  REVENUECAT_DEFAULT_OFFERING_IDENTIFIER: resolveRevenueCatDefaultOfferingIdentifier(),
   TOKEN_KEY: '@BetHunter:token',
 } as const;

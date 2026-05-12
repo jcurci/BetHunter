@@ -29,6 +29,9 @@ yarn-error.*
 # Local env files
 .env*.local
 .env
+.env.staging
+.env.production
+.env.development
 
 # TypeScript
 *.tsbuildinfo

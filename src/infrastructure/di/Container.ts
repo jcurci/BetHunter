@@ -59,6 +59,11 @@ import { SubmitBettingHouseReportUseCase } from "../../domain/usercases/SubmitBe
 import { BettingHouseReportApi } from "../services/BettingHouseReport.api";
 import { BettingHouseReportRepositoryImpl } from "../../domain/data/repositories/BettingHouseReportRepositoryImpl";
 
+// Reward imports
+import { ClaimRewardUseCase } from "../../domain/usercases/ClaimRewardUseCase";
+import { RewardRepositoryImpl } from "../../domain/data/repositories/RewardRepositoryImpl";
+import { RewardApi } from "../services/Reward.api";
+
 export class Container {
   private static instance: Container;
 
@@ -93,6 +98,7 @@ export class Container {
   private confirmPasswordChangeUseCase: ConfirmPasswordChangeUseCase | null = null;
 
   private submitBettingHouseReportUseCase: SubmitBettingHouseReportUseCase | null = null;
+  private claimRewardUseCase: ClaimRewardUseCase | null = null;
 
   private authApi: AuthApi | null = null;
   private authRepository: AuthRepositoryImpl | null = null;
@@ -308,5 +314,14 @@ export class Container {
       );
     }
     return this.submitBettingHouseReportUseCase;
+  }
+
+  getClaimRewardUseCase(): ClaimRewardUseCase {
+    if (!this.claimRewardUseCase) {
+      const rewardApi = new RewardApi();
+      const rewardRepository = new RewardRepositoryImpl(rewardApi);
+      this.claimRewardUseCase = new ClaimRewardUseCase(rewardRepository);
+    }
+    return this.claimRewardUseCase;
   }
 }

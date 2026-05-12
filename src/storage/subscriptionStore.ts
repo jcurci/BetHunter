@@ -4,13 +4,16 @@ import { ENTITLEMENT_ID } from '../services/revenueCat';
 
 type SubscriptionState = {
   isPremium: boolean;
+  isInitialized: boolean;
   customerInfo: CustomerInfo | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  setFromCustomerInfo: (info: CustomerInfo) => void;
 };
 
 export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isPremium: false,
+  isInitialized: false,
   customerInfo: null,
   loading: true,
 
@@ -18,22 +21,30 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
     try {
       set({ loading: true });
       const info = await Purchases.getCustomerInfo();
-      set({
-        isPremium: !!info.entitlements.active[ENTITLEMENT_ID],
-        customerInfo: info,
-        loading: false,
-      });
-    } catch {
-      set({ loading: false });
+      const isPremium = !!info.entitlements.active[ENTITLEMENT_ID];
+      if (__DEV__) console.log('[SUBSCRIPTION] refresh() → isPremium:', isPremium, 'entitlements:', Object.keys(info.entitlements.active));
+      set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
+    } catch (e) {
+      if (__DEV__) console.warn('[REVENUECAT] getCustomerInfo failed', e);
+      set({ loading: false, isInitialized: true });
     }
+  },
+
+  setFromCustomerInfo: (info: CustomerInfo) => {
+    const isPremium = !!info.entitlements.active[ENTITLEMENT_ID];
+    set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
   },
 }));
 
 export function setupCustomerInfoListener(): () => void {
   const listener = (info: CustomerInfo) => {
+    const isPremium = !!info.entitlements.active[ENTITLEMENT_ID];
+    if (__DEV__) console.log('[SUBSCRIPTION] listener fired → isPremium:', isPremium);
     useSubscriptionStore.setState({
-      isPremium: !!info.entitlements.active[ENTITLEMENT_ID],
+      isPremium,
       customerInfo: info,
+      loading: false,
+      isInitialized: true,
     });
   };
 

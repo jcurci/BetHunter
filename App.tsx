@@ -5,6 +5,7 @@ import { NavigationContainer, NavigationContainerRef } from "@react-navigation/n
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initRevenueCat, identifyUser } from "./src/services/revenueCat";
+import type { CustomerInfo } from "react-native-purchases";
 import {
   useSubscriptionStore,
   setupCustomerInfoListener,
@@ -62,6 +63,7 @@ const App: React.FC = () => {
   const isPremium = useSubscriptionStore((s) => s.isPremium);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const prevIsPremiumRef = useRef<boolean | null>(null);
+  const expirationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -89,15 +91,28 @@ const App: React.FC = () => {
         return;
       }
 
+      let rcCustomerInfo: CustomerInfo | null = null;
       if (user?.id) {
         try {
-          await identifyUser(user.id);
-        } catch (e) {
-          console.warn('Failed to identify user in RevenueCat:', e);
+          rcCustomerInfo = await identifyUser(user.id);
+        } catch (firstErr) {
+          console.warn('[REVENUECAT] identifyUser failed, retrying in 2s...', firstErr);
+          try {
+            await new Promise<void>((r) => setTimeout(r, 2000));
+            rcCustomerInfo = await identifyUser(user.id);
+          } catch (retryErr) {
+            console.warn('[REVENUECAT] identifyUser retry also failed — failing open', retryErr);
+            // Do NOT fall back to anonymous getCustomerInfo() — it has no purchases.
+            // Mark isInitialized so the expiration guard doesn't fire; listener will correct when network returns.
+            useSubscriptionStore.getState().setFromCustomerInfo({
+              entitlements: { active: {}, all: {} },
+            } as any);
+          }
         }
       }
-
-      await useSubscriptionStore.getState().refresh();
+      if (rcCustomerInfo) {
+        useSubscriptionStore.getState().setFromCustomerInfo(rcCustomerInfo);
+      }
       const { isPremium: premium } = useSubscriptionStore.getState();
 
       await finishBoot(premium ? "Home" : "Paywall");
@@ -110,21 +125,47 @@ const App: React.FC = () => {
     return removeListener;
   }, []);
 
-  // Redirect to Paywall when subscription expires while using the app
+  // Redirect to Paywall when subscription expires while using the app (debounced + double-checked)
   useEffect(() => {
+    const { isInitialized } = useSubscriptionStore.getState();
+
+    // Don't fire during boot — RC logIn() triggers multiple listener updates before settling
+    if (!isInitialized) {
+      prevIsPremiumRef.current = isPremium;
+      return;
+    }
+
     if (prevIsPremiumRef.current === null) {
       prevIsPremiumRef.current = isPremium;
       return;
     }
 
+    if (__DEV__) console.log('[EXPIRATION GUARD] state change:', { prev: prevIsPremiumRef.current, current: isPremium, isAuthenticated });
+
     if (prevIsPremiumRef.current && !isPremium && isAuthenticated) {
-      navigationRef.current?.reset({
-        index: 0,
-        routes: [{ name: 'Paywall' }],
-      });
+      if (expirationTimerRef.current) clearTimeout(expirationTimerRef.current);
+
+      // Wait 3s then double-check: RC fires false negatives during logIn() transitions
+      expirationTimerRef.current = setTimeout(async () => {
+        await useSubscriptionStore.getState().refresh();
+        const { isPremium: confirmedPremium } = useSubscriptionStore.getState();
+        const { isAuthenticated: stillAuthed } = useAuthStore.getState();
+
+        if (!confirmedPremium && stillAuthed) {
+          navigationRef.current?.reset({ index: 0, routes: [{ name: 'Paywall' }] });
+        }
+      }, 3000);
+    } else if (isPremium && expirationTimerRef.current) {
+      // Premium restored before timer fired — cancel redirect
+      clearTimeout(expirationTimerRef.current);
+      expirationTimerRef.current = null;
     }
 
     prevIsPremiumRef.current = isPremium;
+
+    return () => {
+      if (expirationTimerRef.current) clearTimeout(expirationTimerRef.current);
+    };
   }, [isPremium, isAuthenticated]);
 
   if (!isReady) {
