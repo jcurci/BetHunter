@@ -36,8 +36,7 @@ yarn-error.*
 # TypeScript
 *.tsbuildinfo
 
-# Lock files
-package-lock.json
+# Lock files (yarn.lock kept out; package-lock.json committed so EAS uses npm)
 yarn.lock
 
 # IDE
