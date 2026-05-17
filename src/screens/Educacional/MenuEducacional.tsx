@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -33,28 +33,40 @@ import {
 const MenuEducacional: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((state) => state.user);
-  
+
   // Dashboard store
   const { dashboard, isLoading, loadAll } = useDashboardStore();
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
 
-  // Current course in progress (for "Curso atual" card)
+  // Current course — stale-while-revalidate:
+  // state persists between focus events (component doesn't unmount),
+  // so cached value renders instantly while background fetch runs.
   const [currentCourse, setCurrentCourse] = useState<CourseProgress | null>(null);
+  const [currentCourseLoading, setCurrentCourseLoading] = useState(true);
+  const hasCourseDataRef = useRef(false);
 
   const loadCurrentCourse = useCallback(async () => {
+    // First load → show skeleton. Subsequent focuses → silent background refresh.
+    if (!hasCourseDataRef.current) {
+      setCurrentCourseLoading(true);
+    }
     try {
       const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
       const inProgress = courses.find(
         (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
       );
       const notStarted = courses.find((c) => c.modulesCompleted === 0);
-      setCurrentCourse(inProgress ?? notStarted ?? courses[0] ?? null);
+      const resolved = inProgress ?? notStarted ?? courses[0] ?? null;
+      hasCourseDataRef.current = true;
+      setCurrentCourse(resolved);
     } catch {
-      // Non-critical — card simply won't render
+      // Non-critical — keeps last known value, or skeleton stays if first load failed
+    } finally {
+      setCurrentCourseLoading(false);
     }
-  }, []);
+  }, []); // stable — reads only refs, no external deps
 
   useEffect(() => {
     loadAll();
@@ -81,9 +93,14 @@ const MenuEducacional: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Avatar initials={getInitials(user?.name)} size={48} style={styles.avatar} />
+            <Avatar initials={getInitials(user?.name)} size={42} style={styles.avatar} />
             <View style={styles.titleContainer}>
-              <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit={false}>
+              <Text
+                style={styles.title}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
                 Menu{"\n"}Educacional
               </Text>
             </View>
@@ -165,7 +182,12 @@ const MenuEducacional: React.FC = () => {
 
               <Text style={styles.continueBoxTitle}>Curso atual</Text>
 
-              {currentCourse && (
+              {currentCourseLoading && !currentCourse ? (
+                <View style={styles.continueSkeletonCard}>
+                  <View style={styles.continueSkeletonTitle} />
+                  <View style={styles.continueSkeletonSubtitle} />
+                </View>
+              ) : currentCourse ? (
                 <LinearGradient
                   colors={[...HORIZONTAL_GRADIENT_COLORS]}
                   locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
@@ -225,7 +247,7 @@ const MenuEducacional: React.FC = () => {
                     </View>
                   </TouchableOpacity>
                 </LinearGradient>
-              )}
+              ) : null}
             </View>
           </View>
 
@@ -263,7 +285,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingTop: 10,
+    paddingTop: 4,
     paddingHorizontal: 20,
     paddingBottom: 0,
   },
@@ -272,34 +294,36 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-    marginTop: 8,
+    alignItems: "center",
+    marginBottom: 14,
+    marginTop: 0,
   },
   headerLeft: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     flex: 1,
-    marginRight: 16,
+    marginRight: 12,
+    minWidth: 0,
   },
   avatar: {
-    marginRight: 12,
+    marginRight: 10,
+    flexShrink: 0,
   },
   titleContainer: {
     flex: 1,
-    maxWidth: "70%",
+    minWidth: 0,
     justifyContent: "center",
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#FFFFFF",
-    lineHeight: 28,
-    flexWrap: "wrap",
+    lineHeight: 25,
   },
   headerRight: {
     alignItems: "flex-end",
-    justifyContent: "flex-start",
+    justifyContent: "center",
+    flexShrink: 0,
   },
 
   // Scroll
@@ -307,12 +331,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 28,
+    paddingBottom: 20,
   },
 
   // Streak
   streakCounter: {
-    marginBottom: 28,
+    marginBottom: 20,
   },
   streakCounterSkeleton: {
     height: 60,
@@ -351,7 +375,7 @@ const styles = StyleSheet.create({
 
   // Estude (continue de onde parou)
   studySection: {
-    marginBottom: 28,
+    marginBottom: 20,
   },
   studyHeader: {
     flexDirection: "row",
@@ -412,6 +436,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#A09CAB",
     marginTop: 2,
+  },
+  continueSkeletonCard: {
+    borderRadius: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    gap: 10,
+  },
+  continueSkeletonTitle: {
+    height: 20,
+    width: "65%",
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  continueSkeletonSubtitle: {
+    height: 13,
+    width: "35%",
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   arrowContainer: {
     width: 44,

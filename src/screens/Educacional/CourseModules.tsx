@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 import { BlurView } from "expo-blur";
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from "@react-navigation/native";
@@ -36,7 +36,7 @@ import {
 
 // ─── Trail layout constants ───────────────────────────────────────────────────
 const VERTICAL_SPACING = 200;
-const TOP_PADDING = 60;
+const TRAIL_GAP = 24; // gap below the header's bottom edge
 const BOTTOM_PADDING = 120;
 const HORIZONTAL_AMPLITUDE = 52;
 const CONNECTOR_DOTS = 5;
@@ -63,8 +63,8 @@ function getNodeCenterX(index: number, screenWidth: number): number {
   return screenWidth / 2 + Math.sin(index * (Math.PI / 2)) * HORIZONTAL_AMPLITUDE;
 }
 
-function getNodeCenterY(index: number): number {
-  return TOP_PADDING + index * VERTICAL_SPACING;
+function getNodeCenterY(index: number, trailTopPadding: number): number {
+  return trailTopPadding + index * VERTICAL_SPACING;
 }
 
 // ─── Active glow border (pill-shaped, not circle) ────────────────────────────
@@ -181,9 +181,13 @@ const TrailNode = React.memo(function TrailNode({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 const CourseModules: React.FC = () => {
   const { width: screenWidth } = useWindowDimensions();
+  const { top: topInset } = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, "CourseModules">>();
   const { courseId, courseTitle, modulesCompleted: initialModulesCompleted } = route.params;
+
+  const [headerHeight, setHeaderHeight] = useState(120);
+  const trailTopPadding = headerHeight + TRAIL_GAP;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -330,7 +334,7 @@ const CourseModules: React.FC = () => {
   };
 
   const totalHeight =
-    TOP_PADDING + Math.max(1, modules.length) * VERTICAL_SPACING + BOTTOM_PADDING;
+    trailTopPadding + Math.max(1, modules.length) * VERTICAL_SPACING + BOTTOM_PADDING;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -355,12 +359,12 @@ const CourseModules: React.FC = () => {
           const displayModules = [...modules].reverse();
           return displayModules.map((module, visualIndex) => {
             const cx = getNodeCenterX(visualIndex, screenWidth);
-            const cy = getNodeCenterY(visualIndex);
+            const cy = getNodeCenterY(visualIndex, trailTopPadding);
             const status = getStatus(module.moduleNumber, modulesCompletedCount);
 
             const hasNext = visualIndex < displayModules.length - 1;
             const nextCx = hasNext ? getNodeCenterX(visualIndex + 1, screenWidth) : 0;
-            const nextCy = hasNext ? getNodeCenterY(visualIndex + 1) : 0;
+            const nextCy = hasNext ? getNodeCenterY(visualIndex + 1, trailTopPadding) : 0;
 
             const curDims = NODE_SVG_DIMS[module.moduleType] ?? DEFAULT_NODE_DIMS;
             const nextDims = hasNext
@@ -393,7 +397,11 @@ const CourseModules: React.FC = () => {
       </ScrollView>
 
       {/* Floating header */}
-      <View style={styles.header} pointerEvents="box-none">
+      <View
+        style={[styles.header, { paddingTop: topInset + 8 }]}
+        pointerEvents="box-none"
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
         <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
@@ -421,9 +429,7 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
-  scrollContent: {
-    paddingTop: 150,
-  },
+  scrollContent: {},
   centered: {
     flex: 1,
     alignItems: "center",
@@ -436,7 +442,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 56,
+    // paddingTop set dynamically via topInset + 8 inline style
     paddingHorizontal: 20,
     paddingBottom: 14,
     zIndex: 10,

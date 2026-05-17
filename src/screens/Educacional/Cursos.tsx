@@ -9,7 +9,7 @@ import {
   Image,
   useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -75,9 +75,14 @@ function formatCourseModalTitle(raw: string): string {
 
 const Cursos = () => {
   const { width: windowWidth } = useWindowDimensions();
+  const { top: topInset } = useSafeAreaInsets();
   const cardWidth = Math.floor(
     (windowWidth - SCROLL_HORIZONTAL_PADDING * 2 - GRID_COLUMN_GAP) / 2,
   );
+  const [headerHeight, setHeaderHeight] = useState(180);
+  // ScrollView starts after SafeAreaView's top inset, so we subtract it
+  // to align cards exactly at the header's bottom edge on every device.
+  const scrollPaddingTop = Math.max(headerHeight - topInset, 0);
 
   const navigation = useNavigation<NavigationProp>();
   const authStore = useAuthStore();
@@ -137,7 +142,7 @@ const Cursos = () => {
 
   const renderProgressBar = (percentage: number, _hasProgress: boolean, gradientColors: string[]) => {
     return (
-      <View style={[styles.progressBarRow, { width: cardWidth - 16 }]}>
+      <View style={styles.progressBarRow}>
         <View style={styles.progressBarTrack}>
           <LinearGradient
             colors={gradientColors as any}
@@ -233,7 +238,7 @@ const Cursos = () => {
     <SafeAreaView edges={["top"]} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
         {error && (
@@ -272,7 +277,10 @@ const Cursos = () => {
       </ScrollView>
 
       {/* Floating Header - positioned above ScrollView */}
-      <View style={styles.headerContainer}>
+      <View
+        style={[styles.headerContainer, { paddingTop: topInset + 12 }]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
         {/* Header Background with Blur - always visible with low opacity */}
         <BlurView
           intensity={50}
@@ -334,7 +342,7 @@ const Cursos = () => {
       <Modal
         visible={isModalVisible}
         onClose={handleCloseModal}
-        size="medium"
+        size="big"
         title={formatCourseModalTitle(selectedModule?.title || "")}
         headerActions={{
           right: [
@@ -374,7 +382,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 60,
+    // paddingTop set dynamically via topInset + 12 inline style
     paddingHorizontal: 20,
     paddingBottom: 16,
     zIndex: 10,
@@ -457,7 +465,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-    paddingTop: 180, // Espaço para o header flutuante
+    // paddingTop is set dynamically via onLayout on the header
   },
   modulesContainer: {
     paddingTop: 12,
@@ -470,6 +478,7 @@ const styles = StyleSheet.create({
   },
   moduleCard: {
     minHeight: 172,
+    overflow: "hidden",
     backgroundColor: "#2B2935",
     borderRadius: 15,
     paddingVertical: 8,
@@ -509,7 +518,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    alignSelf: "center",
     marginBottom: 2,
   },
   progressBarTrack: {

@@ -4,9 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Animated,
   Easing,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import { useOnboarding } from '../OnboardingContext';
@@ -52,6 +54,7 @@ export const DiagnosticScreen: React.FC<Props> = ({
   onBack,
 }) => {
   const { answers, setProfile } = useOnboarding();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(0);
   const result = calculateProfile(answers);
@@ -260,7 +263,13 @@ export const DiagnosticScreen: React.FC<Props> = ({
       onBack={onBack}
       stepLabel="Seu diagnóstico"
     >
-      <View style={styles.content}>
+      {/* ScrollView garante que o conteúdo seja acessível em telas pequenas */}
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Avatar */}
         <Animated.View
           style={[
@@ -336,9 +345,15 @@ export const DiagnosticScreen: React.FC<Props> = ({
         <Animated.View style={[styles.summaryCard, { opacity: summaryFade }]}>
           <Text style={styles.summaryText}>{result.profileSummary}</Text>
         </Animated.View>
-      </View>
+      </ScrollView>
 
-      <Animated.View style={[styles.bottomBar, { opacity: buttonFade }]}>
+      {/* Botão CTA fixo fora do scroll — sempre visível */}
+      <Animated.View
+        style={[
+          styles.bottomBar,
+          { opacity: buttonFade, paddingBottom: Math.max(insets.bottom, 24) },
+        ]}
+      >
         <TouchableOpacity onPress={onNext} activeOpacity={0.9}>
           <LinearGradient
             colors={[...HORIZONTAL_GRADIENT_COLORS]}
@@ -443,10 +458,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#7456C8',
   },
-  content: {
+  scrollArea: {
     flex: 1,
+  },
+  scrollContent: {
     alignItems: 'center',
     paddingTop: 8,
+    paddingBottom: 12,
   },
   avatarWrapper: {
     marginBottom: 16,
@@ -562,8 +580,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   bottomBar: {
-    paddingBottom: 36,
     paddingTop: 12,
+    paddingHorizontal: 0,
   },
   continueButton: {
     borderRadius: 999,

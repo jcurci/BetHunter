@@ -14,6 +14,7 @@ import {
   InteractionManager,
   Animated,
   Easing,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -125,10 +126,18 @@ const Home: React.FC = () => {
 
   const [greetingLine, setGreetingLine] = useState<string>(() => periodGreetingLabel());
 
-  // Current course in progress (for "Continue de onde parou" card)
+  // Current course — stale-while-revalidate:
+  // state persists between focus events (component doesn't unmount),
+  // so cached value renders instantly while background fetch runs.
   const [currentCourse, setCurrentCourse] = useState<CourseProgress | null>(null);
+  const [currentCourseLoading, setCurrentCourseLoading] = useState(true);
+  const hasCourseDataRef = useRef(false);
 
   const loadCurrentCourse = useCallback(async () => {
+    // First load → show skeleton. Subsequent focuses → silent background refresh.
+    if (!hasCourseDataRef.current) {
+      setCurrentCourseLoading(true);
+    }
     try {
       const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
       // Prefer the course actively in progress; fall back to the first not yet started
@@ -136,11 +145,15 @@ const Home: React.FC = () => {
         (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
       );
       const notStarted = courses.find((c) => c.modulesCompleted === 0);
-      setCurrentCourse(inProgress ?? notStarted ?? courses[0] ?? null);
+      const resolved = inProgress ?? notStarted ?? courses[0] ?? null;
+      hasCourseDataRef.current = true;
+      setCurrentCourse(resolved);
     } catch {
-      // Non-critical — card simply won't render
+      // Non-critical — keeps last known value, or skeleton stays if first load failed
+    } finally {
+      setCurrentCourseLoading(false);
     }
-  }, []);
+  }, []); // stable — reads only refs, no external deps
 
   useEffect(() => {
     loadAll();
@@ -234,9 +247,23 @@ const Home: React.FC = () => {
       if (BetBlocker.refreshBlockedDomains) {
         await BetBlocker.refreshBlockedDomains();
       }
-      BetBlocker.startBlocking();
+      const granted: boolean = await BetBlocker.startBlocking();
       setShowBlockModal(false);
-      setShowBlockSuccessModal(true);
+      if (granted) {
+        setShowBlockSuccessModal(true);
+      } else {
+        Alert.alert(
+          "Permissão necessária",
+          "Para ativar o bloqueio, você precisa autorizar a conexão VPN quando o Android solicitar.",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Abrir configurações",
+              onPress: () => Linking.openSettings(),
+            },
+          ]
+        );
+      }
     } catch (error: any) {
       console.log("BetBlocker error", error);
       Alert.alert(
@@ -511,7 +538,12 @@ const Home: React.FC = () => {
                 style={StyleSheet.absoluteFill}
               />
               <Text style={styles.continueBoxTitle}>Continue de onde parou</Text>
-              {currentCourse && (
+              {currentCourseLoading && !currentCourse ? (
+                <View style={styles.continueSkeletonCard}>
+                  <View style={styles.continueSkeletonLine} />
+                  <View style={styles.continueSkeletonChevron} />
+                </View>
+              ) : currentCourse ? (
                 <LinearGradient
                   colors={[...HORIZONTAL_GRADIENT_COLORS]}
                   locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
@@ -536,7 +568,7 @@ const Home: React.FC = () => {
                     <Icon name="chevron-right" size={22} color="#B8B3BF" />
                   </TouchableOpacity>
                 </LinearGradient>
-              )}
+              ) : null}
             </View>
           </View>
 
@@ -569,7 +601,7 @@ const Home: React.FC = () => {
       <Modal
         visible={showBlockFlowModal}
         onClose={closeBlockFlowModal}
-        size="big"
+        size="bigger"
         title="Proteção e denúncias"
         subtitle="Configure o bloqueio neste dispositivo ou nos informe um site ou app para incluir na lista."
       >
@@ -982,6 +1014,27 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: 0.2,
   },
+  continueSkeletonCard: {
+    borderRadius: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  continueSkeletonLine: {
+    height: 16,
+    width: "62%",
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.10)",
+  },
+  continueSkeletonChevron: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.07)",
+  },
 
   // Continue Box (reuses roulette visual)
   continueBoxOuter: {
@@ -998,7 +1051,6 @@ const styles = StyleSheet.create({
   // Reset Modal Styles
   resetModalContent: {
     alignItems: "center",
-    paddingTop: 20,
   },
   blockModalContent: {
     alignItems: "center",
@@ -1118,7 +1170,6 @@ const styles = StyleSheet.create({
   },
   checkInModalContent: {
     alignItems: "center",
-    paddingTop: 20,
     gap: 12,
   },
   resetConfirmModalContent: {

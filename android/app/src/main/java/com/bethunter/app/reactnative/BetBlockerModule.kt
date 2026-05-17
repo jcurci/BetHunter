@@ -1,8 +1,12 @@
 package com.bethunter.app.reactnative
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.VpnService
+import android.os.PowerManager
+import android.provider.Settings
+import android.net.Uri
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.bethunter.app.repository.BlockedDomainsRepository
@@ -21,6 +25,9 @@ class BetBlockerModule(
 
   private val repository = BlockedDomainsRepository(reactContext.applicationContext)
 
+  // @Volatile garante visibilidade entre JS thread e UI thread
+  @Volatile private var pendingVpnPromise: Promise? = null
+
   init {
     reactContext.addActivityEventListener(this)
   }
@@ -28,22 +35,28 @@ class BetBlockerModule(
   override fun getName(): String = "BetBlocker"
 
   @ReactMethod
-  fun startBlocking() {
+  fun startBlocking(promise: Promise) {
     repository.setBlockingEnabled(true)
-    val prepareIntent = VpnService.prepare(reactContext.currentActivity)
+    val prepareIntent = VpnService.prepare(reactContext.currentActivity ?: reactContext)
     if (prepareIntent == null) {
       startVpnService()
+      requestBatteryOptimizationExemption()
+      promise.resolve(true)
       return
     }
     val activity = reactContext.currentActivity
     if (activity == null) {
-      Log.w(TAG, "No current activity to request VPN permission")
+      repository.setBlockingEnabled(false)
+      promise.reject("NO_ACTIVITY", "No active Android activity")
       return
     }
+    pendingVpnPromise = promise
     try {
       activity.startActivityForResult(prepareIntent, REQ_PREPARE_VPN)
     } catch (e: Exception) {
-      Log.e(TAG, "Failed to start VPN prepare: ${e.message}")
+      pendingVpnPromise = null
+      repository.setBlockingEnabled(false)
+      promise.reject("VPN_PREPARE_FAILED", e.message)
     }
   }
 
@@ -75,7 +88,6 @@ class BetBlockerModule(
     }
     repository.setBlockedDomains(list)
 
-    // ask service (if running) to reload from SharedPreferences
     try {
       val reloadIntent = Intent(reactContext, BetBlockerVpnService::class.java).apply {
         action = BetBlockerVpnService.ACTION_RELOAD
@@ -118,13 +130,31 @@ class BetBlockerModule(
     }
   }
 
+  private fun requestBatteryOptimizationExemption() {
+    val pm = reactContext.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
+    if (pm.isIgnoringBatteryOptimizations(reactContext.packageName)) return
+    try {
+      val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        data = Uri.parse("package:${reactContext.packageName}")
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+      }
+      reactContext.startActivity(intent)
+    } catch (e: Exception) {
+      Log.w(TAG, "Could not open battery optimization settings: ${e.message}")
+    }
+  }
+
   override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
     if (requestCode != REQ_PREPARE_VPN) return
+    val p = pendingVpnPromise
+    pendingVpnPromise = null
     if (resultCode == Activity.RESULT_OK) {
       startVpnService()
+      requestBatteryOptimizationExemption()
+      p?.resolve(true)
     } else {
-      // user denied; rollback enabled flag
       repository.setBlockingEnabled(false)
+      p?.resolve(false)
       Log.w(TAG, "VPN permission denied by user")
     }
   }
@@ -133,9 +163,14 @@ class BetBlockerModule(
     // no-op
   }
 
+  override fun onCatalystInstanceDestroy() {
+    pendingVpnPromise?.reject("MODULE_DESTROYED", "Module was destroyed")
+    pendingVpnPromise = null
+    reactContext.removeActivityEventListener(this)
+  }
+
   companion object {
     private const val TAG = "BetBlockerModule"
-    private const val REQ_PREPARE_VPN = 0xBEE // arbitrary
+    private const val REQ_PREPARE_VPN = 0xBEE
   }
 }
-

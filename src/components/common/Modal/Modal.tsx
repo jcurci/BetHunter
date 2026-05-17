@@ -6,10 +6,11 @@ import {
   Modal as RNModal,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   Animated,
   TouchableWithoutFeedback,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ModalProps, ButtonConfig, HeaderAction } from './Modal.types';
@@ -19,14 +20,12 @@ import {
   SHADOW_OVERLAY_COLORS,
 } from '../../../config/colors';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const SIZE_HEIGHTS = {
-  bigger: SCREEN_HEIGHT * 0.9,
-  big: SCREEN_HEIGHT * 0.7,
-  medium: SCREEN_HEIGHT * 0.5,
-  small: SCREEN_HEIGHT * 0.3,
-  smaller: SCREEN_HEIGHT * 0.2,
+const SIZE_RATIOS = {
+  bigger: 0.9,
+  big: 0.7,
+  medium: 0.5,
+  small: 0.45,
+  smaller: 0.2,
 };
 
 const CustomModal: React.FC<ModalProps> = ({
@@ -43,7 +42,9 @@ const CustomModal: React.FC<ModalProps> = ({
   backdropOpacity = 0.5,
   scrollEnabled = true,
 }) => {
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const { height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -65,7 +66,7 @@ const CustomModal: React.FC<ModalProps> = ({
     } else {
       if (animationType === 'slide') {
         Animated.timing(slideAnim, {
-          toValue: SCREEN_HEIGHT,
+          toValue: screenHeight,
           duration: 250,
           useNativeDriver: true,
         }).start();
@@ -79,7 +80,9 @@ const CustomModal: React.FC<ModalProps> = ({
     }
   }, [visible, animationType]);
 
-  const modalHeight = SIZE_HEIGHTS[size];
+  const modalHeight = screenHeight * SIZE_RATIOS[size];
+  // Garante que o conteúdo scrollável não fique atrás da nav bar/home indicator
+  const contentBottomPadding = Math.max(insets.bottom, 16);
 
   const renderHeaderAction = (action: HeaderAction, index: number) => (
     <TouchableOpacity
@@ -187,13 +190,13 @@ const CustomModal: React.FC<ModalProps> = ({
         {scrollEnabled ? (
           <ScrollView
             style={styles.contentContainer}
-            contentContainerStyle={styles.contentInner}
+            contentContainerStyle={[styles.contentInner, { paddingBottom: contentBottomPadding }]}
             showsVerticalScrollIndicator={false}
           >
             {children}
           </ScrollView>
         ) : (
-          <View style={[styles.contentContainer, styles.contentInner]}>
+          <View style={[styles.contentContainer, styles.contentInner, { paddingBottom: contentBottomPadding }]}>
             {children}
           </View>
         )}
@@ -311,13 +314,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
     width: '100%',
     flexShrink: 1,
-    lineHeight: 28,
+    lineHeight: 25,
   },
   subtitle: {
     fontSize: 14,

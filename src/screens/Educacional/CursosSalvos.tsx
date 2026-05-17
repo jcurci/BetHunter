@@ -36,7 +36,7 @@ const CursosSalvos: React.FC = () => {
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBar}>
           <LinearGradient
-            colors={gradientColors}
+            colors={gradientColors as any}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: `${percentage}%` }]}
@@ -58,7 +58,7 @@ const CursosSalvos: React.FC = () => {
             maskElement={<Text style={styles.courseTitle}>{course.title}</Text>}
           >
             <LinearGradient
-              colors={course.gradientColors}
+              colors={course.gradientColors as any}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
