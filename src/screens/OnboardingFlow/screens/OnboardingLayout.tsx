@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   TouchableOpacity,
@@ -8,6 +7,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import RadialGradientBackground from '../../../components/common/RadialGradientBackground/RadialGradientBackground';
 import {
@@ -30,6 +30,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   onBack,
   stepLabel,
 }) => {
+  const insets = useSafeAreaInsets();
   const rawProgress = (currentStep + 1) / totalSteps;
   const progress = Math.max(0.01, Math.min(rawProgress, 1));
 
@@ -79,70 +80,66 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 
   return (
     <RadialGradientBackground>
-      <SafeAreaView style={styles.safeArea}>
-        <Animated.View
-          style={[
-            styles.container,
-            {
-              opacity: entranceFade,
-              transform: [{ translateY: entranceSlide }],
-            },
-          ]}
-        >
-          {/* Progress bar */}
-          <View style={styles.progressBarBackground}>
-            <Animated.View style={{ flex: progressFlex }}>
-              <LinearGradient
-                colors={[...HORIZONTAL_GRADIENT_COLORS]}
-                locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.progressFill}
-              />
-            </Animated.View>
-            <Animated.View style={{ flex: remainFlex }} />
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + 16,
+            paddingBottom: Math.max(insets.bottom, 16),
+            opacity: entranceFade,
+            transform: [{ translateY: entranceSlide }],
+          },
+        ]}
+      >
+        {/* Progress bar */}
+        <View style={styles.progressBarBackground}>
+          <Animated.View style={{ flex: progressFlex }}>
+            <LinearGradient
+              colors={[...HORIZONTAL_GRADIENT_COLORS]}
+              locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.progressFill}
+            />
+          </Animated.View>
+          <Animated.View style={{ flex: remainFlex }} />
+        </View>
+
+        {/* Header */}
+        {(onBack !== undefined || stepLabel) && (
+          <View style={styles.headerRow}>
+            {onBack ? (
+              <TouchableOpacity
+                onPress={onBack}
+                activeOpacity={0.7}
+                style={styles.backButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Text style={styles.backText}>← Voltar</Text>
+              </TouchableOpacity>
+            ) : (
+              <View />
+            )}
+            {stepLabel ? (
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepIndicator}>{stepLabel}</Text>
+              </View>
+            ) : (
+              <View />
+            )}
           </View>
+        )}
 
-          {/* Header */}
-          {(onBack !== undefined || stepLabel) && (
-            <View style={styles.headerRow}>
-              {onBack ? (
-                <TouchableOpacity
-                  onPress={onBack}
-                  activeOpacity={0.7}
-                  style={styles.backButton}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  <Text style={styles.backText}>← Voltar</Text>
-                </TouchableOpacity>
-              ) : (
-                <View />
-              )}
-              {stepLabel ? (
-                <View style={styles.stepBadge}>
-                  <Text style={styles.stepIndicator}>{stepLabel}</Text>
-                </View>
-              ) : (
-                <View />
-              )}
-            </View>
-          )}
-
-          {children}
-        </Animated.View>
-      </SafeAreaView>
+        {children}
+      </Animated.View>
     </RadialGradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 16,
   },
   progressBarBackground: {
     height: 5,

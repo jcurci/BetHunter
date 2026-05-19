@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
@@ -35,6 +36,8 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
   onNext,
 }) => {
   const { setPushEnabled } = useOnboarding();
+  const { height } = useWindowDimensions();
+  const isSmall = height < 700;
   const bellBounce = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
 
@@ -82,22 +85,27 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
     onNext();
   };
 
+  const bellSize = isSmall ? 64 : 84;
+  const bellIconSize = isSmall ? 28 : 36;
+  const contentGap = isSmall ? 16 : 28;
+  const benefitPadding = isSmall ? 10 : 14;
+
   return (
     <OnboardingLayout currentStep={currentStep} totalSteps={totalSteps}>
-      <Animated.View style={[styles.content, { opacity: fadeIn }]}>
+      <Animated.View style={[styles.content, { opacity: fadeIn, gap: contentGap }]}>
         {/* Bell icon */}
         <Animated.View style={{ transform: [{ translateY: bellBounce }] }}>
           <LinearGradient
             colors={['rgba(255,216,102,0.2)', 'rgba(255,216,102,0.05)']}
-            style={styles.bellContainer}
+            style={[styles.bellContainer, { width: bellSize, height: bellSize, borderRadius: bellSize / 2 }]}
           >
-            <Icon name="bell" size={36} color="#FFD866" />
+            <Icon name="bell" size={bellIconSize} color="#FFD866" />
           </LinearGradient>
         </Animated.View>
 
-        <View style={styles.textGroup}>
-          <Text style={styles.title}>Ative as notificações</Text>
-          <Text style={styles.subtitle}>
+        <View style={[styles.textGroup, { gap: isSmall ? 6 : 10 }]}>
+          <Text style={[styles.title, { fontSize: isSmall ? 20 : 24 }]}>Ative as notificações</Text>
+          <Text style={[styles.subtitle, { fontSize: isSmall ? 13 : 15 }]}>
             Não perca nenhum momento da sua recuperação.{'\n'}Receba suporte quando mais precisar.
           </Text>
         </View>
@@ -105,7 +113,7 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
         {/* Benefits list */}
         <View style={styles.benefitsList}>
           {BENEFITS.map((b, i) => (
-            <View key={i} style={styles.benefitItem}>
+            <View key={i} style={[styles.benefitItem, { padding: benefitPadding }]}>
               <View style={[styles.benefitIcon, { backgroundColor: b.color + '22' }]}>
                 <Icon name={b.icon} size={16} color={b.color} />
               </View>
@@ -115,7 +123,7 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
         </View>
 
         {/* Buttons */}
-        <View style={styles.buttonsGroup}>
+        <View style={[styles.buttonsGroup, { gap: isSmall ? 8 : 14 }]}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleRequestPermission}
@@ -126,7 +134,7 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
               locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.primaryButton}
+              style={[styles.primaryButton, { paddingVertical: isSmall ? 13 : 16 }]}
             >
               <Icon name="bell" size={16} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>Ativar notificações</Text>
@@ -147,12 +155,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
   },
   bellContainer: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -160,17 +164,14 @@ const styles = StyleSheet.create({
   },
   textGroup: {
     alignItems: 'center',
-    gap: 10,
   },
   title: {
-    fontSize: 24,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 15,
     color: '#A09BAE',
     textAlign: 'center',
     lineHeight: 22,

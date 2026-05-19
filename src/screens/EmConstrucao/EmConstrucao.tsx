@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
+  useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -20,28 +21,34 @@ import { RadialGradientBackground, GradientBorderButton } from "../../components
 
 const EmConstrucao: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { width, height } = useWindowDimensions();
+
+  const circleSize = Math.min(width * 0.8, 340);
+  const iconScale = circleSize / 340;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: Math.max(24, height * 0.05) }]}>
         {/* Background Gradient - Radial Effect */}
         <RadialGradientBackground style={styles.backgroundGradient} />
 
-        <View style={styles.content}>
-          <Text style={styles.title}>Em Construção!</Text>
-          <Text style={styles.subtitle}>
+        <View style={[styles.content, { paddingTop: height * 0.1 }]}>
+          <Text style={[styles.title, { fontSize: Math.min(42, width * 0.11) }]}>
+            Em Construção!
+          </Text>
+          <Text style={[styles.subtitle, { fontSize: Math.min(20, width * 0.055), marginBottom: height * 0.07 }]}>
             Essa feature ainda não esta disponível.
           </Text>
 
-          <View style={styles.iconContainer}>
+          <View style={[styles.iconContainer, { width: circleSize, height: circleSize }]}>
             <LinearGradient
               colors={HORIZONTAL_GRADIENT_COLORS}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.gradientCircle}
+              style={[styles.gradientCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}
             />
             <View style={styles.iconWrapper}>
-              <EmConstrucaoIcon width={228} height={219} />
+              <EmConstrucaoIcon width={228 * iconScale} height={219 * iconScale} />
             </View>
           </View>
         </View>
@@ -63,7 +70,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingBottom: 40,
     justifyContent: "space-between",
   },
   backgroundGradient: {
@@ -77,33 +83,24 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     alignItems: "center",
-    paddingTop: 86,
   },
   title: {
-    fontSize: 42,
     fontWeight: "bold",
     color: "#EAEAE5",
     textAlign: "center",
     marginBottom: 16,
   },
   subtitle: {
-    fontSize: 20,
     color: "#A09CAB",
     textAlign: "center",
-    marginBottom: 60,
   },
   iconContainer: {
     position: "relative",
-    width: 340,
-    height: 340,
     alignItems: "center",
     justifyContent: "center",
   },
   gradientCircle: {
     position: "absolute",
-    width: 340,
-    height: 340,
-    borderRadius: 170,
     opacity: 0.6,
   },
   iconWrapper: {

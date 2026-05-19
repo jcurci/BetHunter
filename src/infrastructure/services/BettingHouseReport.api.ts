@@ -2,18 +2,10 @@ import { apiClient } from '../../services/api/apiClient';
 import type { BettingHouseReportPayload } from '../../domain/repositories/BettingHouseReportRepository';
 import { AuthenticationError } from '../../domain/errors/CustomErrors';
 
-/**
- * Backend: espera POST com houseName + url para fila manual de domínios.
- * Ajuste o path aqui se a API usar outra rota.
- */
 export class BettingHouseReportApi {
   async submitReport(payload: BettingHouseReportPayload): Promise<void> {
     try {
-      const urlPath = '/users/betting-house-reports';
-      await apiClient.post(urlPath, {
-        houseName: payload.houseName,
-        url: payload.url,
-      });
+      await apiClient.post('/betting-links', { url: payload.url });
     } catch (error: any) {
       if (error instanceof AuthenticationError) {
         throw error;

@@ -91,7 +91,6 @@ const Home: React.FC = () => {
   const [showBlockFlowModal, setShowBlockFlowModal] = useState<boolean>(false);
   const [blockFlowStep, setBlockFlowStep] = useState<BlockFlowStep>("choices");
   const blockFlowFade = useRef(new Animated.Value(1)).current;
-  const [reportHouseName, setReportHouseName] = useState<string>("");
   const [reportHouseUrl, setReportHouseUrl] = useState<string>("");
   const [isSubmittingReport, setIsSubmittingReport] = useState<boolean>(false);
 
@@ -295,7 +294,6 @@ const Home: React.FC = () => {
     setShowBlockFlowModal(false);
     setBlockFlowStep("choices");
     blockFlowFade.setValue(1);
-    setReportHouseName("");
     setReportHouseUrl("");
   };
 
@@ -304,7 +302,7 @@ const Home: React.FC = () => {
     setIsSubmittingReport(true);
     try {
       const useCase = Container.getInstance().getSubmitBettingHouseReportUseCase();
-      await useCase.execute(reportHouseName, reportHouseUrl);
+      await useCase.execute(reportHouseUrl);
       closeBlockFlowModal();
       Alert.alert(
         "Obrigado!",
@@ -676,16 +674,6 @@ const Home: React.FC = () => {
                 <MaterialCommunityIcons name="chevron-left" size={22} color="#9E9AA8" />
                 <Text style={styles.blockFlowBackText}>Voltar às opções</Text>
               </TouchableOpacity>
-              <Text style={styles.reportLabel}>Nome da casa</Text>
-              <TextInput
-                style={styles.reportInput}
-                value={reportHouseName}
-                onChangeText={setReportHouseName}
-                placeholder='Ex.: "Nome da casa"'
-                placeholderTextColor="#726E7C"
-                autoCapitalize="sentences"
-                editable={!isSubmittingReport}
-              />
               <Text style={styles.reportLabel}>URL</Text>
               <TextInput
                 style={styles.reportInput}

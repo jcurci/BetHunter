@@ -22,14 +22,8 @@ function normalizeUrl(input: string): string {
 export class SubmitBettingHouseReportUseCase {
   constructor(private readonly repo: BettingHouseReportRepository) {}
 
-  async execute(houseName: string, rawUrl: string): Promise<void> {
-    const name = houseName.trim();
-    if (name.length < 2) {
-      throw new ValidationError('Informe o nome da casa (pelo menos 2 caracteres).');
-    }
-
+  async execute(rawUrl: string): Promise<void> {
     const url = normalizeUrl(rawUrl);
-
-    await this.repo.submitReport({ houseName: name, url });
+    await this.repo.submitReport({ url });
   }
 }

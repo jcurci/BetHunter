@@ -1,5 +1,4 @@
 export interface BettingHouseReportPayload {
-  houseName: string;
   url: string;
 }
 
