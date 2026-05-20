@@ -65,7 +65,7 @@ export const resetTokenProvider = (): void => {
  */
 const apiClient: AxiosInstance = axios.create({
   baseURL: ENV.API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },

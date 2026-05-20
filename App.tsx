@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import { AppState, Platform } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 import { AppLoadingScreen } from "./src/components/AppLoadingScreen";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
@@ -123,6 +125,19 @@ const App: React.FC = () => {
   useEffect(() => {
     const removeListener = setupCustomerInfoListener();
     return removeListener;
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const hideNav = () => {
+      NavigationBar.setVisibilityAsync("hidden");
+      NavigationBar.setBehaviorAsync("overlay-swipe");
+    };
+    hideNav();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") hideNav();
+    });
+    return () => sub.remove();
   }, []);
 
   // Redirect to Paywall when subscription expires while using the app (debounced + double-checked)

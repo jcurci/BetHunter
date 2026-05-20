@@ -20,6 +20,26 @@ class BetBlockingModule: NSObject {
     }
   }
 
+  @objc
+  func stopBlocking() {
+    DispatchQueue.main.async {
+      if #available(iOS 16.0, *) {
+        BlockingManager.shared.removeBlocking()
+        AppGroupHelper.isProtectionEnabled = false
+      }
+    }
+  }
+
+  @objc
+  func isBlockingEnabled(_ resolve: @escaping RCTPromiseResolveBlock,
+                         reject: @escaping RCTPromiseRejectBlock) {
+    if #available(iOS 16.0, *) {
+      resolve(AppGroupHelper.isProtectionEnabled)
+    } else {
+      resolve(false)
+    }
+  }
+
   private func showUnsupportedAlert() {
     guard let rootVC = UIApplication.shared.connectedScenes
       .compactMap({ $0 as? UIWindowScene })

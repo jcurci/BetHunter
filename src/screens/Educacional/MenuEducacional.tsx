@@ -10,7 +10,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
-import { Footer, StatsDisplay, Avatar, DayCounter, IconCard } from "../../components";
+import { Footer, StatsDisplay, Avatar, DayCounter, IconCard, GradientBorderButton } from "../../components";
+import Modal from "../../components/common/Modal/Modal";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import { Container } from "../../infrastructure/di/Container";
@@ -35,10 +36,33 @@ const MenuEducacional: React.FC = () => {
   const user = useAuthStore((state) => state.user);
 
   // Dashboard store
-  const { dashboard, isLoading, loadAll } = useDashboardStore();
+  const { dashboard, isLoading, loadAll, loadError, clearLoadError } = useDashboardStore();
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
+
+  // Error modal
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [retryCallback, setRetryCallback] = useState<(() => void) | null>(null);
+
+  const triggerError = useCallback((msg?: string, retry?: () => void) => {
+    setErrorMessage(msg ?? 'Ocorreu um erro ao processar sua solicitação. Tente novamente.');
+    setRetryCallback(retry ? () => retry : null);
+    setShowErrorModal(true);
+  }, []);
+
+  const closeErrorModal = useCallback(() => {
+    setShowErrorModal(false);
+    clearLoadError();
+    retryCallback?.();
+  }, [clearLoadError, retryCallback]);
+
+  useEffect(() => {
+    if (loadError) {
+      triggerError(loadError, () => loadAll());
+    }
+  }, [loadError, triggerError, loadAll]);
 
   // Current course — stale-while-revalidate:
   // state persists between focus events (component doesn't unmount),
@@ -49,7 +73,8 @@ const MenuEducacional: React.FC = () => {
 
   const loadCurrentCourse = useCallback(async () => {
     // First load → show skeleton. Subsequent focuses → silent background refresh.
-    if (!hasCourseDataRef.current) {
+    const isFirstLoad = !hasCourseDataRef.current;
+    if (isFirstLoad) {
       setCurrentCourseLoading(true);
     }
     try {
@@ -62,11 +87,13 @@ const MenuEducacional: React.FC = () => {
       hasCourseDataRef.current = true;
       setCurrentCourse(resolved);
     } catch {
-      // Non-critical — keeps last known value, or skeleton stays if first load failed
+      if (isFirstLoad) {
+        triggerError(undefined, () => void loadCurrentCourse());
+      }
     } finally {
       setCurrentCourseLoading(false);
     }
-  }, []); // stable — reads only refs, no external deps
+  }, [triggerError]);
 
   useEffect(() => {
     loadAll();
@@ -274,6 +301,21 @@ const MenuEducacional: React.FC = () => {
         </ScrollView>
       </View>
       <Footer />
+
+      <Modal
+        visible={showErrorModal}
+        onClose={closeErrorModal}
+        size="small"
+        title="Atenção"
+        subtitle={errorMessage}
+      >
+        <View style={styles.errorModalContent}>
+          <GradientBorderButton
+            label="Fechar"
+            onPress={closeErrorModal}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -486,6 +528,9 @@ const styles = StyleSheet.create({
   optionIconImage: {
     width: 24,
     height: 24,
+  },
+  errorModalContent: {
+    alignItems: "center",
   },
 });
 

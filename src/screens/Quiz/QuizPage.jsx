@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   SafeAreaView,
   StatusBar,
   Image,
@@ -334,64 +335,72 @@ const QuizPage = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Question Progress */}
-      <View style={styles.questionProgress}>
-        <Text style={styles.questionProgressText}>
-          Pergunta: {currentQuestionIndex + 1}/{total}
-        </Text>
-      </View>
+      {/* Scrollable area: progress + question + options */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Question Progress */}
+        <View style={styles.questionProgress}>
+          <Text style={styles.questionProgressText}>
+            Pergunta: {currentQuestionIndex + 1}/{total}
+          </Text>
+        </View>
 
-      {/* Question */}
-      <View style={styles.questionContainer}>
-        <Text style={styles.questionText}>{currentQuestion.statement}</Text>
-      </View>
+        {/* Question */}
+        <View style={styles.questionContainer}>
+          <Text style={styles.questionText}>{currentQuestion.statement}</Text>
+        </View>
 
-      {/* Options */}
-      <View style={styles.optionsContainer}>
-        {currentQuestion.alternatives.map((option, index) => {
-          const icon = getOptionIconProps(option);
-          const isSelected = selectedAnswer === option.id;
-          return (
-            <TouchableOpacity
-              key={option.id || index}
-              style={[getOptionStyle(option), styles.optionRow]}
-              onPress={() => handleAnswerSelect(option.id)}
-              disabled={showAnswer}
-            >
-              <View style={styles.optionLeft}>
-                <View
-                  style={[
-                    styles.optionMarker,
-                    isSelected && styles.optionMarkerSelected,
-                    showAnswer && option.correct && styles.optionMarkerCorrect,
-                    showAnswer && !option.correct && isSelected && styles.optionMarkerIncorrect,
-                  ]}
-                >
-                  {(showAnswer || isSelected) && (
-                    <View
-                      style={[
-                        styles.optionMarkerInner,
-                        showAnswer && option.correct && styles.optionMarkerInnerCorrect,
-                        showAnswer && !option.correct && isSelected && styles.optionMarkerInnerIncorrect,
-                      ]}
-                    />
-                  )}
+        {/* Options */}
+        <View style={styles.optionsContainer}>
+          {currentQuestion.alternatives.map((option, index) => {
+            const icon = getOptionIconProps(option);
+            const isSelected = selectedAnswer === option.id;
+            return (
+              <TouchableOpacity
+                key={option.id || index}
+                style={[getOptionStyle(option), styles.optionRow]}
+                onPress={() => handleAnswerSelect(option.id)}
+                disabled={showAnswer}
+              >
+                <View style={styles.optionLeft}>
+                  <View
+                    style={[
+                      styles.optionMarker,
+                      isSelected && styles.optionMarkerSelected,
+                      showAnswer && option.correct && styles.optionMarkerCorrect,
+                      showAnswer && !option.correct && isSelected && styles.optionMarkerIncorrect,
+                    ]}
+                  >
+                    {(showAnswer || isSelected) && (
+                      <View
+                        style={[
+                          styles.optionMarkerInner,
+                          showAnswer && option.correct && styles.optionMarkerInnerCorrect,
+                          showAnswer && !option.correct && isSelected && styles.optionMarkerInnerIncorrect,
+                        ]}
+                      />
+                    )}
+                  </View>
+                  <Text style={[getOptionTextStyle(option), styles.optionTextContent]}>
+                    {option.text}
+                  </Text>
                 </View>
-                <Text style={[getOptionTextStyle(option), styles.optionTextContent]}>
-                  {option.text}
-                </Text>
-              </View>
-              {icon && (
-                <View style={[styles.iconBadge, { borderColor: icon.borderColor }]}>
-                  <Icon name={icon.name} size={18} color={icon.color} />
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                {icon && (
+                  <View style={[styles.iconBadge, { borderColor: icon.borderColor }]}>
+                    <Icon name={icon.name} size={18} color={icon.color} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
 
-      {/* Submit Button */}
+      {/* Submit Button — fixed at bottom */}
       <View style={styles.submitContainer}>
         {!selectedAnswer ? (
           <QuizDisabledButton label="Selecione uma resposta" />
@@ -457,7 +466,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 20,
+    paddingBottom: 12,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 8,
   },
   headerTitle: {
     fontSize: 18,
@@ -513,7 +529,7 @@ const styles = StyleSheet.create({
   },
   questionContainer: {
     paddingHorizontal: 20,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   questionText: {
     fontSize: 20,
@@ -524,7 +540,7 @@ const styles = StyleSheet.create({
   // ─── Options ───────────────────────────────────────────────────────────────
   optionsContainer: {
     paddingHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 8,
   },
   optionRow: {
     flexDirection: "row",

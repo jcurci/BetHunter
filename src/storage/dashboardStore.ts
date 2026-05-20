@@ -13,6 +13,7 @@ interface DashboardStore {
   canCheckIn: boolean;
   nextCheckInAt: string | null;
   isLoading: boolean;
+  loadError: string | null;
   lastFetchedDashboard: number | null;  // timestamp ms
   lastFetchedBetStreak: number | null;  // timestamp ms
 
@@ -22,6 +23,7 @@ interface DashboardStore {
   loadDashboard: (force?: boolean) => Promise<void>;
   loadBetStreak: (force?: boolean) => Promise<void>;
   updateAfterCheckIn: (betStreak: number, nextCheckInAt: string) => void;
+  clearLoadError: () => void;
   invalidate: () => void;               // zera timestamps → força refetch
 }
 
@@ -36,6 +38,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   canCheckIn: false,
   nextCheckInAt: null,
   isLoading: false,
+  loadError: null,
   lastFetchedDashboard: null,
   lastFetchedBetStreak: null,
 
@@ -64,7 +67,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       return;
     }
 
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: null });
 
     try {
       const promises: Promise<void>[] = [];
@@ -74,7 +77,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         promises.push(get().loadDashboard(true));
       }
 
-      // Adiciona promise do bet streak se necessário  
+      // Adiciona promise do bet streak se necessário
       if (needsBetStreak) {
         promises.push(get().loadBetStreak(true));
       }
@@ -85,6 +88,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       console.log('✅ [DashboardStore] loadAll() concluído');
     } catch (error) {
       console.error('❌ [DashboardStore] Erro no loadAll():', error);
+      set({ loadError: 'Ocorreu um erro ao carregar os dados. Tente novamente.' });
     } finally {
       set({ isLoading: false });
     }
@@ -173,6 +177,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       lastFetchedBetStreak: Date.now(),
     });
   },
+
+  clearLoadError: () => set({ loadError: null }),
 
   /**
    * Invalida o cache forçando refetch na próxima chamada

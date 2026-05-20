@@ -4,7 +4,7 @@ const extra = Constants.expoConfig?.extra ?? {};
 
 function resolveApiBaseUrl(): string {
   if (extra.API_BASE_URL && typeof extra.API_BASE_URL === 'string') {
-    return extra.API_BASE_URL.trim();
+    return extra.API_BASE_URL.trim().replace(/\/$/, '');
   }
 
   if (__DEV__) {

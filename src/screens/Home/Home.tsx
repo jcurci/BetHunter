@@ -27,6 +27,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 // Components
 import { Footer, StatsDisplay, IconCard, GradientBorderButton } from "../../components";
 import Modal from "../../components/common/Modal/Modal";
+import { AppLoadingScreen } from "../../components/AppLoadingScreen";
 
 // Config
 import {
@@ -69,21 +70,77 @@ function periodGreetingLabel(): string {
 }
 
 const { BetBlocker, BetBlocking } = NativeModules;
+
+// Module-level flag: persists for the entire app session, survives component remounts
+let sessionBooted = false;
+
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, "Home">>();
   const user = useAuthStore((s) => s.user);
   
   // Dashboard store
-  const { 
-    dashboard, 
-    betStreak, 
-    canCheckIn, 
-    isLoading, 
-    loadAll, 
-    updateAfterCheckIn 
+  const {
+    dashboard,
+    betStreak,
+    canCheckIn,
+    isLoading,
+    loadAll,
+    loadError,
+    clearLoadError,
+    updateAfterCheckIn
   } = useDashboardStore();
   
+  const [hasBooted, setHasBooted] = useState<boolean>(sessionBooted);
+
+  // Blocker state
+  const [isBlockerEnabled, setIsBlockerEnabled] = useState<boolean>(false);
+
+  const checkBlockerStatus = useCallback(async () => {
+    try {
+      if (Platform.OS === "android" && BetBlocker?.isBlockingEnabled) {
+        const enabled: boolean = await BetBlocker.isBlockingEnabled();
+        setIsBlockerEnabled(enabled);
+      } else if (Platform.OS === "ios" && BetBlocking?.isBlockingEnabled) {
+        const enabled: boolean = await BetBlocking.isBlockingEnabled();
+        setIsBlockerEnabled(enabled);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    checkBlockerStatus();
+  }, [checkBlockerStatus]);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkBlockerStatus();
+    }, [checkBlockerStatus])
+  );
+
+  // Error modal
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [retryCallback, setRetryCallback] = useState<(() => void) | null>(null);
+
+  const triggerError = useCallback((msg?: string, retry?: () => void) => {
+    setErrorMessage(msg ?? 'Ocorreu um erro ao processar sua solicitação. Tente novamente.');
+    setRetryCallback(retry ? () => retry : null);
+    setShowErrorModal(true);
+  }, []);
+
+  const closeErrorModal = useCallback(() => {
+    setShowErrorModal(false);
+    clearLoadError();
+    retryCallback?.();
+  }, [clearLoadError, retryCallback]);
+
+  useEffect(() => {
+    if (loadError) {
+      triggerError(loadError, () => loadAll());
+    }
+  }, [loadError, triggerError, loadAll]);
+
   // Modal states
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
@@ -134,7 +191,8 @@ const Home: React.FC = () => {
 
   const loadCurrentCourse = useCallback(async () => {
     // First load → show skeleton. Subsequent focuses → silent background refresh.
-    if (!hasCourseDataRef.current) {
+    const isFirstLoad = !hasCourseDataRef.current;
+    if (isFirstLoad) {
       setCurrentCourseLoading(true);
     }
     try {
@@ -148,15 +206,22 @@ const Home: React.FC = () => {
       hasCourseDataRef.current = true;
       setCurrentCourse(resolved);
     } catch {
-      // Non-critical — keeps last known value, or skeleton stays if first load failed
+      if (isFirstLoad) {
+        triggerError(undefined, () => void loadCurrentCourse());
+      }
     } finally {
       setCurrentCourseLoading(false);
     }
-  }, []); // stable — reads only refs, no external deps
+  }, [triggerError]);
 
+  // Boot: run all data services in parallel before showing Home
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    Promise.all([loadAll(), loadCurrentCourse()]).finally(() => {
+      sessionBooted = true;
+      setHasBooted(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -176,8 +241,9 @@ const Home: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      if (!hasBooted) return; // boot effect handles first load
       void loadCurrentCourse();
-    }, [loadCurrentCourse]),
+    }, [loadCurrentCourse, hasBooted]),
   );
 
   // Auto-close reset confirm modal after 3 seconds
@@ -218,7 +284,7 @@ const Home: React.FC = () => {
       updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
-      Alert.alert("Erro", "Não foi possível registrar o check-in. Tente novamente.");
+      triggerError('Não foi possível registrar o check-in. Tente novamente.', () => void handleCheckIn());
     } finally {
       setIsCheckInSubmitting(false);
     }
@@ -249,6 +315,7 @@ const Home: React.FC = () => {
       const granted: boolean = await BetBlocker.startBlocking();
       setShowBlockModal(false);
       if (granted) {
+        setIsBlockerEnabled(true);
         setShowBlockSuccessModal(true);
       } else {
         Alert.alert(
@@ -265,10 +332,22 @@ const Home: React.FC = () => {
       }
     } catch (error: any) {
       console.log("BetBlocker error", error);
-      Alert.alert(
-        "Erro",
-        "Não foi possível ativar o bloqueio. Tente novamente."
-      );
+      triggerError('Não foi possível ativar o bloqueio. Tente novamente.', () => void handleBlockContinue());
+    }
+  };
+
+  const handleDeactivateBlocker = async (): Promise<void> => {
+    setShowBlockFlowModal(false);
+    try {
+      if (Platform.OS === "android" && BetBlocker?.stopBlocking) {
+        BetBlocker.stopBlocking();
+      } else if (Platform.OS === "ios" && BetBlocking?.stopBlocking) {
+        BetBlocking.stopBlocking();
+      }
+      setIsBlockerEnabled(false);
+      Alert.alert("Proteção desativada", "O bloqueio foi removido do dispositivo.");
+    } catch {
+      triggerError('Não foi possível desativar o bloqueio. Tente novamente.', () => void handleDeactivateBlocker());
     }
   };
 
@@ -310,12 +389,10 @@ const Home: React.FC = () => {
       );
     } catch (error: unknown) {
       const msg =
-        error instanceof Error ? error.message : "Não foi possível enviar. Tente novamente.";
-      if (error instanceof ValidationError) {
-        Alert.alert("Atenção", msg);
-      } else {
-        Alert.alert("Erro", msg);
-      }
+        error instanceof Error ? error.message : 'Não foi possível enviar. Tente novamente.';
+      // ValidationError = dado inválido; retry com o mesmo input repetiria o mesmo erro
+      const retry = error instanceof ValidationError ? undefined : () => void handleSubmitBettingHouseReport();
+      triggerError(msg, retry);
     } finally {
       setIsSubmittingReport(false);
     }
@@ -453,7 +530,11 @@ const Home: React.FC = () => {
   );
 
 
-  return (  
+  if (!hasBooted) {
+    return <AppLoadingScreen />;
+  }
+
+  return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.mainContainer}>
         <ScrollView
@@ -610,27 +691,41 @@ const Home: React.FC = () => {
                 <View style={styles.blockChoiceHeader}>
                   <View style={styles.blockChoiceIconCircle}>
                     <MaterialCommunityIcons
-                      name="shield-lock-outline"
+                      name={isBlockerEnabled ? "shield-check" : "shield-lock-outline"}
                       size={26}
-                      color="#C9A7E8"
+                      color={isBlockerEnabled ? "#7BE8A7" : "#C9A7E8"}
                     />
                   </View>
                   <View style={styles.blockChoiceHeaderText}>
                     <Text style={styles.blockChoiceTitle}>
-                      {Platform.OS === "ios"
+                      {isBlockerEnabled
+                        ? "Proteção ativa"
+                        : Platform.OS === "ios"
                         ? "Proteção neste iPhone"
                         : "Ativar bloqueio (VPN)"}
                     </Text>
                     <Text style={styles.blockChoiceDesc}>
-                      {Platform.OS === "ios"
+                      {isBlockerEnabled
+                        ? "O bloqueio está ativo neste dispositivo. Toque para desativar."
+                        : Platform.OS === "ios"
                         ? "Abre Tempo de Uso para escolher apps e aplicar bloqueios."
                         : "Instalação do perfil VPN para filtrar sites de apostas no dispositivo."}
                     </Text>
                   </View>
                 </View>
                 <GradientBorderButton
-                  label={Platform.OS === "ios" ? "Configurar bloqueio" : "Ativar bloqueio"}
-                  onPress={handleActivateBlockFlow}
+                  label={
+                    isBlockerEnabled
+                      ? "Desativar proteção"
+                      : Platform.OS === "ios"
+                      ? "Configurar bloqueio"
+                      : "Ativar bloqueio"
+                  }
+                  onPress={
+                    isBlockerEnabled
+                      ? () => void handleDeactivateBlocker()
+                      : handleActivateBlockFlow
+                  }
                 />
               </View>
 
@@ -713,9 +808,11 @@ const Home: React.FC = () => {
                 await container.getResetBetStreakUseCase().execute();
                 setShowResetModal(false);
                 setShowResetConfirmModal(true);
-                await loadAll(true);
+                loadAll(true).catch(() => {});
               } catch (error: any) {
                 console.log("ResetBetStreak:", error?.message ?? error);
+                setShowResetModal(false);
+                triggerError();
               }
             }}
           />
@@ -784,10 +881,11 @@ const Home: React.FC = () => {
                 await container.getResetBetStreakUseCase().execute();
                 setShowCheckInModal(false);
                 setShowResetConfirmModal(true);
-                await loadAll(true);
+                loadAll(true).catch(() => {});
               } catch (error: any) {
                 console.log("BetCheckIn apostou (reset):", error?.message ?? error);
                 setShowCheckInModal(false);
+                triggerError();
               }
             }}
             disabled={isCheckInSubmitting}
@@ -807,6 +905,22 @@ const Home: React.FC = () => {
           <GradientBorderButton
             label="Entendi"
             onPress={() => setShowAlreadyMarkedModal(false)}
+          />
+        </View>
+      </Modal>
+
+      {/* Modal de Erro */}
+      <Modal
+        visible={showErrorModal}
+        onClose={closeErrorModal}
+        size="small"
+        title="Atenção"
+        subtitle={errorMessage}
+      >
+        <View style={styles.resetModalContent}>
+          <GradientBorderButton
+            label="Fechar"
+            onPress={closeErrorModal}
           />
         </View>
       </Modal>
