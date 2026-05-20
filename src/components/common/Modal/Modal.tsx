@@ -180,8 +180,8 @@ const CustomModal: React.FC<ModalProps> = ({
             {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
           </View>
 
-          {/* Right Actions */}
-          <View style={styles.headerRight}>
+          {/* Right Actions — minWidth mirrors close button when right is empty, keeping center symmetric */}
+          <View style={[styles.headerRight, showCloseButton && !headerActions?.right?.length && styles.headerRightPhantom]}>
             {headerActions?.right?.map(renderHeaderAction)}
           </View>
         </View>
@@ -296,6 +296,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     zIndex: 10,
+  },
+  headerRightPhantom: {
+    minWidth: 48,
   },
   closeButton: {
     width: 48,
