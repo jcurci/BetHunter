@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from "react";
-import { View, StyleSheet, Pressable, Text, Animated } from "react-native";
+import { View, StyleSheet, Pressable, Text, Animated, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -49,6 +49,10 @@ const TabButton: React.FC<TabButtonProps> = ({
 
   const renderIcon = () => {
     if (isActive) {
+      // MaskedView + DST_IN + LAYER_TYPE_HARDWARE causa artefatos escuros no Android
+      if (Platform.OS === 'android') {
+        return <Icon name={name} size={size} color="#D783D8" />;
+      }
       return (
         <MaskedView
           maskElement={
@@ -78,6 +82,7 @@ const TabButton: React.FC<TabButtonProps> = ({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      android_ripple={null}
     >
       <Animated.View
         style={[
