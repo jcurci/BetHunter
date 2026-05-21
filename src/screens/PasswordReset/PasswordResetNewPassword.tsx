@@ -4,9 +4,8 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
-  Alert,
-} from "react-native";
+  Alert} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";

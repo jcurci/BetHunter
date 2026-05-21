@@ -2,9 +2,8 @@ import React from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
+  StyleSheet} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import Icon from "react-native-vector-icons/MaterialIcons";

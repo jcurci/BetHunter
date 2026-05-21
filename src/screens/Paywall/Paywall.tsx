@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
@@ -87,7 +88,7 @@ const Paywall: React.FC = () => {
   }, [loadOffering]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#D783D8" />
@@ -110,7 +111,7 @@ const Paywall: React.FC = () => {
           }}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

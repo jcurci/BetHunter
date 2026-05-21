@@ -3,9 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  useWindowDimensions,
-} from "react-native";
+  useWindowDimensions} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 

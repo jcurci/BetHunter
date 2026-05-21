@@ -4,12 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
-  Alert,
-} from "react-native";
+  Alert} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { BackIconButton } from "../../components";
@@ -73,7 +72,7 @@ const MaterialReader: React.FC = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0C0A14" />
+        <StatusBar hidden={true} translucent={true} />
         <View style={styles.header}>
           <BackIconButton onPress={() => navigation.goBack()} size={42} />
           <Text style={styles.headerTitle} numberOfLines={1}>{moduleTitle}</Text>
@@ -89,7 +88,7 @@ const MaterialReader: React.FC = () => {
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0C0A14" />
+        <StatusBar hidden={true} translucent={true} />
         <View style={styles.header}>
           <BackIconButton onPress={() => navigation.goBack()} size={42} />
           <Text style={styles.headerTitle} numberOfLines={1}>{moduleTitle}</Text>
@@ -108,7 +107,7 @@ const MaterialReader: React.FC = () => {
   if (materials.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0C0A14" />
+        <StatusBar hidden={true} translucent={true} />
         <View style={styles.header}>
           <BackIconButton onPress={() => navigation.goBack()} size={42} />
           <Text style={styles.headerTitle} numberOfLines={1}>{moduleTitle}</Text>
@@ -131,7 +130,7 @@ const MaterialReader: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0C0A14" />
+      <StatusBar hidden={true} translucent={true} />
 
       <View style={styles.header}>
         <BackIconButton onPress={() => navigation.goBack()} size={42} />

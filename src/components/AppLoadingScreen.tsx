@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useMemo, useRef } from "react";
+import { StatusBar } from "expo-status-bar";
 import {
   Text,
   StyleSheet,
@@ -62,7 +63,9 @@ const AppLoadingScreenInner: React.FC = () => {
   });
 
   return (
-    <LinearGradient
+    <>
+      <StatusBar hidden={true} translucent={true} />
+      <LinearGradient
       colors={[...BACKGROUND_GRADIENT_COLORS]}
       locations={[...BACKGROUND_GRADIENT_LOCATIONS]}
       start={{ x: 0.5, y: 0 }}
@@ -91,6 +94,7 @@ const AppLoadingScreenInner: React.FC = () => {
         <ActivityIndicator size="large" color={LOADER_COLOR} />
       </Animated.View>
     </LinearGradient>
+    </>
   );
 };
 

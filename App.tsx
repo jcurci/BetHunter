@@ -190,7 +190,7 @@ const App: React.FC = () => {
   return (
     <SafeAreaProvider>
       <NavigationContainer ref={navigationRef}>
-        <StatusBar style="auto" />
+        <StatusBar hidden={true} translucent={true} />
         <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen
           name="OnboardingFlow"

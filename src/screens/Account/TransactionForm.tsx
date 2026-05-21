@@ -3,12 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
-} from 'react-native';
+  Alert} from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 // Removed LinearGradient - using solid colors
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';

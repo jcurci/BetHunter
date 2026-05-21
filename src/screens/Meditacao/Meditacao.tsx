@@ -3,13 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Animated,
   Dimensions,
-  StatusBar,
-  Easing,
-} from "react-native";
+  Easing} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { Audio } from "expo-av";
@@ -671,7 +670,7 @@ const Meditacao: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar hidden={true} translucent={true} />
       
       <LinearGradient
         colors={BACKGROUND_GRADIENT_COLORS}

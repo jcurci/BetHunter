@@ -3,9 +3,8 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
+  StyleSheet} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RouteProp as RNRouteProp } from "@react-navigation/native";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
