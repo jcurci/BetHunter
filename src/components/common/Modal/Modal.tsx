@@ -340,6 +340,7 @@ const styles = StyleSheet.create({
   },
   contentInner: {
     padding: 20,
+    flexGrow: 1,
   },
   // TODO: Remover estilos de botões quando usar componente Button comum
   buttonsContainer: {

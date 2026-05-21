@@ -1152,7 +1152,9 @@ const styles = StyleSheet.create({
   },
   // Reset Modal Styles
   resetModalContent: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
   blockModalContent: {
     alignItems: "center",
