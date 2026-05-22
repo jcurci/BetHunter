@@ -42,6 +42,9 @@ yarn.lock
 # EAS local credentials (contains keystore passwords — never commit)
 credentials.json
 
+# Android keystore credentials (passwords — never commit)
+android/keystore.properties
+
 # IDE
 .idea/
 .vscode/
