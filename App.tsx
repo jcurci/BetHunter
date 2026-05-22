@@ -39,7 +39,8 @@ import AccountOverview from "./src/screens/Account/AccountOverview";
 import AccountHistory from "./src/screens/Account/AccountHistory";
 import TransactionForm from "./src/screens/Account/TransactionForm";
 import EmConstrucao from "./src/screens/EmConstrucao/EmConstrucao";
-import Acessor from "./src/screens/Acessor/Acessor";
+import EmBreve from "./src/screens/EmConstrucao/EmConstrucao";
+// import Acessor from "./src/screens/Acessor/Acessor"; // temporariamente substituído por EmBreve
 import HistoryList from "./src/screens/Acessor/HistoryList";
 import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
@@ -390,11 +391,16 @@ const App: React.FC = () => {
         />
         <Stack.Screen
           name="Acessor"
-          component={Acessor}
-          options={{
-            headerShown: false,
-          }}
-        />
+          options={{ headerShown: false }}
+        >
+          {({ navigation: nav }) => (
+            <EmBreve
+              title="Em Breve!"
+              subtitle="Essa funcionalidade estará disponível em breve."
+              onBack={() => nav.navigate("Home")}
+            />
+          )}
+        </Stack.Screen>
         <Stack.Screen
           name="HistoryList"
           component={HistoryList}

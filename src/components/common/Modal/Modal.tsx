@@ -174,10 +174,9 @@ const CustomModal: React.FC<ModalProps> = ({
             {headerActions?.left?.map(renderHeaderAction)}
           </View>
 
-          {/* Center - Title and Subtitle */}
+          {/* Center - Title only */}
           <View style={[styles.headerCenter, size === 'smaller' && styles.headerCenterSmaller]}>
             {title && <Text style={styles.title}>{title}</Text>}
-            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
           </View>
 
           {/* Right Actions — minWidth mirrors close button when right is empty, keeping center symmetric */}
@@ -193,11 +192,21 @@ const CustomModal: React.FC<ModalProps> = ({
             contentContainerStyle={[styles.contentInner, { paddingBottom: contentBottomPadding }]}
             showsVerticalScrollIndicator={false}
           >
+            {subtitle && (
+              <Text style={[styles.subtitle, styles.subtitleScroll]}>{subtitle}</Text>
+            )}
             {children}
           </ScrollView>
         ) : (
-          <View style={[styles.contentContainer, styles.contentInner, { paddingBottom: contentBottomPadding }]}>
-            {children}
+          <View style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}>
+            {subtitle && (
+              <View style={styles.subtitleCenter}>
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              </View>
+            )}
+            <View style={styles.contentInnerBottom}>
+              {children}
+            </View>
           </View>
         )}
 
@@ -260,7 +269,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -330,10 +339,18 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#A7A3AE',
     textAlign: 'center',
-    marginTop: 8,
     width: '100%',
     flexShrink: 1,
     lineHeight: 21,
+  },
+  subtitleScroll: {
+    marginBottom: 16,
+  },
+  subtitleCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
   contentContainer: {
     flex: 1,
@@ -341,6 +358,9 @@ const styles = StyleSheet.create({
   contentInner: {
     padding: 20,
     flexGrow: 1,
+  },
+  contentInnerBottom: {
+    paddingHorizontal: 20,
   },
   // TODO: Remover estilos de botões quando usar componente Button comum
   buttonsContainer: {

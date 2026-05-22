@@ -18,7 +18,17 @@ import { NavigationProp } from "../../types/navigation";
 import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
 import { RadialGradientBackground, GradientBorderButton } from "../../components";
 
-const EmConstrucao: React.FC = () => {
+interface EmConstrucaoProps {
+  title?: string;
+  subtitle?: string;
+  onBack?: () => void;
+}
+
+const EmConstrucao: React.FC<EmConstrucaoProps> = ({
+  title = "Em Construção!",
+  subtitle = "Essa feature ainda não esta disponível.",
+  onBack,
+}) => {
   const navigation = useNavigation<NavigationProp>();
   const { width, height } = useWindowDimensions();
 
@@ -33,10 +43,10 @@ const EmConstrucao: React.FC = () => {
 
         <View style={[styles.content, { paddingTop: height * 0.1 }]}>
           <Text style={[styles.title, { fontSize: Math.min(42, width * 0.11) }]}>
-            Em Construção!
+            {title}
           </Text>
           <Text style={[styles.subtitle, { fontSize: Math.min(20, width * 0.055), marginBottom: height * 0.07 }]}>
-            Essa feature ainda não esta disponível.
+            {subtitle}
           </Text>
 
           <View style={[styles.iconContainer, { width: circleSize, height: circleSize }]}>
@@ -54,7 +64,7 @@ const EmConstrucao: React.FC = () => {
 
         <GradientBorderButton
           label="Voltar"
-          onPress={() => navigation.goBack()}
+          onPress={onBack ?? (() => navigation.goBack())}
         />
       </View>
     </SafeAreaView>

@@ -121,7 +121,8 @@ const SignUpContact: React.FC = () => {
     >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
+        enabled={Platform.OS === "ios"}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
