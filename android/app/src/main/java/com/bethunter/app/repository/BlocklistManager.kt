@@ -12,7 +12,7 @@ class BlocklistManager(
 ) {
   companion object {
     private const val TAG = "BlocklistManager"
-    private const val GIST_RAW_URL = "https://gist.githubusercontent.com/gilberto-009199/5e4672816f5db6c4bc055f209ae2adf0/raw/latin_america_blacklist_bets_cassino_brazil.txt"
+    private const val GIST_RAW_URL = "https://gist.github.com/hidekiiwasa/2fb62fe5fa9781f30a369b1fc41e204f/raw/latin_america_blacklist_bets_cassino_brazil.txt"
     private val REFRESH_INTERVAL_MS = TimeUnit.HOURS.toMillis(24)
   }
 

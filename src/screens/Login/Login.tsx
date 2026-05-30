@@ -123,12 +123,12 @@ const Login: React.FC = () => {
   }, []);
 
   const resolvePostLoginRoute = async (userId: string): Promise<"OnboardingFlow" | "Home" | "Paywall"> => {
-    const onboardingDone = await isOnboardingFlowCompleted();
-    if (!onboardingDone) return "OnboardingFlow";
-
+    // Identifica no RevenueCat ANTES do gate do onboarding, espelhando o cadastro,
+    // para que todo usuário que loga apareça no RevenueCat mesmo com onboarding pendente.
     let rcInfo: CustomerInfo | null = null;
     try {
-      rcInfo = await identifyUser(userId);
+      const u = useAuthStore.getState().user;
+      rcInfo = await identifyUser(userId, { email: u?.email, name: u?.name });
     } catch (e) {
       console.warn('[REVENUECAT] identifyUser failed at login, falling back to getCustomerInfo', e);
     }
@@ -137,6 +137,10 @@ const Login: React.FC = () => {
     } else {
       await useSubscriptionStore.getState().refresh();
     }
+
+    const onboardingDone = await isOnboardingFlowCompleted();
+    if (!onboardingDone) return "OnboardingFlow";
+
     const { isPremium } = useSubscriptionStore.getState();
     return isPremium ? "Home" : "Paywall";
   };

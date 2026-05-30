@@ -86,6 +86,8 @@ const Home: React.FC = () => {
     canCheckIn,
     isLoading,
     loadAll,
+    loadDashboard,
+    loadBetStreak,
     loadError,
     clearLoadError,
     updateAfterCheckIn
@@ -95,6 +97,8 @@ const Home: React.FC = () => {
 
   // Blocker state
   const [isBlockerEnabled, setIsBlockerEnabled] = useState<boolean>(false);
+  const [isBlockerLoading, setIsBlockerLoading] = useState<boolean>(false);
+  const blockingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkBlockerStatus = useCallback(async () => {
     try {
@@ -121,25 +125,52 @@ const Home: React.FC = () => {
   // Error modal
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [retryCallback, setRetryCallback] = useState<(() => void) | null>(null);
+  const [retryCallback, setRetryCallback] = useState<(() => Promise<void>) | null>(null);
+  const [isRetrying, setIsRetrying] = useState<boolean>(false);
+  const [blockCloseHint, setBlockCloseHint] = useState<boolean>(false);
 
-  const triggerError = useCallback((msg?: string, retry?: () => void) => {
+  const triggerError = useCallback((msg?: string, retry?: () => Promise<void>) => {
     setErrorMessage(msg ?? 'Ocorreu um erro ao processar sua solicitação. Tente novamente.');
     setRetryCallback(retry ? () => retry : null);
     setShowErrorModal(true);
+    setBlockCloseHint(false);
   }, []);
 
-  const closeErrorModal = useCallback(() => {
+  const handleErrorAction = useCallback(async () => {
+    if (!retryCallback) {
+      setShowErrorModal(false);
+      clearLoadError();
+      return;
+    }
+    setIsRetrying(true);
+    try {
+      await retryCallback();
+      setShowErrorModal(false);
+      clearLoadError();
+    } catch {
+      setErrorMessage('Não foi possível, tente novamente mais tarde.');
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [retryCallback, clearLoadError]);
+
+  const handleErrorModalClose = useCallback(() => {
+    if (retryCallback) {
+      setBlockCloseHint(true);
+      setTimeout(() => setBlockCloseHint(false), 2500);
+      return;
+    }
     setShowErrorModal(false);
     clearLoadError();
-    retryCallback?.();
-  }, [clearLoadError, retryCallback]);
+  }, [retryCallback, clearLoadError]);
 
   useEffect(() => {
     if (loadError) {
-      triggerError(loadError, () => loadAll());
+      triggerError(loadError, async () => {
+        await Promise.all([loadDashboard(true), loadBetStreak(true)]);
+      });
     }
-  }, [loadError, triggerError, loadAll]);
+  }, [loadError, triggerError, loadDashboard, loadBetStreak]);
 
   // Modal states
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
@@ -189,6 +220,18 @@ const Home: React.FC = () => {
   const [currentCourseLoading, setCurrentCourseLoading] = useState(true);
   const hasCourseDataRef = useRef(false);
 
+  const fetchCurrentCourse = useCallback(async () => {
+    const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
+    // Prefer the course actively in progress; fall back to the first not yet started
+    const inProgress = courses.find(
+      (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
+    );
+    const notStarted = courses.find((c) => c.modulesCompleted === 0);
+    const resolved = inProgress ?? notStarted ?? courses[0] ?? null;
+    hasCourseDataRef.current = true;
+    setCurrentCourse(resolved);
+  }, []);
+
   const loadCurrentCourse = useCallback(async () => {
     // First load → show skeleton. Subsequent focuses → silent background refresh.
     const isFirstLoad = !hasCourseDataRef.current;
@@ -196,23 +239,15 @@ const Home: React.FC = () => {
       setCurrentCourseLoading(true);
     }
     try {
-      const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
-      // Prefer the course actively in progress; fall back to the first not yet started
-      const inProgress = courses.find(
-        (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
-      );
-      const notStarted = courses.find((c) => c.modulesCompleted === 0);
-      const resolved = inProgress ?? notStarted ?? courses[0] ?? null;
-      hasCourseDataRef.current = true;
-      setCurrentCourse(resolved);
+      await fetchCurrentCourse();
     } catch {
       if (isFirstLoad) {
-        triggerError(undefined, () => void loadCurrentCourse());
+        triggerError(undefined, fetchCurrentCourse);
       }
     } finally {
       setCurrentCourseLoading(false);
     }
-  }, [triggerError]);
+  }, [fetchCurrentCourse, triggerError]);
 
   // Boot: run all data services in parallel before showing Home
   useEffect(() => {
@@ -266,6 +301,15 @@ const Home: React.FC = () => {
     }
   }, [showBlockSuccessModal]);
 
+  // Cleanup do timeout de segurança da VPN ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (blockingTimeoutRef.current) {
+        clearTimeout(blockingTimeoutRef.current);
+      }
+    };
+  }, []);
+
 
   const handleDaysPress = () => {
     if (canCheckIn) {
@@ -284,7 +328,16 @@ const Home: React.FC = () => {
       updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
-      triggerError('Não foi possível registrar o check-in. Tente novamente.', () => void handleCheckIn());
+      triggerError('Não foi possível registrar o check-in. Tente novamente.', async () => {
+        setIsCheckInSubmitting(true);
+        try {
+          const container = Container.getInstance();
+          const result = await container.getBetCheckInUseCase().execute();
+          updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
+        } finally {
+          setIsCheckInSubmitting(false);
+        }
+      });
     } finally {
       setIsCheckInSubmitting(false);
     }
@@ -308,21 +361,57 @@ const Home: React.FC = () => {
       );
       return;
     }
-    try {
-      if (BetBlocker.refreshBlockedDomains) {
-        await BetBlocker.refreshBlockedDomains();
-      }
-      const granted: boolean = await BetBlocker.startBlocking();
+
+    // Guard: evita múltiplos cliques em paralelo
+    if (isBlockerLoading) return;
+
+    // Ativa loading imediatamente — antes de qualquer await
+    setIsBlockerLoading(true);
+
+    // Timeout de segurança: se o sistema travar ou o usuário minimizar o app
+    // e nunca voltar, reseta o estado após 20s para não ficar em loading infinito.
+    blockingTimeoutRef.current = setTimeout(() => {
+      setIsBlockerLoading(false);
       setShowBlockModal(false);
+      triggerError(
+        'O sistema demorou para responder. Verifique as permissões de VPN nas configurações do Android e tente novamente.'
+      );
+    }, 20000);
+
+    const clearLoadingTimeout = () => {
+      if (blockingTimeoutRef.current) {
+        clearTimeout(blockingTimeoutRef.current);
+        blockingTimeoutRef.current = null;
+      }
+    };
+
+    try {
+      // Atualização da blocklist em background: fire-and-forget.
+      // A lista local já está disponível (carregada no onCreate do service),
+      // então não bloqueamos o fluxo principal esperando a rede aqui.
+      if (BetBlocker.refreshBlockedDomains) {
+        BetBlocker.refreshBlockedDomains().catch(() => {
+          // Falha silenciosa: blocklist local continua funcional
+        });
+      }
+
+      // Solicita permissão VPN ao sistema. A Promise só resolve quando o
+      // usuário age no diálogo nativo (aprova ou rejeita).
+      const granted: boolean = await BetBlocker.startBlocking();
+
+      clearLoadingTimeout();
+      setIsBlockerLoading(false);
+      setShowBlockModal(false);
+
       if (granted) {
         setIsBlockerEnabled(true);
         setShowBlockSuccessModal(true);
       } else {
         Alert.alert(
           "Permissão necessária",
-          "Para ativar o bloqueio, você precisa autorizar a conexão VPN quando o Android solicitar.",
+          "Para ativar o bloqueio, autorize a conexão VPN quando o Android solicitar. Você pode habilitá-la a qualquer momento nas Configurações.",
           [
-            { text: "Cancelar", style: "cancel" },
+            { text: "Agora não", style: "cancel" },
             {
               text: "Abrir configurações",
               onPress: () => Linking.openSettings(),
@@ -331,8 +420,11 @@ const Home: React.FC = () => {
         );
       }
     } catch (error: any) {
+      clearLoadingTimeout();
+      setIsBlockerLoading(false);
       console.log("BetBlocker error", error);
-      triggerError('Não foi possível ativar o bloqueio. Tente novamente.', () => void handleBlockContinue());
+      setShowBlockModal(false);
+      triggerError('Não foi possível ativar o bloqueio. Tente novamente.');
     }
   };
 
@@ -347,7 +439,7 @@ const Home: React.FC = () => {
       setIsBlockerEnabled(false);
       Alert.alert("Proteção desativada", "O bloqueio foi removido do dispositivo.");
     } catch {
-      triggerError('Não foi possível desativar o bloqueio. Tente novamente.', () => void handleDeactivateBlocker());
+      triggerError('Não foi possível desativar o bloqueio. Tente novamente.');
     }
   };
 
@@ -391,7 +483,17 @@ const Home: React.FC = () => {
       const msg =
         error instanceof Error ? error.message : 'Não foi possível enviar. Tente novamente.';
       // ValidationError = dado inválido; retry com o mesmo input repetiria o mesmo erro
-      const retry = error instanceof ValidationError ? undefined : () => void handleSubmitBettingHouseReport();
+      const retry = error instanceof ValidationError
+        ? undefined
+        : async () => {
+            const useCase = Container.getInstance().getSubmitBettingHouseReportUseCase();
+            await useCase.execute(reportHouseUrl);
+            closeBlockFlowModal();
+            Alert.alert(
+              "Obrigado!",
+              "Recebemos sua denúncia. Vamos avaliar para incluir na lista de bloqueio."
+            );
+          };
       triggerError(msg, retry);
     } finally {
       setIsSubmittingReport(false);
@@ -834,15 +936,25 @@ const Home: React.FC = () => {
       {/* Modal de Bloqueio - Permissões */}
       <Modal
         visible={showBlockModal}
-        onClose={() => setShowBlockModal(false)}
+        onClose={() => {
+          // Impede fechar enquanto aguarda a permissão do sistema
+          if (isBlockerLoading) return;
+          setShowBlockModal(false);
+        }}
         size="small"
-        title="Habilite permissoes!"
-        subtitle='Para o funcionamento do bloqueio do Bethunter, necessitamos da instalação de um perfil VPN para redirecionar e filtrar o tráfego. Esse bloqueio funcionará em todos os sites e apps que consideramos como "apostas".'
+        title="Habilite as permissões!"
+        subtitle={
+          isBlockerLoading
+            ? "Aguardando autorização do Android…"
+            : "Para bloquear sites e apps de apostas, o BetHunter usa uma VPN local no seu dispositivo. Nenhum dado é enviado para fora do aparelho."
+        }
       >
         <View style={styles.blockModalContent}>
           <GradientBorderButton
-            label="Continuar"
+            label={isBlockerLoading ? "Aguardando…" : "Continuar"}
             onPress={handleBlockContinue}
+            loading={isBlockerLoading}
+            disabled={isBlockerLoading}
           />
         </View>
       </Modal>
@@ -912,15 +1024,19 @@ const Home: React.FC = () => {
       {/* Modal de Erro */}
       <Modal
         visible={showErrorModal}
-        onClose={closeErrorModal}
+        onClose={handleErrorModalClose}
         size="small"
         title="Atenção"
-        subtitle={errorMessage}
+        subtitle={blockCloseHint
+          ? 'Algo deu errado. Tente novamente.'
+          : errorMessage}
       >
         <View style={styles.resetModalContent}>
           <GradientBorderButton
-            label="Fechar"
-            onPress={closeErrorModal}
+            label={retryCallback ? 'Tentar novamente' : 'Fechar'}
+            onPress={() => void handleErrorAction()}
+            loading={isRetrying}
+            disabled={isRetrying}
           />
         </View>
       </Modal>

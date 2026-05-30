@@ -36,6 +36,14 @@ class BetBlockerModule(
 
   @ReactMethod
   fun startBlocking(promise: Promise) {
+    // Guard: rejeita chamadas paralelas enquanto um diálogo de permissão já está aberto.
+    // Isso previne a race condition onde pendingVpnPromise seria sobrescrito se o JS
+    // disparar startBlocking duas vezes antes de onActivityResult ser chamado.
+    if (pendingVpnPromise != null) {
+      promise.reject("ALREADY_IN_PROGRESS", "A VPN permission dialog is already open")
+      return
+    }
+
     repository.setBlockingEnabled(true)
     val prepareIntent = VpnService.prepare(reactContext.currentActivity ?: reactContext)
     if (prepareIntent == null) {

@@ -20,6 +20,8 @@ import { OnboardingLayout } from "../OnboardingFlow/screens/OnboardingLayout";
 import { Container } from "../../infrastructure/di/Container";
 import { AuthenticationError, ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
+import { useSubscriptionStore } from "../../storage/subscriptionStore";
+import { identifyUser } from "../../services/revenueCat";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -133,6 +135,20 @@ const SignUpPassword: React.FC = () => {
         points: 0,
         betcoins: 0,
       });
+
+      const userId = session.user?.id;
+      if (userId) {
+        try {
+          const rcInfo = await identifyUser(userId, {
+            email: session.user?.email,
+            name: session.user?.name,
+            phone,
+          });
+          useSubscriptionStore.getState().setFromCustomerInfo(rcInfo);
+        } catch (e) {
+          console.warn('[REVENUECAT] identifyUser após signup falhou', e);
+        }
+      }
 
       await resetLocalOnboardingStateForNewAccount();
       navigation.reset({ index: 0, routes: [{ name: "OnboardingFlow" }] });

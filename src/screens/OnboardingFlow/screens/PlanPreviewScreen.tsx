@@ -151,9 +151,6 @@ export const PlanPreviewScreen: React.FC<Props> = ({
               <Text style={styles.featureTitle}>{feat.title}</Text>
               <Text style={styles.featureDesc}>{feat.description}</Text>
             </View>
-            <View style={styles.chevronContainer}>
-              <Icon name="chevron-right" size={16} color="#555" />
-            </View>
           </Animated.View>
         ))}
       </ScrollView>

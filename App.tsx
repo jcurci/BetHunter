@@ -80,29 +80,21 @@ const App: React.FC = () => {
 
       await initRevenueCat();
 
-      const onboardingDone = await isOnboardingFlowCompleted();
-      if (!onboardingDone) {
-        await finishBoot("OnboardingFlow");
-        return;
-      }
-
+      // Carrega a sessão antes de decidir a rota — independente do estado do onboarding.
+      // Assim, mesmo se o onboarding não estiver completo (ex: reinstalação), o RevenueCat
+      // é identificado com o userId real e o assinante não é bloqueado no Paywall.
       await useAuthStore.getState().initialize();
       const { isAuthenticated: authed, user } = useAuthStore.getState();
 
-      if (!authed) {
-        await finishBoot("Login");
-        return;
-      }
-
-      let rcCustomerInfo: CustomerInfo | null = null;
-      if (user?.id) {
+      if (authed && user?.id) {
+        let rcCustomerInfo: CustomerInfo | null = null;
         try {
-          rcCustomerInfo = await identifyUser(user.id);
+          rcCustomerInfo = await identifyUser(user.id, { email: user.email, name: user.name });
         } catch (firstErr) {
           console.warn('[REVENUECAT] identifyUser failed, retrying in 2s...', firstErr);
           try {
             await new Promise<void>((r) => setTimeout(r, 2000));
-            rcCustomerInfo = await identifyUser(user.id);
+            rcCustomerInfo = await identifyUser(user.id, { email: user.email, name: user.name });
           } catch (retryErr) {
             console.warn('[REVENUECAT] identifyUser retry also failed — failing open', retryErr);
             // Do NOT fall back to anonymous getCustomerInfo() — it has no purchases.
@@ -112,12 +104,23 @@ const App: React.FC = () => {
             } as any);
           }
         }
+        if (rcCustomerInfo) {
+          useSubscriptionStore.getState().setFromCustomerInfo(rcCustomerInfo);
+        }
       }
-      if (rcCustomerInfo) {
-        useSubscriptionStore.getState().setFromCustomerInfo(rcCustomerInfo);
-      }
-      const { isPremium: premium } = useSubscriptionStore.getState();
 
+      const onboardingDone = await isOnboardingFlowCompleted();
+      if (!onboardingDone) {
+        await finishBoot("OnboardingFlow");
+        return;
+      }
+
+      if (!authed) {
+        await finishBoot("Login");
+        return;
+      }
+
+      const { isPremium: premium } = useSubscriptionStore.getState();
       await finishBoot(premium ? "Home" : "Paywall");
     };
     init();

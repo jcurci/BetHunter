@@ -32,8 +32,25 @@ export async function initRevenueCat(): Promise<void> {
   isConfigured = true;
 }
 
-export async function identifyUser(userId: string): Promise<CustomerInfo> {
+export async function identifyUser(
+  userId: string,
+  attrs?: { email?: string; name?: string; phone?: string },
+): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.logIn(userId);
+
+  const setAttrs: Record<string, string> = {};
+  if (attrs?.email) setAttrs.$email = attrs.email;
+  if (attrs?.name) setAttrs.$displayName = attrs.name;
+  if (attrs?.phone) setAttrs.$phoneNumber = attrs.phone;
+
+  if (Object.keys(setAttrs).length > 0) {
+    try {
+      await Purchases.setAttributes(setAttrs);
+    } catch (e) {
+      if (__DEV__) console.warn('[REVENUECAT] setAttributes falhou', e);
+    }
+  }
+
   return customerInfo;
 }
 

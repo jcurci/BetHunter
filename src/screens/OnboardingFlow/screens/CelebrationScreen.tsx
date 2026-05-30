@@ -22,6 +22,8 @@ import {
 } from '../../../config/colors';
 import type { RootStackParamList } from '../../../types/navigation';
 import { useSubscriptionStore } from '../../../storage/subscriptionStore';
+import { useAuthStore } from '../../../storage/authStore';
+import { identifyUser } from '../../../services/revenueCat';
 import { setOnboardingFlowCompleted } from '../onboardingStorage';
 
 type Props = {
@@ -290,7 +292,17 @@ export const CelebrationScreen: React.FC<Props> = ({
     navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
   };
 
-  const handleViewPlan = () => {
+  const handleViewPlan = async (): Promise<void> => {
+    // Garante que a compra (e futuros atributos de campanha/influenciador) fique
+    // associada ao usuário real no RevenueCat, e não a um usuário anônimo.
+    const { user } = useAuthStore.getState();
+    if (user?.id) {
+      try {
+        await identifyUser(user.id, { email: user.email, name: user.name });
+      } catch (e) {
+        console.warn('[REVENUECAT] identifyUser antes do paywall falhou', e);
+      }
+    }
     setShowingPaywall(true);
   };
 

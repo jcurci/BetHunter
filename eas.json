@@ -28,7 +28,7 @@
       },
       "env": {
         "APP_ENV": "staging",
-        "EXPO_PUBLIC_API_BASE_URL": "https://bethunter-api-production.up.railway.app",
+        "EXPO_PUBLIC_API_BASE_URL": "https://bethunter-api.up.railway.app",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1058790722417-070a7rh7rib75970luhs57holfd09css.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1058790722417-qk1jkb8tg3ark49fmstc2h7pqbtn0ahq.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1058790722417-ont4hmrcb9babd7t8d2ulv3kq6ond3tp.apps.googleusercontent.com",
@@ -49,7 +49,7 @@
       },
       "env": {
         "APP_ENV": "production",
-        "EXPO_PUBLIC_API_BASE_URL": "https://bethunter-api-production.up.railway.app",
+        "EXPO_PUBLIC_API_BASE_URL": "https://bethunter-api.up.railway.app",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1058790722417-070a7rh7rib75970luhs57holfd09css.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1058790722417-qk1jkb8tg3ark49fmstc2h7pqbtn0ahq.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1058790722417-ont4hmrcb9babd7t8d2ulv3kq6ond3tp.apps.googleusercontent.com",
