@@ -93,27 +93,73 @@ class BlockingFlowCoordinator {
 @available(iOS 16.0, *)
 struct ActivityPickerWrapper: View {
   @State private var selection = FamilyActivitySelection()
+  @State private var isLoading = false
+  @State private var showError = false
   var onDone: () -> Void
 
   var body: some View {
-    NavigationView {
-      FamilyActivityPicker(selection: $selection)
-        .navigationTitle("Selecionar Apps")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-          ToolbarItem(placement: .confirmationAction) {
-            Button("Salvar") {
-              AppGroupHelper.saveFamilyActivitySelection(selection)
-              BlockingManager.shared.applyBlocking(with: selection)
-              onDone()
+    ZStack {
+      NavigationView {
+        FamilyActivityPicker(selection: $selection)
+          .navigationTitle("Selecionar Apps")
+          .navigationBarTitleDisplayMode(.inline)
+          .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+              if isLoading {
+                ProgressView()
+                  .progressViewStyle(CircularProgressViewStyle())
+              } else {
+                Button("Salvar") {
+                  AppGroupHelper.saveFamilyActivitySelection(selection)
+                  isLoading = true
+                  BlockingManager.shared.applyBlocking(with: selection) { success in
+                    isLoading = false
+                    if success {
+                      onDone()
+                    } else {
+                      showError = true
+                    }
+                  }
+                }
+              }
             }
           }
-        }
+      }
+
+      if isLoading {
+        loadingOverlay
+      }
+    }
+    .alert("Não foi possível ativar", isPresented: $showError) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("Não foi possível obter a lista de sites de apostas. Verifique sua conexão e tente mais tarde.")
     }
     .onAppear {
       if let saved = AppGroupHelper.loadFamilyActivitySelection() {
         selection = saved
       }
+    }
+  }
+
+  private var loadingOverlay: some View {
+    ZStack {
+      Color.black.opacity(0.45)
+        .ignoresSafeArea()
+
+      VStack(spacing: 16) {
+        ProgressView()
+          .progressViewStyle(CircularProgressViewStyle(tint: .white))
+          .scaleEffect(1.4)
+        Text("Ativando proteção...")
+          .foregroundColor(.white)
+          .font(.subheadline)
+          .fontWeight(.medium)
+      }
+      .padding(.horizontal, 36)
+      .padding(.vertical, 28)
+      .background(.ultraThinMaterial)
+      .cornerRadius(18)
     }
   }
 }

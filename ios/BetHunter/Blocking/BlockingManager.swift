@@ -11,8 +11,10 @@ class BlockingManager {
 
   private init() {}
 
-  /// Aplica bloqueio de apps via ManagedSettings e ativa o DNS Proxy
-  func applyBlocking(with selection: FamilyActivitySelection) {
+  /// Aplica bloqueio de apps via ManagedSettings e ativa o DNS Proxy.
+  /// Dispara sincronização da blocklist do Gist antes de ativar a extensão.
+  /// completion(true) = ativado com sucesso; completion(false) = falhou (shield revertido).
+  func applyBlocking(with selection: FamilyActivitySelection, completion: ((Bool) -> Void)? = nil) {
     let appTokens = selection.applicationTokens
     let catTokens = selection.categoryTokens
 
@@ -21,7 +23,19 @@ class BlockingManager {
       ? nil
       : ShieldSettings.ActivityCategoryPolicy.specific(catTokens)
 
-    enableDNSProxy()
+    BlocklistSyncService.shared.refreshIfNeeded { success in
+      if success {
+        self.enableDNSProxy()
+        DispatchQueue.main.async { completion?(true) }
+      } else {
+        // Sem lista disponível — reverte o shield para não dar falsa sensação de proteção
+        DispatchQueue.main.async {
+          self.store.shield.applications = nil
+          self.store.shield.applicationCategories = nil
+          completion?(false)
+        }
+      }
+    }
   }
 
   /// Remove todos os bloqueios de apps e desativa o DNS Proxy
@@ -39,7 +53,7 @@ class BlockingManager {
       if error != nil { return }
       let proto = NEDNSProxyProviderProtocol()
       // Tem de coincidir com PRODUCT_BUNDLE_IDENTIFIER do target DNSProxy no Xcode.
-      proto.providerBundleIdentifier = "com.bethunter.app.rick.DNSProxy"
+      proto.providerBundleIdentifier = "com.ricardo.bethunter.DNSProxy"
       manager.providerProtocol = proto
       manager.isEnabled = true
       manager.saveToPreferences { error in

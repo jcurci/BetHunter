@@ -4,10 +4,17 @@ class DNSProxyProvider: NEDNSProxyProvider {
 
   private let upstreamDNS = NWHostEndpoint(hostname: "8.8.8.8", port: "53")
 
+  // Lidos do App Group em startProxy(); fallback para lista estática se o App Group estiver vazio.
+  private var activeDomains: [String] = []
+
+  private static let appGroupSuite = "group.com.ricardo.bethunter"
+  private static let domainsKey = "blocked_domains_list"
+
   override func startProxy(
     options: [String: Any]? = nil,
     completionHandler: @escaping (Error?) -> Void
   ) {
+    loadDomains()
     completionHandler(nil)
   }
 
@@ -22,6 +29,15 @@ class DNSProxyProvider: NEDNSProxyProvider {
     guard let udpFlow = flow as? NEAppProxyUDPFlow else { return false }
     processFlow(udpFlow)
     return true
+  }
+
+  // MARK: - Carregamento da lista
+
+  private func loadDomains() {
+    let defaults = UserDefaults(suiteName: Self.appGroupSuite)
+    let dynamic = defaults?.stringArray(forKey: Self.domainsKey) ?? []
+    activeDomains = dynamic.isEmpty ? BlockedDomains.all : dynamic
+    print("[DNSProxy] Blocklist carregada: \(activeDomains.count) domínios")
   }
 
   // MARK: - Processamento de fluxos DNS
@@ -59,7 +75,7 @@ class DNSProxyProvider: NEDNSProxyProvider {
 
   private func shouldBlock(_ domain: String) -> Bool {
     let lowered = domain.lowercased()
-    return BlockedDomains.all.contains { blocked in
+    return activeDomains.contains { blocked in
       lowered == blocked || lowered.hasSuffix("." + blocked)
     }
   }

@@ -3,10 +3,12 @@ import FamilyControls
 
 @available(iOS 16.0, *)
 struct AppGroupHelper {
-  static let suiteName = "group.com.bethunterapp.ios"
+  static let suiteName = "group.com.ricardo.bethunter"
 
   private static let protectionEnabledKey = "protectionEnabled"
   private static let selectionKey = "familyActivitySelectionData"
+  static let domainsKey = "blocked_domains_list"
+  static let domainsLastFetchKey = "blocked_domains_last_fetch"
 
   private static var sharedDefaults: UserDefaults? {
     UserDefaults(suiteName: suiteName)
@@ -41,5 +43,20 @@ struct AppGroupHelper {
       print("[BetBlocking] Erro ao carregar seleção: \(error)")
       return nil
     }
+  }
+
+  // MARK: - Lista de domínios bloqueados (compartilhada com extensão DNS)
+
+  static func saveBlockedDomains(_ domains: [String]) {
+    sharedDefaults?.set(domains, forKey: domainsKey)
+  }
+
+  static func loadBlockedDomains() -> [String] {
+    sharedDefaults?.stringArray(forKey: domainsKey) ?? []
+  }
+
+  static var blockedDomainsLastFetch: Double {
+    get { sharedDefaults?.double(forKey: domainsLastFetchKey) ?? 0 }
+    set { sharedDefaults?.set(newValue, forKey: domainsLastFetchKey) }
   }
 }

@@ -6,30 +6,68 @@ struct BlockingControlView: View {
   @State private var protectionEnabled = AppGroupHelper.isProtectionEnabled
   @State private var selection: FamilyActivitySelection = AppGroupHelper.loadFamilyActivitySelection() ?? FamilyActivitySelection()
   @State private var showActivityPicker = false
+  @State private var isLoading = false
+  @State private var showError = false
 
   private var blockedAppsCount: Int {
     selection.applicationTokens.count + selection.categoryTokens.count
   }
 
   private var blockedDomainsCount: Int {
-    BlockedDomains.all.count
+    let dynamic = AppGroupHelper.loadBlockedDomains()
+    return dynamic.isEmpty ? BlockedDomains.all.count : dynamic.count
   }
 
   var body: some View {
-    NavigationView {
-      List {
-        statusSection
-        appsSection
-        sitesSection
-        disableAllSection
-      }
-      .navigationTitle("Bloquear Apostas")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Fechar") { dismiss() }
+    ZStack {
+      NavigationView {
+        List {
+          statusSection
+          appsSection
+          sitesSection
+          disableAllSection
+        }
+        .navigationTitle("Bloquear Apostas")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("Fechar") { dismiss() }
+              .disabled(isLoading)
+          }
         }
       }
+
+      if isLoading {
+        loadingOverlay
+      }
+    }
+    .alert("Não foi possível ativar", isPresented: $showError) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("Não foi possível obter a lista de sites de apostas. Verifique sua conexão e tente mais tarde.")
+    }
+  }
+
+  // MARK: - Overlay de carregamento
+
+  private var loadingOverlay: some View {
+    ZStack {
+      Color.black.opacity(0.45)
+        .ignoresSafeArea()
+
+      VStack(spacing: 16) {
+        ProgressView()
+          .progressViewStyle(CircularProgressViewStyle(tint: .white))
+          .scaleEffect(1.4)
+        Text("Ativando proteção...")
+          .foregroundColor(.white)
+          .font(.subheadline)
+          .fontWeight(.medium)
+      }
+      .padding(.horizontal, 36)
+      .padding(.vertical, 28)
+      .background(.ultraThinMaterial)
+      .cornerRadius(18)
     }
   }
 
@@ -46,10 +84,11 @@ struct BlockingControlView: View {
         Spacer()
         Toggle("", isOn: $protectionEnabled)
           .labelsHidden()
+          .disabled(isLoading)
           .onChange(of: protectionEnabled) { newValue in
             AppGroupHelper.isProtectionEnabled = newValue
             if newValue {
-              BlockingManager.shared.applyBlocking(with: selection)
+              activateBlocking(with: selection)
             } else {
               BlockingManager.shared.removeBlocking()
             }
@@ -75,6 +114,7 @@ struct BlockingControlView: View {
           Text("Alterar seleção de apps")
         }
       }
+      .disabled(isLoading)
       .familyActivityPicker(
         isPresented: $showActivityPicker,
         selection: $selection
@@ -82,7 +122,7 @@ struct BlockingControlView: View {
       .onChange(of: selection) { newValue in
         AppGroupHelper.saveFamilyActivitySelection(newValue)
         if protectionEnabled {
-          BlockingManager.shared.applyBlocking(with: newValue)
+          activateBlocking(with: newValue)
         }
       }
     }
@@ -113,6 +153,21 @@ struct BlockingControlView: View {
             .fontWeight(.semibold)
           Spacer()
         }
+      }
+      .disabled(isLoading)
+    }
+  }
+
+  // MARK: - Ativação com feedback
+
+  private func activateBlocking(with sel: FamilyActivitySelection) {
+    isLoading = true
+    BlockingManager.shared.applyBlocking(with: sel) { success in
+      isLoading = false
+      if !success {
+        protectionEnabled = false
+        AppGroupHelper.isProtectionEnabled = false
+        showError = true
       }
     }
   }

@@ -1,14 +1,13 @@
 import Foundation
 
-/// Domínios de apostas bloqueados pelo DNS Proxy.
-/// Compartilhado entre o app principal e a extensão DNS via App Group.
+/// Fallback usado apenas quando o App Group ainda não tem a lista do Gist
+/// (primeira execução sem conexão). Espelha DEFAULT_BLOCKED_DOMAINS do Android.
 struct BlockedDomains {
   static let all: [String] = [
     "bet365.com",
-    // Site BR atual: https://www.betano.bet.br/ (betano.com.br é outro domínio)
-    "betano.bet.br",
-    "pixbet.com",
-    "esportes.betfair.com",
-    "br.bwin.com",
+    "betfair.com",
+    "blaze.com",
+    "pokerstars.com",
+    "1xbet.com",
   ]
 }

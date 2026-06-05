@@ -17,6 +17,7 @@
 		A1B2C3D4E5F60000BB000005 /* AppGroupHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */; };
 		A1B2C3D4E5F60000BB000006 /* BlockingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */; };
 		A1B2C3D4E5F60000BB000007 /* BlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */; };
+		A1B2C3D4E5F60000BB000008 /* BlocklistSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000C /* BlocklistSyncService.swift */; };
 		A1B2C3D4E5F60000CC000001 /* DNSProxyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */; };
 		A1B2C3D4E5F60000CC000002 /* BlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */; };
 		A1B2C3D4E5F60000DD000001 /* DNSProxy.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -67,6 +68,7 @@
 		A1B2C3D4E5F60000AA000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA00000A /* DNSProxy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DNSProxy.entitlements; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DNSProxy.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60000AA00000C /* BlocklistSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocklistSyncService.swift; sourceTree = "<group>"; };
 		A4B597602FB8DB49B1F174E1 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BetHunter/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BetHunter/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 				A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */,
 				A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */,
 				A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */,
+				A1B2C3D4E5F60000AA00000C /* BlocklistSyncService.swift */,
 			);
 			path = BetHunter/Blocking;
 			sourceTree = "<group>";
@@ -494,6 +497,7 @@
 				A1B2C3D4E5F60000BB000005 /* AppGroupHelper.swift in Sources */,
 				A1B2C3D4E5F60000BB000006 /* BlockingManager.swift in Sources */,
 				A1B2C3D4E5F60000BB000007 /* BlockedDomains.swift in Sources */,
+				A1B2C3D4E5F60000BB000008 /* BlocklistSyncService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,7 +549,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter;
 				PRODUCT_NAME = BetHunter;
 				SWIFT_OBJC_BRIDGING_HEADER = "BetHunter/BetHunter-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -578,7 +582,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter;
 				PRODUCT_NAME = BetHunter;
 				SWIFT_OBJC_BRIDGING_HEADER = "BetHunter/BetHunter-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -721,7 +725,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter.DNSProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
@@ -745,7 +749,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter.DNSProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
