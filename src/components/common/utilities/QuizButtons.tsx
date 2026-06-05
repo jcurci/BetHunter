@@ -12,12 +12,12 @@ interface QuizActionButtonProps {
 
 const QuizActionButton: React.FC<QuizActionButtonProps> = ({ label, onPress, disabled, style, textStyle }) => {
   const outerColors = disabled
-    ? ["rgba(255,255,255,0.12)", "rgba(9,9,14,0.8)"]
-    : ["rgba(255,255,255,0.28)", "rgba(25,25,35,0.85)"];
+    ? (["rgba(255,255,255,0.12)", "rgba(9,9,14,0.8)"] as const)
+    : (["rgba(255,255,255,0.28)", "rgba(25,25,35,0.85)"] as const);
 
   const innerGradient = disabled
-    ? ["#13121A", "#0E0D14"]
-    : ["#1B1724", "#13111C"];
+    ? (["#13121A", "#0E0D14"] as const)
+    : (["#1B1724", "#13111C"] as const);
 
   return (
     <LinearGradient

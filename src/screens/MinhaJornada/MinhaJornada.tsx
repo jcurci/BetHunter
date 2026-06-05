@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Footer, Avatar, BackIconButton, RadialGradientBackground } from "../../components";
 
 import { NavigationProp } from "../../types/navigation";
+import { useAuthStore } from "../../storage/authStore";
 import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
 const HEATMAP_COLORS = ["#1A1825", "#3D2B5A", "#6B4D8A", "#9B6FB8", "#D783D8"];
 const MONTHS_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -52,7 +53,7 @@ const generateHeatmapData = () => {
 
 const MinhaJornada: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [user, setUser] = useState<string | null>(null);
+  const user = useAuthStore((s) => s.user);
   const [heatmapData] = useState(generateHeatmapData());
 
 
@@ -68,12 +69,6 @@ const MinhaJornada: React.FC = () => {
       umaEstrela: 20,
     },
   };
-
-  useEffect(() => {
-
-  }, []);
-
-
 
   const getInitials = (name: string | undefined): string => {
     if (!name) return "JD";

@@ -10,11 +10,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // Removed LinearGradient - using solid colors
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useAccountStore } from '../../storage/accountStore';
+import { useAccountStore, Transaction } from '../../storage/accountStore';
+import { NavigationProp } from '../../types/navigation';
 import { BackIconButton } from '../../components';
 
 const AccountHistory = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { transactions, loadTransactions, deleteTransaction } = useAccountStore();
   const [filter, setFilter] = useState('all');
 
@@ -22,14 +23,14 @@ const AccountHistory = () => {
     loadTransactions();
   }, []);
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(amount);
   };
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string) => {
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: 'short',
@@ -47,7 +48,7 @@ const AccountHistory = () => {
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
-  const handleDeleteTransaction = (id) => {
+  const handleDeleteTransaction = (id: string) => {
     Alert.alert(
       'Excluir Transação',
       'Tem certeza que deseja excluir esta transação?',
@@ -65,7 +66,7 @@ const AccountHistory = () => {
     );
   };
 
-  const renderFilterButton = (type, label) => (
+  const renderFilterButton = (type: string, label: string) => (
     <TouchableOpacity
       onPress={() => setFilter(type)}
       style={[
@@ -83,7 +84,7 @@ const AccountHistory = () => {
     </TouchableOpacity>
   );
 
-  const renderTransactionItem = ({ item }) => (
+  const renderTransactionItem = ({ item }: { item: Transaction }) => (
     <View style={styles.transactionItem}>
       <View style={styles.transactionLeft}>
         <View style={[
@@ -162,7 +163,7 @@ const AccountHistory = () => {
         {/* Add Button */}
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('TransactionForm')}
+          onPress={() => navigation.navigate('TransactionForm', { type: 'expense' })}
         >
           <View style={styles.addButtonContainer}>
             <Icon name="plus" size={20} color="#FFFFFF" />

@@ -15,6 +15,7 @@ import {
   Animated,
   Easing,
   Linking,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,6 +56,7 @@ import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { CourseProgress } from "../../domain/entities/CourseProgress";
+import { notifyStreakMilestone } from "../../services/notifications";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
@@ -74,10 +76,15 @@ const { BetBlocker, BetBlocking } = NativeModules;
 // Module-level flag: persists for the entire app session, survives component remounts
 let sessionBooted = false;
 
+const CARD_GAP = 10;
+const SCROLL_HORIZONTAL_PADDING = 40; // 20px each side (scrollContent style)
+
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, "Home">>();
   const user = useAuthStore((s) => s.user);
+  const { width: screenWidth } = useWindowDimensions();
+  const cardSize = Math.floor((screenWidth - SCROLL_HORIZONTAL_PADDING - CARD_GAP * 2) / 3);
   
   // Dashboard store
   const {
@@ -326,6 +333,7 @@ const Home: React.FC = () => {
       const container = Container.getInstance();
       const result = await container.getBetCheckInUseCase().execute();
       updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
+      await notifyStreakMilestone(result.betStreak);
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
       triggerError('Não foi possível registrar o check-in. Tente novamente.', async () => {
@@ -334,6 +342,7 @@ const Home: React.FC = () => {
           const container = Container.getInstance();
           const result = await container.getBetCheckInUseCase().execute();
           updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
+          await notifyStreakMilestone(result.betStreak);
         } finally {
           setIsCheckInSubmitting(false);
         }
@@ -425,21 +434,6 @@ const Home: React.FC = () => {
       console.log("BetBlocker error", error);
       setShowBlockModal(false);
       triggerError('Não foi possível ativar o bloqueio. Tente novamente.');
-    }
-  };
-
-  const handleDeactivateBlocker = async (): Promise<void> => {
-    setShowBlockFlowModal(false);
-    try {
-      if (Platform.OS === "android" && BetBlocker?.stopBlocking) {
-        BetBlocker.stopBlocking();
-      } else if (Platform.OS === "ios" && BetBlocking?.stopBlocking) {
-        BetBlocking.stopBlocking();
-      }
-      setIsBlockerEnabled(false);
-      Alert.alert("Proteção desativada", "O bloqueio foi removido do dispositivo.");
-    } catch {
-      triggerError('Não foi possível desativar o bloqueio. Tente novamente.');
     }
   };
 
@@ -755,22 +749,25 @@ const Home: React.FC = () => {
 
           {/* Minha conta, Meu acessor, Menu Educacional */}
           <View style={styles.cardsContainer}>
-            <IconCard 
-              icon={<BetHunterIcon width={20} height={20} />} 
-              title={"Minha\nConta"} 
+            <IconCard
+              icon={<BetHunterIcon width={20} height={20} />}
+              title={"Minha\nConta"}
               cardBackgroundColor="#14121B"
+              size={cardSize}
               onPress={() => navigation.navigate("MinhaConta")}
             />
-            <IconCard 
-              icon={<AcessorIcon width={20} height={20} />} 
-              title={"Meu\nAcessor"} 
+            <IconCard
+              icon={<AcessorIcon width={20} height={20} />}
+              title={"Meu\nAcessor"}
               cardBackgroundColor="#14121B"
+              size={cardSize}
               onPress={() => navigation.navigate("Acessor")}
             />
-            <IconCard 
-              icon={<CursosIcon width={20} height={20} />} 
-              title={"Menu\nEducacional"} 
+            <IconCard
+              icon={<CursosIcon width={20} height={20} />}
+              title={"Menu\nEducacional"}
               cardBackgroundColor="#14121B"
+              size={cardSize}
               onPress={() => navigation.navigate("MenuEducacional")}
             />
           </View>
@@ -808,27 +805,23 @@ const Home: React.FC = () => {
                     </Text>
                     <Text style={styles.blockChoiceDesc}>
                       {isBlockerEnabled
-                        ? "O bloqueio está ativo neste dispositivo. Toque para desativar."
+                        ? "O bloqueio está ativo neste dispositivo e não pode ser desativado."
                         : Platform.OS === "ios"
                         ? "Abre Tempo de Uso para escolher apps e aplicar bloqueios."
                         : "Instalação do perfil VPN para filtrar sites de apostas no dispositivo."}
                     </Text>
                   </View>
                 </View>
-                <GradientBorderButton
-                  label={
-                    isBlockerEnabled
-                      ? "Desativar proteção"
-                      : Platform.OS === "ios"
-                      ? "Configurar bloqueio"
-                      : "Ativar bloqueio"
-                  }
-                  onPress={
-                    isBlockerEnabled
-                      ? () => void handleDeactivateBlocker()
-                      : handleActivateBlockFlow
-                  }
-                />
+                {!isBlockerEnabled && (
+                  <GradientBorderButton
+                    label={
+                      Platform.OS === "ios"
+                        ? "Configurar bloqueio"
+                        : "Ativar bloqueio"
+                    }
+                    onPress={handleActivateBlockFlow}
+                  />
+                )}
               </View>
 
               <View style={styles.blockActionOrRow}>
@@ -1198,9 +1191,9 @@ const styles = StyleSheet.create({
   // Cards Container
   cardsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    gap: CARD_GAP,
     marginTop: 0,
-    
   },
 
 

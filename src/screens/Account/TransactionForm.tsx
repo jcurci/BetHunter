@@ -8,12 +8,22 @@ import {
   TextInput,
   Alert} from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-// Removed LinearGradient - using solid colors
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useAccountStore } from '../../storage/accountStore';
+import { BackIconButton } from '../../components';
+import { NavigationProp } from '../../types/navigation';
 
-const categories = [
+type TransactionType = 'income' | 'expense';
+
+interface CategoryOption {
+  id: string;
+  name: string;
+  icon: string;
+  type: TransactionType;
+}
+
+const categories: CategoryOption[] = [
   // Receitas
   { id: '1', name: 'Salário', icon: 'cash', type: 'income' },
   { id: '2', name: 'Freelance', icon: 'laptop', type: 'income' },
@@ -35,17 +45,17 @@ const categories = [
 ];
 
 const TransactionForm = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { addTransaction } = useAccountStore();
   
   const [amount, setAmount] = useState('');
-  const [type, setType] = useState('expense');
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [type, setType] = useState<TransactionType>('expense');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryOption | null>(null);
   const [description, setDescription] = useState('');
   const [date] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: string) => {
     // Remove tudo que não é dígito
     const numericValue = value.replace(/[^\d]/g, '');
     
@@ -61,7 +71,7 @@ const TransactionForm = () => {
     }).format(numberValue);
   };
 
-  const handleAmountChange = (value) => {
+  const handleAmountChange = (value: string) => {
     const formatted = formatCurrency(value);
     setAmount(formatted);
   };
@@ -72,9 +82,7 @@ const TransactionForm = () => {
   };
 
   const getFilteredCategories = () => {
-    return categories.filter(category => 
-      category.type === type || category.type === 'both'
-    );
+    return categories.filter(category => category.type === type);
   };
 
   const handleSubmit = async () => {
@@ -124,7 +132,7 @@ const TransactionForm = () => {
     }
   };
 
-  const renderTypeButton = (buttonType, label) => (
+  const renderTypeButton = (buttonType: TransactionType, label: string) => (
     <TouchableOpacity
       onPress={() => {
         setType(buttonType);
@@ -145,7 +153,7 @@ const TransactionForm = () => {
     </TouchableOpacity>
   );
 
-  const renderCategoryItem = (category) => (
+  const renderCategoryItem = (category: CategoryOption) => (
     <TouchableOpacity
       key={category.id}
       onPress={() => setSelectedCategory(category)}

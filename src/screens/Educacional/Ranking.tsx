@@ -12,13 +12,30 @@ import { useNavigation } from "@react-navigation/native";
 import { Avatar, CloseIconButton, HelpIconButton, RadialGradientBackground } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 
-const LEAGUES = [
+interface LeagueItem {
+  id: string;
+  label: string;
+  colors: readonly [string, string];
+}
+
+interface RankingItem {
+  position: number;
+  name: string;
+  xp: number;
+  initials: string;
+  avatarGradient: readonly [string, string];
+  highlight?: boolean;
+  promotion?: boolean;
+  relegation?: boolean;
+}
+
+const LEAGUES: LeagueItem[] = [
   { id: "bronze", label: "Bronze", colors: ["#4C4F5C", "#2A2C35"] },
   { id: "prata", label: "Prata", colors: ["#9254FF", "#6B4D8A"] },
   { id: "campeao", label: "Campeão", colors: ["#FF7A9E", "#9254FF"] },
 ];
 
-const RANKING_DATA = [
+const RANKING_DATA: RankingItem[] = [
   {
     position: 1,
     name: "Enzo Vasconcelos",
@@ -237,7 +254,7 @@ const RANKING_DATA = [
 const Ranking: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
-  const renderAvatar = (item: typeof RANKING_DATA[number]) => {
+  const renderAvatar = (item: RankingItem) => {
     if (item.initials) {
       return (
         <LinearGradient

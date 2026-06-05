@@ -20,14 +20,36 @@ import Svg, { Polyline } from "react-native-svg";
 
 const { width } = Dimensions.get("window");
 
+interface ChartDataset {
+  data: number[];
+  color?: (opacity: number) => string;
+  strokeWidth?: number;
+}
+
+interface LineChartData {
+  labels: string[];
+  datasets: ChartDataset[];
+}
+
+interface Investment {
+  id: number;
+  ticker: string;
+  company: string;
+  logo: ReturnType<typeof require>;
+  currentValue: string;
+  percentageChange: number;
+  isPositive: boolean;
+  miniChartData: number[];
+}
+
 const Graficos = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [accountBalance, setAccountBalance] = useState("R$14.884,20");
   const [selectedPeriod, setSelectedPeriod] = useState("Essa semana");
-  const [chartData, setChartData] = useState(null);
-  const [investments, setInvestments] = useState([]);
+  const [chartData, setChartData] = useState<LineChartData | null>(null);
+  const [investments, setInvestments] = useState<Investment[]>([]);
 
   useEffect(() => {
     loadData();
@@ -137,7 +159,7 @@ const Graficos = () => {
     }
   };
 
-  const renderMiniChart = (data, isPositive) => {
+  const renderMiniChart = (data: number[], isPositive: boolean) => {
     const max = Math.max(...data);
     const min = Math.min(...data);
     const range = max - min || 1; // Evita divisão por zero
@@ -164,7 +186,7 @@ const Graficos = () => {
     );
   };
 
-  const renderInvestmentItem = (investment) => (
+  const renderInvestmentItem = (investment: Investment) => (
     <TouchableOpacity key={investment.id} style={styles.investmentItem}>
       <View style={styles.investmentLeft}>
         <View style={styles.logoContainer}>
@@ -249,7 +271,7 @@ const Graficos = () => {
             <Text style={styles.balanceCurrency}>$BET</Text>
           </View>
           <View style={styles.chartArea}>
-            <LineChart
+            {chartData !== null && <LineChart
               data={chartData}
               width={width - 80}
               height={120}
@@ -277,7 +299,7 @@ const Graficos = () => {
               withDots={true}
               withShadow={true}
               style={styles.areaChart}
-            />
+            />}
           </View>
         </View>
 

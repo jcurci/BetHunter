@@ -11,13 +11,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { useAccountStore } from '../../storage/accountStore';
+import { useAccountStore, Transaction } from '../../storage/accountStore';
 import { BackIconButton } from '../../components';
+import { NavigationProp } from '../../types/navigation';
 
 const { width } = Dimensions.get('window');
 
 const AccountOverview = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { 
     transactions, 
     balance, 
@@ -30,7 +31,7 @@ const AccountOverview = () => {
     loadTransactions();
   }, []);
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -84,7 +85,7 @@ const AccountOverview = () => {
     };
   };
 
-  const renderTransactionItem = ({ item }) => (
+  const renderTransactionItem = ({ item }: { item: Transaction }) => (
     <View style={styles.transactionItem}>
       <View style={styles.transactionIcon}>
         <Icon 
@@ -205,7 +206,7 @@ const AccountOverview = () => {
         {/* Floating Action Button */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => navigation.navigate('TransactionForm')}
+          onPress={() => navigation.navigate('TransactionForm', { type: 'expense' })}
         >
           <View style={styles.fabButton}>
             <Icon name="plus" size={24} color="#FFFFFF" />

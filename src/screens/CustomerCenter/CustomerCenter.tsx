@@ -3,13 +3,14 @@ import { StyleSheet } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import RevenueCatUI from 'react-native-purchases-ui';
 import { useNavigation } from '@react-navigation/native';
+import { NavigationProp } from '../../types/navigation';
 
 const CustomerCenter: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.container}>
-      <RevenueCatUI.CustomerCenter
+      <RevenueCatUI.CustomerCenterView
         onDismiss={() => navigation.goBack()}
       />
     </SafeAreaView>

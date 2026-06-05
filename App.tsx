@@ -53,6 +53,12 @@ import Paywall from "./src/screens/Paywall/Paywall";
 import { RootStackParamList } from "./src/types/navigation";
 import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardingStorage";
+import {
+  configureNotifications,
+  hasPermission,
+  scheduleDailyCheckInReminder,
+  scheduleReengagementReminder,
+} from "./src/services/notifications";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -106,6 +112,17 @@ const App: React.FC = () => {
         }
         if (rcCustomerInfo) {
           useSubscriptionStore.getState().setFromCustomerInfo(rcCustomerInfo);
+        }
+
+        try {
+          await configureNotifications();
+          const permissionGranted = await hasPermission();
+          if (permissionGranted) {
+            await scheduleDailyCheckInReminder();
+            await scheduleReengagementReminder(user.name);
+          }
+        } catch (notificationsError) {
+          console.warn("[NOTIFICATIONS] Falha ao configurar lembretes locais", notificationsError);
         }
       }
 

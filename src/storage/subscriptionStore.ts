@@ -11,6 +11,8 @@ type SubscriptionState = {
   setFromCustomerInfo: (info: CustomerInfo) => void;
 };
 
+let _refreshInFlight: Promise<void> | null = null;
+
 export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isPremium: false,
   isInitialized: false,
@@ -18,16 +20,24 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   loading: true,
 
   refresh: async () => {
-    try {
-      set({ loading: true });
-      const info = await Purchases.getCustomerInfo();
-      const isPremium = !!info.entitlements.active[ENTITLEMENT_ID];
-      if (__DEV__) console.log('[SUBSCRIPTION] refresh() → isPremium:', isPremium, 'entitlements:', Object.keys(info.entitlements.active));
-      set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
-    } catch (e) {
-      if (__DEV__) console.warn('[REVENUECAT] getCustomerInfo failed', e);
-      set({ loading: false, isInitialized: true });
-    }
+    if (_refreshInFlight) return _refreshInFlight;
+
+    set({ loading: true });
+    _refreshInFlight = (async () => {
+      try {
+        const info = await Purchases.getCustomerInfo();
+        const isPremium = !!info.entitlements.active[ENTITLEMENT_ID];
+        if (__DEV__) console.log('[SUBSCRIPTION] refresh() → isPremium:', isPremium, 'entitlements:', Object.keys(info.entitlements.active));
+        set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
+      } catch (e) {
+        if (__DEV__) console.warn('[REVENUECAT] getCustomerInfo failed', e);
+        set({ loading: false, isInitialized: true });
+      } finally {
+        _refreshInFlight = null;
+      }
+    })();
+
+    return _refreshInFlight;
   },
 
   setFromCustomerInfo: (info: CustomerInfo) => {

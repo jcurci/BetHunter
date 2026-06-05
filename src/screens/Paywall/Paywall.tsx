@@ -23,10 +23,23 @@ const Paywall: React.FC = () => {
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isNavigatingRef = React.useRef(false);
 
   const finishAsSubscriber = async (): Promise<void> => {
-    await refresh();
-    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+
+    try {
+      await refresh();
+      const { isPremium: isNowPremium } = useSubscriptionStore.getState();
+      if (!isNowPremium) {
+        isNavigatingRef.current = false;
+        return;
+      }
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    } catch {
+      isNavigatingRef.current = false;
+    }
   };
 
   // Safety net: if RevenueCat listener confirms premium while user is stuck on Paywall
@@ -35,6 +48,20 @@ const Paywall: React.FC = () => {
       void finishAsSubscriber();
     }
   }, [isPremium]);
+
+  const presentAndroidPaywall = useCallback(async (o: PurchasesOffering): Promise<void> => {
+    const result = await RevenueCatUI.presentPaywall({
+      displayCloseButton: true,
+      offering: o,
+    });
+    console.log('[PAYWALL-ANDROID] presentPaywall result:', result);
+    if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+      await finishAsSubscriber();
+    } else {
+      // Volta para a CelebrationScreen do onboarding para o usuário poder rever o plano
+      navigation.reset({ index: 0, routes: [{ name: 'OnboardingFlow', params: { startAtStep: 'celebration' } }] });
+    }
+  }, [navigation]);
 
   const loadOffering = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -52,21 +79,9 @@ const Paywall: React.FC = () => {
         console.log('[PAYWALL-ANDROID] offering.serverDescription:', o.serverDescription);
         console.log('[PAYWALL-ANDROID] availablePackages count:', o.availablePackages.length);
         console.log('[PAYWALL-ANDROID] metadata keys:', Object.keys(o.metadata ?? {}));
-        // paywall property exists in V2 offerings serialized from native
         console.log('[PAYWALL-ANDROID] paywall (V2 template):', JSON.stringify((o as any).paywall ?? null));
 
-        const result = await RevenueCatUI.presentPaywall({
-          displayCloseButton: true,
-          offering: o,
-        });
-        console.log('[PAYWALL-ANDROID] presentPaywall result:', result);
-        if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-          await finishAsSubscriber();
-        } else {
-          // Paywall is a hard gate — no goBack(). Reload the offering so the user can try again.
-          setLoading(true);
-          void loadOffering();
-        }
+        await presentAndroidPaywall(o);
         return;
       }
 
@@ -81,7 +96,7 @@ const Paywall: React.FC = () => {
       setError(msg);
       setLoading(false);
     }
-  }, []);
+  }, [presentAndroidPaywall]);
 
   useEffect(() => {
     void loadOffering();

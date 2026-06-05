@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStorageService } from '../infrastructure/storage/AuthStorageService';
 import { setOnTokenExpired, clearOnTokenExpired } from '../services/api/apiClient';
 import { AuthUser } from '../domain/entities/User';
+import { cancelAllReminders } from '../services/notifications';
 
 const TOKEN_KEY = '@BetHunter:token';
 
@@ -77,6 +78,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
    */
   logout: async () => {
     try {
+      try {
+        await cancelAllReminders();
+      } catch (error) {
+        console.warn('⚠️ [AuthStore] Falha ao cancelar lembretes locais no logout:', error);
+      }
+
       await authStorageService.logout();
       
       console.log('✅ [AuthStore] Logout realizado');

@@ -7,6 +7,7 @@ interface IconCardProps {
   title: string;
   onPress?: () => void;
   cardBackgroundColor?: string;
+  size?: number;
 }
 
 const IconCard: React.FC<IconCardProps> = ({
@@ -14,9 +15,10 @@ const IconCard: React.FC<IconCardProps> = ({
   title,
   onPress,
   cardBackgroundColor,
+  size = 106,
 }) => {
   return (
-    <View style={styles.cardWrapper}>
+    <View style={[styles.cardWrapper, { width: size, height: size }]}>
       <LinearGradient
         colors={['#4A4855', '#2A2835', '#1A1825', '#2A2835', '#4A4855']}
         locations={[0, 0.25, 0.5, 0.75, 1]}
@@ -47,8 +49,6 @@ const IconCard: React.FC<IconCardProps> = ({
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    width: 106,
-    height: 106,
     borderRadius: 26,
     overflow: "hidden",
   },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp as RNRouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../types/navigation';
 import { OnboardingProvider, useOnboarding } from './OnboardingContext';
@@ -55,14 +56,17 @@ const QUIZ_TOTAL = 6;
 
 const OnboardingInner: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RNRouteProp<RootStackParamList, 'OnboardingFlow'>>();
+  const startAtStep = route.params?.startAtStep;
   const { hydrated, savedStep, persistStep } = useOnboarding();
   const [step, setStep] = useState<StepId>('notifications');
 
   useEffect(() => {
-    if (hydrated && savedStep && STEP_ORDER.includes(savedStep as StepId)) {
-      setStep(savedStep as StepId);
+    const target = startAtStep ?? savedStep;
+    if (hydrated && target && STEP_ORDER.includes(target as StepId)) {
+      setStep(target as StepId);
     }
-  }, [hydrated, savedStep]);
+  }, [hydrated, savedStep, startAtStep]);
 
   const currentIndex = STEP_ORDER.indexOf(step);
 

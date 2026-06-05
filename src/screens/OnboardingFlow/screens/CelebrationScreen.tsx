@@ -153,28 +153,27 @@ const StatBubble: React.FC<StatBubbleProps> = ({ value, label, icon, color, bgCo
   });
 
   return (
-    <Animated.View style={{ transform: [{ scale }], flex: 1 }}>
-      <Animated.View
-        style={[
-          styles.statBubble,
-          {
-            borderColor: color,
-            borderOpacity,
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={[bgColor, 'transparent']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-          // eslint-disable-next-line react-native/no-inline-styles
-          // @ts-ignore
-          borderRadius={18}
-        />
-        <Text style={styles.statIcon}>{icon}</Text>
-        <Text style={[styles.statValue, { color }]}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+    <Animated.View style={{ opacity: borderOpacity, flex: 1 }}>
+      <Animated.View style={{ transform: [{ scale }], flex: 1 }}>
+        <Animated.View
+          style={[
+            styles.statBubble,
+            { borderColor: color },
+          ]}
+        >
+          <LinearGradient
+            colors={[bgColor, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            // eslint-disable-next-line react-native/no-inline-styles
+            // @ts-ignore
+            borderRadius={18}
+          />
+          <Text style={styles.statIcon}>{icon}</Text>
+          <Text style={[styles.statValue, { color }]}>{value}</Text>
+          <Text style={styles.statLabel}>{label}</Text>
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   );
@@ -196,6 +195,7 @@ export const CelebrationScreen: React.FC<Props> = ({
   const [showingPaywall, setShowingPaywall] = useState(false);
   const refresh = useSubscriptionStore((s) => s.refresh);
   const { betcoinsEarned, xpEarned, streak } = useOnboarding();
+  const isNavigatingRef = useRef(false);
 
   // Hero animations
   const emojiScale = useRef(new Animated.Value(0)).current;
@@ -286,10 +286,22 @@ export const CelebrationScreen: React.FC<Props> = ({
   }, []);
 
   const finishAsSubscriber = async (): Promise<void> => {
-    await refresh();
-    await setOnboardingFlowCompleted();
-    setShowingPaywall(false);
-    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+
+    try {
+      await refresh();
+      const { isPremium: isNowPremium } = useSubscriptionStore.getState();
+      if (!isNowPremium) {
+        isNavigatingRef.current = false;
+        return;
+      }
+      await setOnboardingFlowCompleted();
+      setShowingPaywall(false);
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    } catch {
+      isNavigatingRef.current = false;
+    }
   };
 
   const handleViewPlan = async (): Promise<void> => {
