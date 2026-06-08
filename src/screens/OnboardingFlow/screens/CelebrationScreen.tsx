@@ -8,10 +8,12 @@ import {
   Easing,
   Dimensions,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RevenueCatUI from 'react-native-purchases-ui';
+import type { CustomerInfo } from 'react-native-purchases';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import { useOnboarding } from '../OnboardingContext';
@@ -285,15 +287,23 @@ export const CelebrationScreen: React.FC<Props> = ({
     ]).start();
   }, []);
 
-  const finishAsSubscriber = async (): Promise<void> => {
+  const finishAsSubscriber = async (customerInfo?: CustomerInfo): Promise<void> => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
 
     try {
-      await refresh();
+      if (customerInfo) {
+        useSubscriptionStore.getState().setFromCustomerInfo(customerInfo);
+      } else {
+        await refresh();
+      }
       const { isPremium: isNowPremium } = useSubscriptionStore.getState();
       if (!isNowPremium) {
         isNavigatingRef.current = false;
+        Alert.alert(
+          'Assinatura não encontrada',
+          'Não encontramos uma assinatura ativa nesta conta. Verifique se está usando a conta correta na loja e tente novamente.',
+        );
         return;
       }
       await setOnboardingFlowCompleted();
@@ -301,8 +311,15 @@ export const CelebrationScreen: React.FC<Props> = ({
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch {
       isNavigatingRef.current = false;
+      Alert.alert(
+        'Erro ao verificar assinatura',
+        'Não foi possível confirmar sua assinatura. Verifique sua conexão e tente novamente.',
+      );
     }
   };
+
+  const handleGoToLogin = () =>
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
 
   const handleViewPlan = async (): Promise<void> => {
     // Garante que a compra (e futuros atributos de campanha/influenciador) fique
@@ -343,11 +360,23 @@ export const CelebrationScreen: React.FC<Props> = ({
     return (
       <RevenueCatUI.Paywall
         onDismiss={() => setShowingPaywall(false)}
-        onPurchaseCompleted={async () => {
-          await finishAsSubscriber();
+        onPurchaseCompleted={async ({ customerInfo }) => {
+          await finishAsSubscriber(customerInfo);
         }}
-        onRestoreCompleted={async () => {
-          await finishAsSubscriber();
+        onRestoreCompleted={async ({ customerInfo }) => {
+          await finishAsSubscriber(customerInfo);
+        }}
+        onRestoreError={({ error }) => {
+          Alert.alert(
+            'Erro ao restaurar',
+            error.message || 'Não foi possível restaurar sua assinatura. Tente novamente.',
+          );
+        }}
+        onPurchaseError={({ error }) => {
+          Alert.alert(
+            'Erro na compra',
+            error.message || 'Não foi possível processar a compra. Tente novamente.',
+          );
         }}
       />
     );
@@ -483,6 +512,10 @@ export const CelebrationScreen: React.FC<Props> = ({
               <Text style={styles.ctaButtonText}>Ver meu plano completo</Text>
               <Icon name="arrow-right" size={18} color="#FFFFFF" />
             </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleGoToLogin} activeOpacity={0.7} style={styles.loginLink}>
+            <Text style={styles.loginLinkText}>Já tenho uma conta</Text>
           </TouchableOpacity>
         </Animated.View>
       </OnboardingLayout>
@@ -661,5 +694,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  loginLink: {
+    marginTop: 12,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  loginLinkText: {
+    color: '#8A8595',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

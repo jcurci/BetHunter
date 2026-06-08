@@ -59,11 +59,9 @@ import {
   scheduleDailyCheckInReminder,
   scheduleReengagementReminder,
 } from "./src/services/notifications";
+import { waitForRCSync } from "./src/utils/waitForRCSync";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-/** DEV: extra ms no AppLoadingScreen antes de entrar no app. Ponha `0` para desligar. */
-const DEBUG_SPLASH_HOLD_MS = __DEV__ ? 2500 : 0;
 
 const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
@@ -76,10 +74,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      const finishBoot = async (route: keyof RootStackParamList) => {
-        if (__DEV__ && DEBUG_SPLASH_HOLD_MS > 0) {
-          await new Promise<void>((resolve) => setTimeout(resolve, DEBUG_SPLASH_HOLD_MS));
-        }
+      const finishBoot = (route: keyof RootStackParamList) => {
         setInitialRoute(route);
         setIsReady(true);
       };
@@ -128,17 +123,23 @@ const App: React.FC = () => {
 
       const onboardingDone = await isOnboardingFlowCompleted();
       if (!onboardingDone) {
-        await finishBoot("OnboardingFlow");
+        finishBoot("OnboardingFlow");
         return;
       }
 
       if (!authed) {
-        await finishBoot("Login");
+        finishBoot("Login");
         return;
       }
 
+      // Wait for the RC listener to deliver server-fresh entitlements before
+      // deciding the route. logIn() returns cached (possibly empty) data; the
+      // listener fires ~1-2 s later with the real subscription status.
+      // The AppLoadingScreen stays visible during this window — no Paywall flash.
+      await waitForRCSync(3000);
+
       const { isPremium: premium } = useSubscriptionStore.getState();
-      await finishBoot(premium ? "Home" : "Paywall");
+      finishBoot(premium ? "Home" : "Paywall");
     };
     init();
   }, []);

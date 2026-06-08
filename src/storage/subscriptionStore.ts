@@ -27,10 +27,15 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
       try {
         const info = await Purchases.getCustomerInfo();
         const isPremium = !!info.entitlements.active[ENTITLEMENT_ID];
-        if (__DEV__) console.log('[SUBSCRIPTION] refresh() → isPremium:', isPremium, 'entitlements:', Object.keys(info.entitlements.active));
+        if (__DEV__) {
+          console.log('[SUBSCRIPTION] refresh() — originalAppUserId:', info.originalAppUserId);
+          console.log('[SUBSCRIPTION] refresh() — entitlements.active keys:', Object.keys(info.entitlements.active));
+          console.log('[SUBSCRIPTION] refresh() — ENTITLEMENT_ID buscado:', ENTITLEMENT_ID);
+          console.log('[SUBSCRIPTION] refresh() — isPremium:', isPremium);
+        }
         set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
       } catch (e) {
-        if (__DEV__) console.warn('[REVENUECAT] getCustomerInfo failed', e);
+        if (__DEV__) console.warn('[SUBSCRIPTION] refresh() — getCustomerInfo falhou:', e);
         set({ loading: false, isInitialized: true });
       } finally {
         _refreshInFlight = null;

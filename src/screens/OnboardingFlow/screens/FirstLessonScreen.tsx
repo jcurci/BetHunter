@@ -19,7 +19,7 @@ import {
 type Props = {
   currentStep: number;
   totalSteps: number;
-  onNext: () => void;
+  onFinishLesson: (betcoins: number, xp: number) => void;
   onBack: () => void;
 };
 
@@ -198,14 +198,18 @@ const AnimatedLessonOption: React.FC<AnimatedLessonOptionProps> = ({
 export const FirstLessonScreen: React.FC<Props> = ({
   currentStep,
   totalSteps,
-  onNext,
+  onFinishLesson,
   onBack,
 }) => {
-  const { addBetcoins, addXp, setStreak, setFirstLessonCompleted } = useOnboarding();
-  const [qIndex, setQIndex] = useState(0);
+  const { firstLessonQuestionIndex, setFirstLessonQuestionIndex } = useOnboarding();
+  const [qIndex, setQIndex] = useState(firstLessonQuestionIndex);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [totalBetcoins, setTotalBetcoins] = useState(0);
+
+  useEffect(() => {
+    setFirstLessonQuestionIndex(qIndex);
+  }, [qIndex]);
 
   const cardShake = useRef(new Animated.Value(0)).current;
   const coinPop = useRef(new Animated.Value(0)).current;
@@ -272,11 +276,7 @@ export const FirstLessonScreen: React.FC<Props> = ({
       coinPop.setValue(0);
       feedbackFade.setValue(0);
     } else {
-      addBetcoins(totalBetcoins);
-      addXp(15);
-      setStreak(1);
-      setFirstLessonCompleted(true);
-      onNext();
+      onFinishLesson(totalBetcoins, 15);
     }
   };
 

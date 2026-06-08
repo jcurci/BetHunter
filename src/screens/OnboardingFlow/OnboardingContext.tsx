@@ -23,6 +23,7 @@ export type OnboardingState = {
   xpEarned: number;
   streak: number;
   firstLessonCompleted: boolean;
+  firstLessonQuestionIndex: number;
 };
 
 const INITIAL_ANSWERS: QuizAnswers = {
@@ -55,6 +56,9 @@ type OnboardingContextValue = {
   setStreak: (value: number) => void;
   firstLessonCompleted: boolean;
   setFirstLessonCompleted: (value: boolean) => void;
+  firstLessonQuestionIndex: number;
+  setFirstLessonQuestionIndex: (index: number) => void;
+  completeFirstLesson: (betcoins: number, xp: number) => void;
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | undefined>(undefined);
@@ -86,6 +90,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const [xpEarned, setXp] = useState(0);
   const [streak, setStreakRaw] = useState(0);
   const [firstLessonCompleted, setFirstLessonRaw] = useState(false);
+  const [firstLessonQuestionIndex, setFirstLessonQuestionIndexRaw] = useState(0);
 
   useEffect(() => {
     loadState().then((saved) => {
@@ -99,6 +104,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
         setXp(saved.xpEarned ?? 0);
         setStreakRaw(saved.streak ?? 0);
         setFirstLessonRaw(saved.firstLessonCompleted ?? false);
+        setFirstLessonQuestionIndexRaw(saved.firstLessonQuestionIndex ?? 0);
       }
       setHydrated(true);
     });
@@ -115,9 +121,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
       xpEarned,
       streak,
       firstLessonCompleted,
+      firstLessonQuestionIndex,
       ...overrides,
     }),
-    [pushEnabled, answers, profile, savedStep, sobrietyStartDate, betcoinsEarned, xpEarned, streak, firstLessonCompleted],
+    [pushEnabled, answers, profile, savedStep, sobrietyStartDate, betcoinsEarned, xpEarned, streak, firstLessonCompleted, firstLessonQuestionIndex],
   );
 
   const setPushEnabled = useCallback((value: boolean | null) => {
@@ -174,6 +181,31 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     persistState(buildState({ firstLessonCompleted: value }));
   }, [buildState]);
 
+  const setFirstLessonQuestionIndex = useCallback((index: number) => {
+    setFirstLessonQuestionIndexRaw(index);
+    persistState(buildState({ firstLessonQuestionIndex: index }));
+  }, [buildState]);
+
+  const completeFirstLesson = useCallback((betcoins: number, xp: number) => {
+    const newBetcoins = betcoinsEarned + betcoins;
+    const newXp = xpEarned + xp;
+    setBetcoins(newBetcoins);
+    setXp(newXp);
+    setStreakRaw(1);
+    setFirstLessonRaw(true);
+    setSavedStep('celebration');
+    setFirstLessonQuestionIndexRaw(0);
+    persistState({
+      ...buildState(),
+      betcoinsEarned: newBetcoins,
+      xpEarned: newXp,
+      streak: 1,
+      firstLessonCompleted: true,
+      firstLessonQuestionIndex: 0,
+      currentStep: 'celebration',
+    });
+  }, [betcoinsEarned, xpEarned, buildState]);
+
   return (
     <OnboardingContext.Provider
       value={{
@@ -186,6 +218,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
         xpEarned, addXp,
         streak, setStreak,
         firstLessonCompleted, setFirstLessonCompleted,
+        firstLessonQuestionIndex, setFirstLessonQuestionIndex,
+        completeFirstLesson,
       }}
     >
       {children}

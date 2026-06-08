@@ -11,12 +11,15 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import Icon from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useOnboarding } from '../OnboardingContext';
 import { OnboardingLayout } from './OnboardingLayout';
 import {
   HORIZONTAL_GRADIENT_COLORS,
   HORIZONTAL_GRADIENT_LOCATIONS,
 } from '../../../config/colors';
+import type { RootStackParamList } from '../../../types/navigation';
 
 type Props = {
   currentStep: number;
@@ -35,6 +38,7 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
   totalSteps,
   onNext,
 }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { setPushEnabled } = useOnboarding();
   const { height } = useWindowDimensions();
   const isSmall = height < 700;
@@ -84,6 +88,9 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
     setPushEnabled(false);
     onNext();
   };
+
+  const handleGoToLogin = () =>
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
 
   const bellSize = isSmall ? 64 : 84;
   const bellIconSize = isSmall ? 28 : 36;
@@ -143,6 +150,10 @@ export const NotificationsPermissionScreen: React.FC<Props> = ({
 
           <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipButton}>
             <Text style={styles.skipText}>Agora não</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleGoToLogin} activeOpacity={0.7} style={styles.loginLink}>
+            <Text style={styles.loginLinkText}>Já tenho uma conta</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -230,5 +241,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6E6A78',
     textAlign: 'center',
+  },
+  loginLink: {
+    marginTop: 4,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  loginLinkText: {
+    color: '#8A8595',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

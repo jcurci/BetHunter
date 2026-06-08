@@ -33,6 +33,7 @@ import { ENV } from "../../config/env";
 import { identifyUser } from "../../services/revenueCat";
 import type { CustomerInfo } from "react-native-purchases";
 import { isOnboardingFlowCompleted } from "../OnboardingFlow/onboardingStorage";
+import { waitForRCSync } from "../../utils/waitForRCSync";
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -137,6 +138,11 @@ const Login: React.FC = () => {
     } else {
       await useSubscriptionStore.getState().refresh();
     }
+
+    // Hold "Entrando..." while the RC listener delivers server-fresh entitlements.
+    // logIn() returns cached (possibly empty) data; this ensures the routing
+    // decision reflects the actual subscription status from RevenueCat servers.
+    await waitForRCSync(3000);
 
     const onboardingDone = await isOnboardingFlowCompleted();
     if (!onboardingDone) return "OnboardingFlow";

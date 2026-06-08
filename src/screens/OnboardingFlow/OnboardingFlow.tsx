@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { AppLoadingScreen } from '../../components/AppLoadingScreen';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp as RNRouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -58,7 +58,7 @@ const OnboardingInner: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RNRouteProp<RootStackParamList, 'OnboardingFlow'>>();
   const startAtStep = route.params?.startAtStep;
-  const { hydrated, savedStep, persistStep } = useOnboarding();
+  const { hydrated, savedStep, persistStep, completeFirstLesson } = useOnboarding();
   const [step, setStep] = useState<StepId>('notifications');
 
   useEffect(() => {
@@ -90,11 +90,7 @@ const OnboardingInner: React.FC = () => {
   };
 
   if (!hydrated) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#D783D8" />
-      </View>
-    );
+    return <AppLoadingScreen />;
   }
 
   const shared = { currentStep: currentIndex, totalSteps: TOTAL_STEPS };
@@ -203,7 +199,10 @@ const OnboardingInner: React.FC = () => {
       return (
         <FirstLessonScreen
           {...shared}
-          onNext={goNext}
+          onFinishLesson={(betcoins, xp) => {
+            completeFirstLesson(betcoins, xp);
+            setStep('celebration');
+          }}
           onBack={goBack}
         />
       );
@@ -227,12 +226,3 @@ const OnboardingFlow: React.FC = () => (
 );
 
 export default OnboardingFlow;
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
