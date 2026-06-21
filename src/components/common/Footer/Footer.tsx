@@ -136,12 +136,12 @@ const Footer: React.FC = () => {
         onPress={() => handleNavigate("MenuEducacional")}
       />
       <TabButton
-        routeName="Acessor"
+        routeName="ModoOrcamento"
         iconName="wallet"
         iconNameOutline="wallet-outline"
         label="Acessor"
-        isActive={isActive("Acessor")}
-        onPress={() => handleNavigate("Acessor")}
+        isActive={isActive("ModoOrcamento") || isActive("Acessor")}
+        onPress={() => handleNavigate("ModoOrcamento")}
       />
     </SafeAreaView>
   );

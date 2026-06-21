@@ -42,7 +42,6 @@ import Meditation from "../../assets/home/meditation.svg";
 import Reset from "../../assets/home/reset.svg";
 import Block from "../../assets/home/block.svg";
 import BetHunterIcon from "../../assets/home/bethunter.svg";
-import AcessorIcon from "../../assets/home/acessor.svg";
 import CursosIcon from "../../assets/home/cursos.svg";
 
 // Domain & Infrastructure
@@ -507,19 +506,13 @@ const Home: React.FC = () => {
             </View>
           </View>
 
-          {/* Minha conta, Meu acessor, Menu Educacional */}
+          {/* Minha conta, Menu Educacional */}
           <View style={styles.cardsContainer}>
             <IconCard 
               icon={<BetHunterIcon width={20} height={20} />} 
               title={"Minha\nConta"} 
               cardBackgroundColor="#14121B"
               onPress={() => navigation.navigate("MinhaConta")}
-            />
-            <IconCard 
-              icon={<AcessorIcon width={20} height={20} />} 
-              title={"Meu\nAcessor"} 
-              cardBackgroundColor="#14121B"
-              onPress={() => navigation.navigate("Acessor")}
             />
             <IconCard 
               icon={<CursosIcon width={20} height={20} />} 
@@ -915,9 +908,9 @@ const styles = StyleSheet.create({
   // Cards Container
   cardsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     marginTop: 0,
-    
+
   },
 
 

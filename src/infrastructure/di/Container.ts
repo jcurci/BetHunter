@@ -42,6 +42,16 @@ import { SubmitBettingHouseReportUseCase } from "../../domain/usercases/SubmitBe
 import { BettingHouseReportApi } from "../services/BettingHouseReport.api";
 import { BettingHouseReportRepositoryImpl } from "../../domain/data/repositories/BettingHouseReportRepositoryImpl";
 
+// Budget (Modo Orçamento) imports
+import { BudgetRepositoryImpl } from "../../domain/data/repositories/BudgetRepositoryImpl";
+import { GetCurrentBudgetUseCase } from "../../domain/usercases/budget/GetCurrentBudgetUseCase";
+import { SetCurrentBudgetUseCase } from "../../domain/usercases/budget/SetCurrentBudgetUseCase";
+import { GetBudgetHistoryUseCase } from "../../domain/usercases/budget/GetBudgetHistoryUseCase";
+import { GetBudgetPeriodExpensesUseCase } from "../../domain/usercases/budget/GetBudgetPeriodExpensesUseCase";
+import { GetDaysSinceLastEntryUseCase } from "../../domain/usercases/budget/GetDaysSinceLastEntryUseCase";
+import { DismissNoEntriesBannerUseCase } from "../../domain/usercases/budget/DismissNoEntriesBannerUseCase";
+import { RegisterBudgetExpenseUseCase } from "../../domain/usercases/budget/RegisterBudgetExpenseUseCase";
+
 export class Container {
   private static instance: Container;
 
@@ -71,6 +81,16 @@ export class Container {
   private confirmPasswordChangeUseCase: ConfirmPasswordChangeUseCase | null = null;
 
   private submitBettingHouseReportUseCase: SubmitBettingHouseReportUseCase | null = null;
+
+  // Budget (Modo Orçamento)
+  private budgetRepository: BudgetRepositoryImpl | null = null;
+  private getCurrentBudgetUseCase: GetCurrentBudgetUseCase | null = null;
+  private setCurrentBudgetUseCase: SetCurrentBudgetUseCase | null = null;
+  private getBudgetHistoryUseCase: GetBudgetHistoryUseCase | null = null;
+  private getBudgetPeriodExpensesUseCase: GetBudgetPeriodExpensesUseCase | null = null;
+  private getDaysSinceLastEntryUseCase: GetDaysSinceLastEntryUseCase | null = null;
+  private dismissNoEntriesBannerUseCase: DismissNoEntriesBannerUseCase | null = null;
+  private registerBudgetExpenseUseCase: RegisterBudgetExpenseUseCase | null = null;
 
   private authApi: AuthApi | null = null;
   private authRepository: AuthRepositoryImpl | null = null;
@@ -241,5 +261,78 @@ export class Container {
       );
     }
     return this.submitBettingHouseReportUseCase;
+  }
+
+  // Budget (Modo Orçamento) — repositório singleton em memória.
+  // TODO(API): substituir BudgetRepositoryImpl por implementação que consuma o backend.
+  private ensureBudgetRepository(): BudgetRepositoryImpl {
+    if (!this.budgetRepository) {
+      this.budgetRepository = new BudgetRepositoryImpl();
+    }
+    return this.budgetRepository;
+  }
+
+  getGetCurrentBudgetUseCase(): GetCurrentBudgetUseCase {
+    if (!this.getCurrentBudgetUseCase) {
+      this.getCurrentBudgetUseCase = new GetCurrentBudgetUseCase(
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.getCurrentBudgetUseCase;
+  }
+
+  getSetCurrentBudgetUseCase(): SetCurrentBudgetUseCase {
+    if (!this.setCurrentBudgetUseCase) {
+      this.setCurrentBudgetUseCase = new SetCurrentBudgetUseCase(
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.setCurrentBudgetUseCase;
+  }
+
+  getGetBudgetHistoryUseCase(): GetBudgetHistoryUseCase {
+    if (!this.getBudgetHistoryUseCase) {
+      this.getBudgetHistoryUseCase = new GetBudgetHistoryUseCase(
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.getBudgetHistoryUseCase;
+  }
+
+  getGetBudgetPeriodExpensesUseCase(): GetBudgetPeriodExpensesUseCase {
+    if (!this.getBudgetPeriodExpensesUseCase) {
+      this.getBudgetPeriodExpensesUseCase = new GetBudgetPeriodExpensesUseCase(
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.getBudgetPeriodExpensesUseCase;
+  }
+
+  getGetDaysSinceLastEntryUseCase(): GetDaysSinceLastEntryUseCase {
+    if (!this.getDaysSinceLastEntryUseCase) {
+      this.getDaysSinceLastEntryUseCase = new GetDaysSinceLastEntryUseCase(
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.getDaysSinceLastEntryUseCase;
+  }
+
+  getDismissNoEntriesBannerUseCase(): DismissNoEntriesBannerUseCase {
+    if (!this.dismissNoEntriesBannerUseCase) {
+      this.dismissNoEntriesBannerUseCase = new DismissNoEntriesBannerUseCase(
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.dismissNoEntriesBannerUseCase;
+  }
+
+  getRegisterBudgetExpenseUseCase(): RegisterBudgetExpenseUseCase {
+    if (!this.registerBudgetExpenseUseCase) {
+      this.registerBudgetExpenseUseCase = new RegisterBudgetExpenseUseCase(
+        this.getCreateFinancialEntryUseCase(),
+        this.ensureBudgetRepository(),
+      );
+    }
+    return this.registerBudgetExpenseUseCase;
   }
 }
