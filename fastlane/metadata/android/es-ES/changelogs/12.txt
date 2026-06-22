@@ -1,0 +1,2 @@
+• Corrección: los suscriptores ahora acceden directamente a la app tras iniciar sesión, sin necesidad de tocar "Ya soy suscriptor"
+• Mejoras de estabilidad y rendimiento

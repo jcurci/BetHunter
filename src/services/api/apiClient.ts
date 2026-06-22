@@ -77,7 +77,6 @@ apiClient.interceptors.request.use(
     const token = await currentTokenProvider.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔐 Token adicionado ao header');
     }
     return config;
   },

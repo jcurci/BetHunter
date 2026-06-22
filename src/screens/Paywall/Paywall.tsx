@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import Purchases from 'react-native-purchases';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import Icon from 'react-native-vector-icons/Feather';
 import { useSubscriptionStore } from '../../storage/subscriptionStore';
@@ -68,6 +70,12 @@ const Paywall: React.FC = () => {
         );
         return;
       }
+      try {
+        await Purchases.setAttributes({ cupom_ativo: 'false' });
+      } catch {}
+      try {
+        await AsyncStorage.removeItem('@bethunter_affiliate_coupon');
+      } catch {}
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (err) {
       if (__DEV__) console.warn('[PAYWALL] erro em finishAsSubscriber:', err);

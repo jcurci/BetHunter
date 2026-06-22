@@ -17,6 +17,7 @@ import {
   Linking,
   useWindowDimensions,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
@@ -60,6 +61,9 @@ import { notifyStreakMilestone } from "../../services/notifications";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
+/** Chave por usuário — garante que cada conta veja o modal exatamente uma vez. */
+const blockerPromoSeenKey = (userId: string): string =>
+  `@bethunter_blocker_promo_seen_${userId}`;
 
 type BlockFlowStep = "choices" | "report";
 
@@ -214,6 +218,10 @@ const Home: React.FC = () => {
   const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
   const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
   const [isCheckInSubmitting, setIsCheckInSubmitting] = useState<boolean>(false);
+
+  // Blocker promo modal — exibido apenas no primeiro acesso
+  const [showBlockerPromoModal, setShowBlockerPromoModal] = useState<boolean>(false);
+  const promoCheckedRef = useRef<boolean>(false);
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
@@ -264,6 +272,17 @@ const Home: React.FC = () => {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Exibe o modal de promo do bloqueador apenas na primeira entrada do usuário na Home.
+  // A chave é por userId para que contas diferentes no mesmo dispositivo
+  // recebam o modal independentemente.
+  useEffect(() => {
+    if (!hasBooted || promoCheckedRef.current || !user?.id) return;
+    promoCheckedRef.current = true;
+    AsyncStorage.getItem(blockerPromoSeenKey(user.id))
+      .then((seen) => { if (!seen) setShowBlockerPromoModal(true); })
+      .catch(() => {});
+  }, [hasBooted, user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -461,6 +480,26 @@ const Home: React.FC = () => {
     blockFlowFade.setValue(1);
     setReportHouseUrl("");
   };
+
+  const dismissBlockerPromo = useCallback((): void => {
+    setShowBlockerPromoModal(false);
+    if (user?.id) {
+      AsyncStorage.setItem(blockerPromoSeenKey(user.id), "1").catch(() => {});
+    }
+  }, [user?.id]);
+
+  const handleBlockerPromoActivate = useCallback((): void => {
+    setShowBlockerPromoModal(false);
+    if (user?.id) {
+      AsyncStorage.setItem(blockerPromoSeenKey(user.id), "1").catch(() => {});
+    }
+    // Abre o fluxo existente após o modal promo fechar (evita dois modais simultâneos)
+    InteractionManager.runAfterInteractions(() => {
+      blockFlowFade.setValue(1);
+      setBlockFlowStep("choices");
+      setShowBlockFlowModal(true);
+    });
+  }, [blockFlowFade, user?.id]);
 
   const handleSubmitBettingHouseReport = async (): Promise<void> => {
     Keyboard.dismiss();
@@ -1033,6 +1072,30 @@ const Home: React.FC = () => {
           />
         </View>
       </Modal>
+
+      {/* Modal de Promo do Bloqueador — primeiro acesso */}
+      <Modal
+        visible={showBlockerPromoModal}
+        onClose={dismissBlockerPromo}
+        size="medium"
+        title="Bloqueie as apostas agora"
+        subtitle="Impeça o acesso a sites e apps de apostas diretamente neste dispositivo. Ative o bloqueador e mantenha o foco na sua recuperação."
+        scrollEnabled={false}
+      >
+        <View style={styles.blockerPromoContent}>
+          <GradientBorderButton
+            label="Ativar Bloqueador"
+            onPress={handleBlockerPromoActivate}
+          />
+          <TouchableOpacity
+            style={styles.blockerPromoDismissButton}
+            onPress={dismissBlockerPromo}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.blockerPromoDismissText}>Agora não</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1387,6 +1450,23 @@ const styles = StyleSheet.create({
   },
   resetConfirmModalContent: {
     display: "none",
+  },
+
+  // Blocker promo modal
+  blockerPromoContent: {
+    alignItems: "center",
+    gap: 14,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 12 : 4,
+  },
+  blockerPromoDismissButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  blockerPromoDismissText: {
+    color: "#726E7C",
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
 

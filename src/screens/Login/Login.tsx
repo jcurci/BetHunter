@@ -123,7 +123,7 @@ const Login: React.FC = () => {
     });
   }, []);
 
-  const resolvePostLoginRoute = async (userId: string): Promise<"OnboardingFlow" | "Home" | "Paywall"> => {
+  const resolvePostLoginRoute = async (userId: string): Promise<"OnboardingFlow" | "Home" | "CouponScreen"> => {
     // Identifica no RevenueCat ANTES do gate do onboarding, espelhando o cadastro,
     // para que todo usuário que loga apareça no RevenueCat mesmo com onboarding pendente.
     let rcInfo: CustomerInfo | null = null;
@@ -148,7 +148,7 @@ const Login: React.FC = () => {
     if (!onboardingDone) return "OnboardingFlow";
 
     const { isPremium } = useSubscriptionStore.getState();
-    return isPremium ? "Home" : "Paywall";
+    return isPremium ? "Home" : "CouponScreen";
   };
 
   const handleGoogleLogin = async (): Promise<void> => {

@@ -1,0 +1,2 @@
+• Fix: subscribers now enter the app directly after login without needing to tap "I'm already a subscriber"
+• Stability and performance improvements

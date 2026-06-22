@@ -50,6 +50,7 @@ import SobreNos from "./src/screens/MinhaConta/SobreNos";
 import SejaParceiro from "./src/screens/MinhaConta/SejaParceiro";
 import CustomerCenter from "./src/screens/CustomerCenter/CustomerCenter";
 import Paywall from "./src/screens/Paywall/Paywall";
+import CouponScreen from "./src/screens/Paywall/CouponScreen";
 import { RootStackParamList } from "./src/types/navigation";
 import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardingStorage";
@@ -121,14 +122,14 @@ const App: React.FC = () => {
         }
       }
 
-      const onboardingDone = await isOnboardingFlowCompleted();
-      if (!onboardingDone) {
-        finishBoot("OnboardingFlow");
+      if (!authed) {
+        finishBoot("Login");
         return;
       }
 
-      if (!authed) {
-        finishBoot("Login");
+      const onboardingDone = await isOnboardingFlowCompleted();
+      if (!onboardingDone) {
+        finishBoot("OnboardingFlow");
         return;
       }
 
@@ -139,7 +140,7 @@ const App: React.FC = () => {
       await waitForRCSync(3000);
 
       const { isPremium: premium } = useSubscriptionStore.getState();
-      finishBoot(premium ? "Home" : "Paywall");
+      finishBoot(premium ? "Home" : "CouponScreen");
     };
     init();
   }, []);
@@ -189,7 +190,7 @@ const App: React.FC = () => {
         const { isAuthenticated: stillAuthed } = useAuthStore.getState();
 
         if (!confirmedPremium && stillAuthed) {
-          navigationRef.current?.reset({ index: 0, routes: [{ name: 'Paywall' }] });
+          navigationRef.current?.reset({ index: 0, routes: [{ name: 'CouponScreen' }] });
         }
       }, 3000);
     } else if (isPremium && expirationTimerRef.current) {
@@ -476,6 +477,14 @@ const App: React.FC = () => {
           component={CustomerCenter}
           options={{
             headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="CouponScreen"
+          component={CouponScreen}
+          options={{
+            headerShown: false,
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen

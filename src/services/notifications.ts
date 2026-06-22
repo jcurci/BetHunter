@@ -14,10 +14,6 @@ const REENGAGEMENT_BODY =
 const REENGAGEMENT_SECONDS = 3 * 24 * 60 * 60;
 
 const MILESTONE_COPY: Record<number, { title: string; body: string }> = {
-  1: {
-    title: "24 horas livres",
-    body: "Seu primeiro dia sem apostar. E aqui que tudo comeca.",
-  },
   7: {
     title: "7 dias livres",
     body: "Uma semana inteira no controle. Orgulhe-se disso.",

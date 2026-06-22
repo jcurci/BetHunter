@@ -8,8 +8,33 @@ import Purchases, {
 import { ENV } from '../config/env';
 
 const ENTITLEMENT_ID = 'Bethunter Premium';
+const COUPON_OFFERING_ID = 'cupom_desconto';
 
 let isConfigured = false;
+let pendingCouponOffering = false;
+
+export function markCouponApplied(): void {
+  pendingCouponOffering = true;
+}
+
+export function clearPendingCoupon(): void {
+  pendingCouponOffering = false;
+}
+
+/**
+ * Define o atributo de cupom e força um fetch fresco dos offerings com
+ * Targeting reavaliado. Deve ser chamado antes de navegar para o Paywall.
+ */
+export async function applyAndSyncCoupon(withCoupon: boolean): Promise<void> {
+  await Purchases.setAttributes({ cupom_ativo: withCoupon ? 'true' : 'false' });
+  pendingCouponOffering = withCoupon;
+  try {
+    await Purchases.syncAttributesAndOfferingsIfNeeded();
+    if (__DEV__) console.log('[REVENUECAT] syncAttributesAndOfferingsIfNeeded concluído');
+  } catch (e) {
+    if (__DEV__) console.warn('[REVENUECAT] syncAttributesAndOfferingsIfNeeded falhou — usando fallback por ID', e);
+  }
+}
 
 export async function initRevenueCat(): Promise<void> {
   if (isConfigured) return;
@@ -72,9 +97,27 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
   return offerings.current;
 }
 
-/** Offering para `RevenueCatUI.Paywall`: usa ENV ou `offerings.current`. */
+/** Offering para `RevenueCatUI.Paywall`: prioriza cupom pendente → Targeting (.current) → ID do ENV. */
 export async function getPaywallOffering(): Promise<PurchasesOffering | null> {
   const offerings = await Purchases.getOfferings();
+
+  if (pendingCouponOffering) {
+    const coupon = offerings.all[COUPON_OFFERING_ID];
+    if (coupon) {
+      pendingCouponOffering = false;
+      if (__DEV__) console.log('[REVENUECAT] ✅ OFFERING CARREGADO: cupom_desconto —', coupon.serverDescription);
+      return coupon;
+    }
+    // offering ainda não propagou no RevenueCat — mantém flag para próxima tentativa
+    if (__DEV__) console.warn('[REVENUECAT] ⚠️ Offering cupom_desconto NÃO encontrado em offerings.all. Disponíveis:', Object.keys(offerings.all).join(', '));
+  }
+
+  // Fluxo padrão: ignora .current se ainda for o offering promocional (targeting residual)
+  const current = offerings.current;
+  if (current && current.identifier !== COUPON_OFFERING_ID) {
+    if (__DEV__) console.log('[REVENUECAT] ✅ OFFERING CARREGADO: current —', current.identifier);
+    return current;
+  }
 
   const id = ENV.REVENUECAT_DEFAULT_OFFERING_IDENTIFIER;
   if (id) {
@@ -82,12 +125,12 @@ export async function getPaywallOffering(): Promise<PurchasesOffering | null> {
     if (match) return match;
     if (__DEV__) {
       const keys = Object.keys(offerings.all).join(', ');
-      console.warn(
-        `[REVENUECAT] Offering "${id}" não encontrado em offerings.all (${keys || 'vazio'}). A usar offerings.current.`,
-      );
+      console.warn(`[REVENUECAT] Offering "${id}" não encontrado em offerings.all (${keys || 'vazio'}).`);
     }
   }
-  return offerings.current ?? null;
+
+  // Último recurso: retorna current mesmo que seja o cupom (melhor que null)
+  return current ?? null;
 }
 
 export async function purchasePackage(

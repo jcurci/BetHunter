@@ -9,13 +9,19 @@ import {
   Dimensions,
   ScrollView,
   Alert,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RevenueCatUI from 'react-native-purchases-ui';
-import type { CustomerInfo } from 'react-native-purchases';
+import Purchases from 'react-native-purchases';
+import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useOnboarding } from '../OnboardingContext';
 import { OnboardingLayout } from './OnboardingLayout';
 import {
@@ -25,8 +31,12 @@ import {
 import type { RootStackParamList } from '../../../types/navigation';
 import { useSubscriptionStore } from '../../../storage/subscriptionStore';
 import { useAuthStore } from '../../../storage/authStore';
-import { identifyUser } from '../../../services/revenueCat';
+import { identifyUser, applyAndSyncCoupon, getPaywallOffering } from '../../../services/revenueCat';
 import { setOnboardingFlowCompleted } from '../onboardingStorage';
+import { AffiliateApi } from '../../../infrastructure/services/Affiliate.api';
+
+const affiliateApi = new AffiliateApi();
+const AFFILIATE_COUPON_KEY = '@bethunter_affiliate_coupon';
 
 type Props = {
   currentStep: number;
@@ -194,7 +204,19 @@ export const CelebrationScreen: React.FC<Props> = ({
   onBack,
 }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [showingCoupon, setShowingCoupon] = useState(false);
   const [showingPaywall, setShowingPaywall] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponSkipLoading, setCouponSkipLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(AFFILIATE_COUPON_KEY).then((saved) => {
+      if (saved) setCouponCode(saved);
+    }).catch(() => {});
+  }, []);
+  const [paywallOffering, setPaywallOffering] = useState<PurchasesOffering | null>(null);
   const refresh = useSubscriptionStore((s) => s.refresh);
   const { betcoinsEarned, xpEarned, streak } = useOnboarding();
   const isNavigatingRef = useRef(false);
@@ -306,6 +328,12 @@ export const CelebrationScreen: React.FC<Props> = ({
         );
         return;
       }
+      try {
+        await Purchases.setAttributes({ cupom_ativo: 'false' });
+      } catch {}
+      try {
+        await AsyncStorage.removeItem(AFFILIATE_COUPON_KEY);
+      } catch {}
       await setOnboardingFlowCompleted();
       setShowingPaywall(false);
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
@@ -318,8 +346,10 @@ export const CelebrationScreen: React.FC<Props> = ({
     }
   };
 
-  const handleGoToLogin = () =>
+  const handleGoToLogin = async () => {
+    await setOnboardingFlowCompleted();
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
 
   const handleViewPlan = async (): Promise<void> => {
     // Garante que a compra (e futuros atributos de campanha/influenciador) fique
@@ -332,7 +362,71 @@ export const CelebrationScreen: React.FC<Props> = ({
         console.warn('[REVENUECAT] identifyUser antes do paywall falhou', e);
       }
     }
-    setShowingPaywall(true);
+    setShowingCoupon(true);
+  };
+
+  const handleCouponProceed = async (withCoupon: boolean): Promise<void> => {
+    if (withCoupon) {
+      setCouponLoading(true);
+    } else {
+      setCouponSkipLoading(true);
+    }
+    setCouponError(null);
+
+    try {
+      if (withCoupon) {
+        const result = await affiliateApi.validateCoupon(couponCode.trim());
+        if (!result.valid) {
+          setCouponError(result.message || 'Cupom inválido ou não encontrado.');
+          return;
+        }
+
+        // Salva o cupom localmente (garantia para o link pós-login)
+        await AsyncStorage.setItem(AFFILIATE_COUPON_KEY, couponCode.trim()).catch(() => {});
+
+        // Aplica o atributo no RevenueCat (não depende de autenticação)
+        await applyAndSyncCoupon(true).catch((e) => {
+          if (__DEV__) console.warn('[COUPON] applyAndSyncCoupon error', e);
+        });
+
+        // Só tenta linkar se o usuário já está autenticado
+        const { user } = useAuthStore.getState();
+        if (user?.id) {
+          try {
+            await affiliateApi.linkCoupon(couponCode.trim());
+          } catch (e: any) {
+            const status = e?.response?.status;
+            if (__DEV__) console.warn(`[COUPON] linkCoupon error (HTTP ${status})`, e);
+            // Não bloqueia — cupom está salvo no AsyncStorage para retentar após login
+          }
+        }
+        // Se não autenticado: cupom ficou no AsyncStorage, será linkado após o login
+      } else {
+        await applyAndSyncCoupon(false).catch((e) => {
+          if (__DEV__) console.warn('[COUPON] applyAndSyncCoupon(false) error', e);
+        });
+      }
+
+      const offering = await getPaywallOffering().catch(() => null);
+      setPaywallOffering(offering);
+      setShowingCoupon(false);
+      setShowingPaywall(true);
+    } catch (e: any) {
+      if (__DEV__) console.warn('[COUPON] validateCoupon error', e);
+      const status = e?.response?.status;
+      if (status === 401) {
+        setCouponError('Sessão expirada. Faça login novamente e tente de novo.');
+      } else if (status === 404) {
+        setCouponError('Cupom não encontrado. Verifique o código digitado.');
+      } else if (status >= 400 && status < 500) {
+        setCouponError('Cupom inválido. Verifique o código e tente novamente.');
+      } else {
+        setCouponError('Não foi possível validar o cupom. Verifique sua conexão.');
+      }
+    } finally {
+      setCouponLoading(false);
+      setCouponSkipLoading(false);
+    }
   };
 
   const emojiDeg = emojiRotate.interpolate({
@@ -356,9 +450,83 @@ export const CelebrationScreen: React.FC<Props> = ({
     [],
   );
 
+  if (showingCoupon) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.couponContainer}
+      >
+        <View style={styles.couponContent}>
+          <Text style={styles.couponEmoji}>🎟️</Text>
+          <Text style={styles.couponTitle}>Tem um cupom?</Text>
+          <Text style={styles.couponSubtitle}>
+            Digite seu código para obter um desconto especial
+          </Text>
+
+          <TextInput
+            style={[styles.couponInput, couponError !== null && styles.couponInputError]}
+            placeholder="Digite o código"
+            placeholderTextColor="#5A5568"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            value={couponCode}
+            onChangeText={(text) => { setCouponCode(text.toUpperCase()); setCouponError(null); }}
+            editable={!couponLoading && !couponSkipLoading}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              if (couponCode.trim()) void handleCouponProceed(true);
+            }}
+          />
+
+          {couponError !== null && (
+            <Text style={styles.couponErrorText}>{couponError}</Text>
+          )}
+
+          <TouchableOpacity
+            onPress={() => void handleCouponProceed(true)}
+            activeOpacity={0.85}
+            disabled={couponLoading || couponSkipLoading || !couponCode.trim()}
+            style={styles.couponApplyWrapper}
+          >
+            <LinearGradient
+              colors={[...HORIZONTAL_GRADIENT_COLORS]}
+              locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.couponApplyButton,
+                (!couponCode.trim() || couponLoading || couponSkipLoading) && styles.couponApplyButtonDisabled,
+              ]}
+            >
+              {couponLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.couponApplyText}>Aplicar cupom</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.couponSkipButton}
+            onPress={() => void handleCouponProceed(false)}
+            disabled={couponLoading || couponSkipLoading}
+            activeOpacity={0.7}
+          >
+            {couponSkipLoading ? (
+              <ActivityIndicator color="#8A8595" size="small" />
+            ) : (
+              <Text style={styles.couponSkipText}>Continuar sem cupom</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
+
   if (showingPaywall) {
     return (
       <RevenueCatUI.Paywall
+        options={paywallOffering ? { offering: paywallOffering } : undefined}
         onDismiss={() => setShowingPaywall(false)}
         onPurchaseCompleted={async ({ customerInfo }) => {
           await finishAsSubscriber(customerInfo);
@@ -701,6 +869,90 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   loginLinkText: {
+    color: '#8A8595',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // Coupon step
+  couponContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0F',
+  },
+  couponContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    gap: 16,
+  },
+  couponEmoji: {
+    fontSize: 60,
+    marginBottom: 4,
+  },
+  couponTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    textAlign: 'center',
+  },
+  couponSubtitle: {
+    fontSize: 15,
+    color: '#8A8595',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
+  couponInput: {
+    alignSelf: 'stretch',
+    backgroundColor: '#16141F',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2B2737',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    fontSize: 17,
+    color: '#FFFFFF',
+    letterSpacing: 2,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  couponInputError: {
+    borderColor: '#E05252',
+  },
+  couponErrorText: {
+    color: '#E05252',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: -8,
+    paddingHorizontal: 8,
+  },
+  couponApplyWrapper: {
+    alignSelf: 'stretch',
+  },
+  couponApplyButton: {
+    borderRadius: 14,
+    paddingVertical: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  couponApplyButtonDisabled: {
+    opacity: 0.45,
+  },
+  couponApplyText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  couponSkipButton: {
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  couponSkipText: {
     color: '#8A8595',
     fontSize: 14,
     fontWeight: '500',

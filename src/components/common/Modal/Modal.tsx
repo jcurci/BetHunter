@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 24,
   },
   contentContainer: {
     flex: 1,

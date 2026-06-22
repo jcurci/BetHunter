@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import {
   View,
   Text,
@@ -17,26 +17,12 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BackIconButton, QuizPrimaryButton, QuizDisabledButton } from "../../components";
 import { Container } from "../../infrastructure/di/Container";
+import { useQuizStore } from "../../storage/quizStore";
 import BettyIcon from "../../assets/Betty.png";
 
-const QuizPage = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { moduleId, moduleTitle } = route.params || {};
-
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [hasChecked, setHasChecked] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const submitGuardRef = useRef(false);
-  const checkTimeoutRef = useRef(null);
-
+// ─── BettyTip (isolado para não re-renderizar QuizPage) ───────────────────────
+// resetKey muda a cada troca de pergunta — BettyTip fecha automaticamente.
+const BettyTip = memo(({ hint, resetKey }) => {
   const [isTipVisible, setIsTipVisible] = useState(false);
   const [isTipLoading, setIsTipLoading] = useState(false);
   const [displayedTipText, setDisplayedTipText] = useState("");
@@ -47,127 +33,7 @@ const QuizPage = () => {
   const tipOpacity = useRef(new Animated.Value(0)).current;
   const tipTranslate = useRef(new Animated.Value(40)).current;
 
-  useEffect(() => {
-    loadQuestions();
-    return () => {
-      if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
-      if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current);
-      if (tipLoadingTimeoutRef.current) clearTimeout(tipLoadingTimeoutRef.current);
-      if (typewriterIntervalRef.current) clearInterval(typewriterIntervalRef.current);
-    };
-  }, []);
-
-  const loadQuestions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await Container.getInstance()
-        .getGetUnansweredQuestionsUseCase()
-        .execute(moduleId);
-      setQuestions(result);
-    } catch (err) {
-      setError(err.message || "Erro ao carregar perguntas. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetQuestionState = () => {
-    setShowAnswer(false);
-    setHasChecked(false);
-    closeTip(true);
-    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
-  };
-
-  const handleAnswerSelect = (answerId) => {
-    if (showAnswer) return;
-    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: answerId }));
-    setSelectedAnswer(answerId);
-    setHasChecked(false);
-  };
-
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      const nextIndex = currentQuestionIndex + 1;
-      setCurrentQuestionIndex(nextIndex);
-      setSelectedAnswer(answers[questions[nextIndex]?.id] || null);
-      resetQuestionState();
-    } else {
-      handleSubmitQuiz();
-    }
-  };
-
-  const handleSubmitQuiz = async () => {
-    if (submitGuardRef.current || !moduleId || !questions.length) return;
-    submitGuardRef.current = true;
-    setIsSubmitting(true);
-
-    const payload = questions.map((q) => ({
-      questionId: q.id,
-      alternativeId: answers[q.id],
-    }));
-    if (payload.some((p) => !p.alternativeId)) {
-      submitGuardRef.current = false;
-      setIsSubmitting(false);
-      Alert.alert("Quiz", "Responda todas as perguntas antes de concluir.");
-      return;
-    }
-
-    try {
-      const result = await Container.getInstance()
-        .getSubmitQuizModuleUseCase()
-        .execute(moduleId, payload);
-
-      const navQuizResultParams = {
-        score: result.correctCount,
-        total: result.totalQuestions,
-        stars: result.stars,
-        accuracy: result.accuracy,
-      };
-      if (__DEV__) {
-        console.warn("[BetHunter] QuizPage submit OK — retorno use case (= serviço)", {
-          moduleId,
-          resultDoServicoCamadaApi: result,
-          paramsQuizResult: navQuizResultParams,
-        });
-      }
-      navigation.navigate("QuizResult", navQuizResultParams);
-    } catch (err) {
-      submitGuardRef.current = false;
-      setIsSubmitting(false);
-      if (__DEV__) {
-        console.warn("[BetHunter] QuizPage handleSubmitQuiz", err);
-      }
-      const msg =
-        err && typeof err.message === "string"
-          ? err.message
-          : "Erro ao submeter o quiz. Tente novamente.";
-      Alert.alert("Quiz", msg);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentQuestionIndex > 0) {
-      const prevIndex = currentQuestionIndex - 1;
-      setCurrentQuestionIndex(prevIndex);
-      setSelectedAnswer(answers[questions[prevIndex]?.id] || null);
-      resetQuestionState();
-    } else {
-      navigation.goBack();
-    }
-  };
-
-  const handleCheckAnswer = () => {
-    if (!selectedAnswer) return;
-    setHasChecked(true);
-    setShowAnswer(true);
-    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
-    checkTimeoutRef.current = setTimeout(() => {
-      handleNextQuestion();
-    }, 1200);
-  };
-
-  const closeTip = (instant = false) => {
+  const closeTip = useCallback((instant = false) => {
     if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current);
     if (tipLoadingTimeoutRef.current) clearTimeout(tipLoadingTimeoutRef.current);
     if (typewriterIntervalRef.current) clearInterval(typewriterIntervalRef.current);
@@ -193,9 +59,22 @@ const QuizPage = () => {
         setIsTyping(false);
       }
     });
-  };
+  }, [tipOpacity, tipTranslate]);
 
-  const startTypewriter = (text) => {
+  // Fecha a dica instantaneamente ao trocar de pergunta
+  useEffect(() => {
+    closeTip(true);
+  }, [resetKey, closeTip]);
+
+  useEffect(() => {
+    return () => {
+      if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current);
+      if (tipLoadingTimeoutRef.current) clearTimeout(tipLoadingTimeoutRef.current);
+      if (typewriterIntervalRef.current) clearInterval(typewriterIntervalRef.current);
+    };
+  }, []);
+
+  const startTypewriter = useCallback((text) => {
     setIsTyping(true);
     setDisplayedTipText("");
     let i = 0;
@@ -208,12 +87,12 @@ const QuizPage = () => {
         setIsTyping(false);
       }
     }, 25);
-  };
+  }, []);
 
-  const handleBettyPress = () => {
+  const handlePress = useCallback(() => {
     if (isTipVisible) { closeTip(); return; }
 
-    const hint = currentQuestion?.hint || "Vamos nessa! Pense no conceito principal.";
+    const text = hint || "Vamos nessa! Pense no conceito principal.";
     setIsTipVisible(true);
     setIsTipLoading(true);
     setDisplayedTipText("");
@@ -227,13 +106,195 @@ const QuizPage = () => {
 
     tipLoadingTimeoutRef.current = setTimeout(() => {
       setIsTipLoading(false);
-      startTypewriter(hint);
+      startTypewriter(text);
     }, 1500);
 
     tipTimeoutRef.current = setTimeout(() => { closeTip(); }, 15000);
+  }, [isTipVisible, hint, closeTip, startTypewriter, tipOpacity, tipTranslate]);
+
+  return (
+    <>
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+        <Image source={BettyIcon} style={styles.bettyIcon} resizeMode="contain" />
+      </TouchableOpacity>
+
+      {isTipVisible && (
+        <Animated.View
+          style={[
+            styles.tipModalWrapper,
+            { opacity: tipOpacity, transform: [{ translateY: tipTranslate }] },
+          ]}
+        >
+          <LinearGradient
+            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.tipGradientBorder}
+          >
+            <View style={styles.tipInnerContent}>
+              <TouchableOpacity onPress={closeTip} style={styles.tipHandleWrapper} activeOpacity={0.7}>
+                <View style={styles.tipHandleBar} />
+              </TouchableOpacity>
+              <View style={styles.tipContentRow}>
+                <Image source={BettyIcon} style={styles.tipAvatarImage} resizeMode="contain" />
+                {isTipLoading ? (
+                  <Text style={styles.tipTextContent}>Pensando em uma resposta...</Text>
+                ) : (
+                  <Text style={styles.tipTextContent}>
+                    {displayedTipText}
+                    {isTyping && <Text style={styles.typingCursor}>|</Text>}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      )}
+    </>
+  );
+});
+
+// ─── QuizPage ─────────────────────────────────────────────────────────────────
+const QuizPage = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { moduleId, moduleTitle } = route.params || {};
+
+  const {
+    moduleId: cachedModuleId,
+    questions,
+    currentQuestionIndex,
+    answers,
+    isLoaded,
+    initQuiz,
+    saveAnswer,
+    setCurrentIndex,
+    resetQuiz,
+  } = useQuizStore();
+
+  // Derived: true when the store already has questions for this exact module
+  const hasCachedData = isLoaded && cachedModuleId === moduleId;
+
+  // Start with loading=false if we already have data; true otherwise
+  const [loading, setLoading] = useState(() => !hasCachedData);
+  const [error, setError] = useState(null);
+
+  // Per-question UI state — intentionally local, no need to survive navigation
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tipResetKey, setTipResetKey] = useState(0);
+
+  const submitGuardRef = useRef(false);
+  const checkTimeoutRef = useRef(null);
+
+  // Derived from store — auto-updates when answers or currentQuestionIndex change
+  const currentQuestion = questions[currentQuestionIndex];
+  const selectedAnswer = answers[currentQuestion?.id] ?? null;
+
+  useEffect(() => {
+    if (!hasCachedData) {
+      loadQuestions();
+    }
+    return () => {
+      if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+    };
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await Container.getInstance()
+        .getGetUnansweredQuestionsUseCase()
+        .execute(moduleId);
+      initQuiz(moduleId, result);
+    } catch (err) {
+      setError(err.message || "Erro ao carregar perguntas. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getOptionStyle = (option) => {
+  const resetQuestionState = useCallback(() => {
+    setShowAnswer(false);
+    setHasChecked(false);
+    setTipResetKey((k) => k + 1);
+    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+  }, []);
+
+  const handleAnswerSelect = useCallback((answerId) => {
+    if (showAnswer) return;
+    saveAnswer(currentQuestion.id, answerId);
+    setHasChecked(false);
+  }, [showAnswer, currentQuestion, saveAnswer]);
+
+  const handleSubmitQuiz = useCallback(async () => {
+    if (submitGuardRef.current || !moduleId || !questions.length) return;
+    submitGuardRef.current = true;
+    setIsSubmitting(true);
+
+    const payload = questions.map((q) => ({
+      questionId: q.id,
+      alternativeId: answers[q.id],
+    }));
+    if (payload.some((p) => !p.alternativeId)) {
+      submitGuardRef.current = false;
+      setIsSubmitting(false);
+      Alert.alert("Quiz", "Responda todas as perguntas antes de concluir.");
+      return;
+    }
+
+    try {
+      const result = await Container.getInstance()
+        .getSubmitQuizModuleUseCase()
+        .execute(moduleId, payload);
+
+      navigation.navigate("QuizResult", {
+        score: result.correctCount,
+        total: result.totalQuestions,
+        stars: result.stars,
+        accuracy: result.accuracy,
+      });
+      resetQuiz();
+    } catch (err) {
+      submitGuardRef.current = false;
+      setIsSubmitting(false);
+      if (__DEV__) console.warn("[BetHunter] QuizPage handleSubmitQuiz", err);
+      const msg = err?.message ?? "Erro ao submeter o quiz. Tente novamente.";
+      Alert.alert("Quiz", msg);
+    }
+  }, [moduleId, questions, answers, navigation, resetQuiz]);
+
+  const handleNextQuestion = useCallback(() => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentIndex(currentQuestionIndex + 1);
+      resetQuestionState();
+    } else {
+      handleSubmitQuiz();
+    }
+  }, [currentQuestionIndex, questions.length, setCurrentIndex, resetQuestionState, handleSubmitQuiz]);
+
+  const handleBack = useCallback(() => {
+    if (currentQuestionIndex > 0) {
+      setCurrentIndex(currentQuestionIndex - 1);
+      resetQuestionState();
+    } else {
+      navigation.goBack();
+    }
+  }, [currentQuestionIndex, setCurrentIndex, resetQuestionState, navigation]);
+
+  const handleCheckAnswer = useCallback(() => {
+    if (!selectedAnswer) return;
+    setHasChecked(true);
+    setShowAnswer(true);
+    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+    checkTimeoutRef.current = setTimeout(() => {
+      handleNextQuestion();
+    }, 1200);
+  }, [selectedAnswer, handleNextQuestion]);
+
+  const getOptionStyle = useCallback((option) => {
     if (!showAnswer) {
       return selectedAnswer === option.id
         ? [styles.optionButton, styles.optionButtonSelected]
@@ -242,9 +303,9 @@ const QuizPage = () => {
     return option.correct
       ? [styles.optionButton, styles.optionButtonCorrect]
       : [styles.optionButton, styles.optionButtonIncorrect];
-  };
+  }, [showAnswer, selectedAnswer]);
 
-  const getOptionTextStyle = (option) => {
+  const getOptionTextStyle = useCallback((option) => {
     if (!showAnswer) {
       return selectedAnswer === option.id
         ? [styles.optionText, styles.optionTextSelected]
@@ -253,14 +314,14 @@ const QuizPage = () => {
     return option.correct
       ? [styles.optionText, styles.optionTextCorrect]
       : [styles.optionText, styles.optionTextIncorrect];
-  };
+  }, [showAnswer, selectedAnswer]);
 
-  const getOptionIconProps = (option) => {
+  const getOptionIconProps = useCallback((option) => {
     if (!showAnswer) return null;
     return option.correct
       ? { name: "check", color: "#4CAF50", borderColor: "#4CAF50" }
       : { name: "x", color: "#F44336", borderColor: "#F44336" };
-  };
+  }, [showAnswer]);
 
   // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -319,7 +380,6 @@ const QuizPage = () => {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
   const total = questions.length;
 
   return (
@@ -330,9 +390,8 @@ const QuizPage = () => {
       <View style={styles.header}>
         <BackIconButton onPress={handleBack} size={42} />
         <Text style={styles.headerTitle} numberOfLines={1}>{moduleTitle}</Text>
-        <TouchableOpacity onPress={handleBettyPress} activeOpacity={0.8}>
-          <Image source={BettyIcon} style={styles.bettyIcon} resizeMode="contain" />
-        </TouchableOpacity>
+        {/* BettyTip isola todo o estado e re-renders do typewriter */}
+        <BettyTip hint={currentQuestion.hint} resetKey={tipResetKey} />
       </View>
 
       {/* Scrollable area: progress + question + options */}
@@ -412,40 +471,6 @@ const QuizPage = () => {
           <QuizDisabledButton label="Checando..." />
         )}
       </View>
-
-      {/* Betty Tip */}
-      {isTipVisible && (
-        <Animated.View
-          style={[
-            styles.tipModalWrapper,
-            { opacity: tipOpacity, transform: [{ translateY: tipTranslate }] },
-          ]}
-        >
-          <LinearGradient
-            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.tipGradientBorder}
-          >
-            <View style={styles.tipInnerContent}>
-              <TouchableOpacity onPress={closeTip} style={styles.tipHandleWrapper} activeOpacity={0.7}>
-                <View style={styles.tipHandleBar} />
-              </TouchableOpacity>
-              <View style={styles.tipContentRow}>
-                <Image source={BettyIcon} style={styles.tipAvatarImage} resizeMode="contain" />
-                {isTipLoading ? (
-                  <Text style={styles.tipTextContent}>Pensando em uma resposta...</Text>
-                ) : (
-                  <Text style={styles.tipTextContent}>
-                    {displayedTipText}
-                    {isTyping && <Text style={styles.typingCursor}>|</Text>}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-      )}
     </SafeAreaView>
   );
 };

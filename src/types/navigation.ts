@@ -40,6 +40,7 @@ export type RootStackParamList = {
   SejaParceiro: undefined;
   DetalhesPessoais: undefined;
   CustomerCenter: undefined;
+  CouponScreen: undefined;
   Paywall: undefined;
 };
 

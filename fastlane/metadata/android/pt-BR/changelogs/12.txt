@@ -1,0 +1,2 @@
+• Correção: assinantes agora entram diretamente no app após o login, sem precisar clicar em "Já sou assinante"
+• Melhorias de estabilidade e desempenho
