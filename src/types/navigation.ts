@@ -29,6 +29,9 @@ export type RootStackParamList = {
   TransactionForm: { type: 'income' | 'expense' };
   EmConstrucao: undefined;
   Acessor: undefined;
+  ModoOrcamento: undefined;
+  BudgetHistory: undefined;
+  BudgetMonthDetail: { periodKey: string };
   HistoryList: undefined;
   MinhaJornada: undefined;
   CursosSalvos: undefined;
