@@ -42,6 +42,9 @@ import EmConstrucao from "./src/screens/EmConstrucao/EmConstrucao";
 import EmBreve from "./src/screens/EmConstrucao/EmConstrucao";
 // import Acessor from "./src/screens/Acessor/Acessor"; // temporariamente substituído por EmBreve
 import HistoryList from "./src/screens/Acessor/HistoryList";
+import ModoOrcamento from "./src/screens/ModoOrcamento/ModoOrcamento";
+import BudgetHistoryScreen from "./src/screens/ModoOrcamento/BudgetHistoryScreen";
+import BudgetMonthDetailScreen from "./src/screens/ModoOrcamento/BudgetMonthDetailScreen";
 import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
@@ -423,6 +426,27 @@ const App: React.FC = () => {
             />
           )}
         </Stack.Screen>
+        <Stack.Screen
+          name="ModoOrcamento"
+          component={ModoOrcamento}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="BudgetHistory"
+          component={BudgetHistoryScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="BudgetMonthDetail"
+          component={BudgetMonthDetailScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
         <Stack.Screen
           name="HistoryList"
           component={HistoryList}

@@ -16,12 +16,7 @@ import {
   HORIZONTAL_GRADIENT_LOCATIONS,
 } from "../../../config/colors";
 
-/**
- * Bottom sheet reaproveitado pelo fluxo de configuração inicial e edição do
- * orçamento mensal. Usa o CustomModal existente com `size="small"`, que mantém
- * a animação slide-up. Deixamos comentado o motivo de não usar `"smaller"` aqui:
- * o ratio 0.2 não comporta o campo de valor + botão de confirmação.
- */
+/** Bottom sheet para configuração inicial e edição do orçamento mensal. */
 interface BudgetSetupSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -85,14 +80,13 @@ const BudgetSetupSheet: React.FC<BudgetSetupSheetProps> = ({
     <Modal
       visible={visible}
       onClose={onClose}
-      size="small"
+      size="big"
       title={isEditing ? "Editar orçamento" : "Configurar orçamento"}
       subtitle={
         isEditing
           ? "Atualize o valor disponível para este período."
           : "Pode ser salário, mesada, transferência — sem julgamento."
       }
-      scrollEnabled={false}
     >
       <View style={styles.body}>
         <View style={styles.inputBlock}>
@@ -147,8 +141,6 @@ const BudgetSetupSheet: React.FC<BudgetSetupSheetProps> = ({
 
 const styles = StyleSheet.create({
   body: {
-    flex: 1,
-    justifyContent: "space-between",
     paddingTop: 4,
   },
   inputBlock: {
@@ -189,7 +181,7 @@ const styles = StyleSheet.create({
   ctaBorder: {
     borderRadius: 28,
     padding: 2,
-    marginTop: 16,
+    marginTop: 32,
   },
   ctaBorderDisabled: {
     opacity: 0.45,

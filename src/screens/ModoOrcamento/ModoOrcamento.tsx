@@ -268,6 +268,7 @@ const ModoOrcamento: React.FC = () => {
 
   const onExpenseSaved = useCallback(async () => {
     await refresh();
+    setShowBanner(false);
     showAnotadoToast();
   }, [refresh, showAnotadoToast]);
 
@@ -562,13 +563,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 100,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 8,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   headerTitle: {
     fontSize: 24,
@@ -587,19 +588,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "500",
-    marginBottom: 18,
+    marginBottom: 12,
   },
   balanceCardWrapper: {
-    borderRadius: 24,
+    borderRadius: 20,
     overflow: "hidden",
-    marginBottom: 24,
-    minHeight: 260,
+    marginBottom: 16,
   },
   balanceContent: {
-    paddingHorizontal: 24,
-    paddingTop: 22,
-    paddingBottom: 24,
-    gap: 22,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 18,
+    gap: 14,
   },
   balanceTopRow: {
     flexDirection: "row",
@@ -613,9 +613,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   editBudgetButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.06)",
@@ -633,33 +633,33 @@ const styles = StyleSheet.create({
   },
   balanceCurrency: {
     color: "#FFFFFF",
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "600",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   balanceValue: {
     color: "#FFFFFF",
-    fontSize: 56,
+    fontSize: 42,
     fontWeight: "800",
-    lineHeight: 60,
+    lineHeight: 46,
     letterSpacing: -1,
   },
   balanceFootnote: {
     color: "#7A7390",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
   },
   progressBlock: {
-    gap: 10,
+    gap: 8,
   },
   progressTrack: {
-    height: 14,
+    height: 8,
     borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.08)",
     overflow: "hidden",
   },
   progressFill: {
-    height: 14,
+    height: 8,
     borderRadius: 999,
     minWidth: 4,
   },
@@ -685,15 +685,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   noBudgetCard: {
-    borderRadius: 20,
-    paddingVertical: 28,
-    paddingHorizontal: 22,
+    borderRadius: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
     backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
     alignItems: "center",
-    gap: 18,
-    marginBottom: 24,
+    gap: 14,
+    marginBottom: 16,
   },
   noBudgetTitle: {
     color: "#FFFFFF",
@@ -723,8 +723,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sectionTitle: {
     color: "#FFFFFF",
@@ -760,12 +759,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   expensesList: {
-    gap: 10,
+    gap: 8,
   },
   expenseItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.03)",

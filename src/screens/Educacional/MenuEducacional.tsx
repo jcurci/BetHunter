@@ -36,8 +36,8 @@ const MenuEducacional: React.FC = () => {
   const user = useAuthStore((state) => state.user);
 
   // Dashboard store
-  const { dashboard, isLoading, loadAll, loadError, clearLoadError } = useDashboardStore();
-  
+  const { dashboard, betStreak, isLoading, loadAll, loadError, clearLoadError } = useDashboardStore();
+
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
 
@@ -136,7 +136,7 @@ const MenuEducacional: React.FC = () => {
             <StatsDisplay
               loading={!statsReady}
               energy={statsReady && dashboard ? dashboard.energy : undefined}
-              streak={statsReady && dashboard ? `${dashboard.streak}d` : undefined}
+              streak={statsReady ? `${betStreak}d` : undefined}
             />
           </View>
         </View>
@@ -158,13 +158,9 @@ const MenuEducacional: React.FC = () => {
           ) : (
             <DayCounter
               useFireIcons={true}
-              activeFires={Math.min(dashboard?.streak ?? 0, 7)}
+              activeFires={Math.min(betStreak, 7)}
               totalFires={7}
-              finalNumber={
-                dashboard != null && (dashboard.streak ?? 0) > 7
-                  ? (dashboard.streak ?? 0)
-                  : undefined
-              }
+              finalNumber={betStreak > 7 ? betStreak : undefined}
               style={styles.streakCounter}
             />
           )}

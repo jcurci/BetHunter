@@ -1,6 +1,4 @@
 import { BudgetRepository } from '../../repositories/BudgetRepository';
-import { CreateFinancialEntryUseCase } from '../CreateFinancialEntryUseCase';
-import { FinancialEntry } from '../../entities/FinancialEntry';
 import { BudgetExpenseSnapshot, periodKeyFromDate } from '../../entities/Budget';
 
 export interface RegisterBudgetExpenseInput {
@@ -12,47 +10,32 @@ export interface RegisterBudgetExpenseInput {
   categoryIcon?: string;
 }
 
-export interface RegisterBudgetExpenseResult {
-  entry: FinancialEntry;
-  snapshot: BudgetExpenseSnapshot;
-}
-
-/**
- * Orquestrador do registro de gasto no Modo Orçamento.
- *
- * Adendo 2: REUTILIZA o mesmo CreateFinancialEntryUseCase do botão "Nova Saída"
- *            do Acessor — não cria pipeline paralelo nem novo endpoint.
- * Adendo 6: mantém uma cópia local (snapshot) para alimentar a UI enquanto o
- *            backend não expõe a listagem por período do orçamento.
- */
 export class RegisterBudgetExpenseUseCase {
-  constructor(
-    private createFinancialEntryUseCase: CreateFinancialEntryUseCase,
-    private budgetRepository: BudgetRepository,
-  ) {}
+  constructor(private budgetRepository: BudgetRepository) {}
 
-  async execute(input: RegisterBudgetExpenseInput): Promise<RegisterBudgetExpenseResult> {
-    const entry = await this.createFinancialEntryUseCase.execute(
-      input.valor,
-      input.descricao,
-      input.data,
-      input.categoryId,
-      'saida',
-    );
+  async execute(input: RegisterBudgetExpenseInput): Promise<BudgetExpenseSnapshot> {
+    const normalized = input.valor
+      .toString()
+      .replace(/\./g, '')
+      .replace(',', '.');
+    const amount = parseFloat(normalized);
 
-    // TODO(API): quando a UI consumir gastos direto de
-    // /financial-entries filtrando pelo período do orçamento,
-    // remover o append abaixo (ele só existe para alimentar o mock).
-    const snapshot = await this.budgetRepository.appendExpenseSnapshot({
-      periodKey: periodKeyFromDate(input.data),
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('Valor inválido para o gasto.');
+    }
+
+    const snapshot = await this.budgetRepository.addExpense({
       categoryId: input.categoryId,
-      categoryName: input.categoryName,
-      categoryIcon: input.categoryIcon,
-      value: parseFloat(entry.valor) || 0,
-      description: entry.descricao,
-      date: entry.data.toISOString(),
+      amount,
+      description: input.descricao || undefined,
+      expenseDate: input.data,
     });
 
-    return { entry, snapshot };
+    // Enrich snapshot with icon data from local input (not returned by API)
+    return {
+      ...snapshot,
+      categoryName: snapshot.categoryName || input.categoryName,
+      categoryIcon: input.categoryIcon,
+    };
   }
 }

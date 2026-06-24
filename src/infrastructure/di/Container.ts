@@ -65,6 +65,7 @@ import { RewardRepositoryImpl } from "../../domain/data/repositories/RewardRepos
 import { RewardApi } from "../services/Reward.api";
 
 // Budget (Modo Orçamento) imports
+import { BudgetApi } from "../services/BudgetApi";
 import { BudgetRepositoryImpl } from "../../domain/data/repositories/BudgetRepositoryImpl";
 import { GetCurrentBudgetUseCase } from "../../domain/usercases/budget/GetCurrentBudgetUseCase";
 import { SetCurrentBudgetUseCase } from "../../domain/usercases/budget/SetCurrentBudgetUseCase";
@@ -345,11 +346,9 @@ export class Container {
     return this.claimRewardUseCase;
   }
 
-  // Budget (Modo Orçamento) — repositório singleton em memória.
-  // TODO(API): substituir BudgetRepositoryImpl por implementação que consuma o backend.
   private ensureBudgetRepository(): BudgetRepositoryImpl {
     if (!this.budgetRepository) {
-      this.budgetRepository = new BudgetRepositoryImpl();
+      this.budgetRepository = new BudgetRepositoryImpl(new BudgetApi());
     }
     return this.budgetRepository;
   }
@@ -411,7 +410,6 @@ export class Container {
   getRegisterBudgetExpenseUseCase(): RegisterBudgetExpenseUseCase {
     if (!this.registerBudgetExpenseUseCase) {
       this.registerBudgetExpenseUseCase = new RegisterBudgetExpenseUseCase(
-        this.getCreateFinancialEntryUseCase(),
         this.ensureBudgetRepository(),
       );
     }

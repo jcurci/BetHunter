@@ -24,6 +24,7 @@ import Animated, {
 import { BackIconButton, StatsDisplay } from "../../components";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import { Container } from "../../infrastructure/di/Container";
+import { useDashboardStore } from "../../storage/dashboardStore";
 import { CourseModule } from "../../domain/entities/CourseModule";
 import { AuthenticationError, ServerError } from "../../domain/errors/CustomErrors";
 import {
@@ -191,6 +192,7 @@ const CourseModules: React.FC = () => {
 
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const { betStreak } = useDashboardStore();
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [processedSvgs, setProcessedSvgs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -413,7 +415,7 @@ const CourseModules: React.FC = () => {
           <StatsDisplay
             loading={!statsReady}
             energy={statsReady && dashboard ? dashboard.energy : undefined}
-            streak={statsReady && dashboard ? `${dashboard.streak}d` : undefined}
+            streak={statsReady ? `${betStreak}d` : undefined}
           />
         </View>
       </View>

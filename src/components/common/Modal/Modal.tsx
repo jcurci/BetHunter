@@ -347,10 +347,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   subtitleCenter: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+    paddingBottom: 16,
   },
   contentContainer: {
     flex: 1,
@@ -360,6 +359,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   contentInnerBottom: {
+    flex: 1,
     paddingHorizontal: 20,
   },
   // TODO: Remover estilos de botões quando usar componente Button comum
