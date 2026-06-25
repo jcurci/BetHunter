@@ -7,7 +7,7 @@ class DNSProxyProvider: NEDNSProxyProvider {
   // Lidos do App Group em startProxy(); fallback para lista estática se o App Group estiver vazio.
   private var activeDomains: [String] = []
 
-  private static let appGroupSuite = "group.com.ricardo.bethunter"
+  private static let appGroupSuite = "group.com.bethunter.app.rick"
   private static let domainsKey = "blocked_domains_list"
 
   override func startProxy(

@@ -53,7 +53,7 @@ class BlockingManager {
       if error != nil { return }
       let proto = NEDNSProxyProviderProtocol()
       // Tem de coincidir com PRODUCT_BUNDLE_IDENTIFIER do target DNSProxy no Xcode.
-      proto.providerBundleIdentifier = "com.ricardo.bethunter.DNSProxy"
+      proto.providerBundleIdentifier = "com.bethunter.app.rick.DNSProxy"
       manager.providerProtocol = proto
       manager.isEnabled = true
       manager.saveToPreferences { error in

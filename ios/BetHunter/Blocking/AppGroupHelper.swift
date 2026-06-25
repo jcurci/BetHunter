@@ -3,7 +3,7 @@ import FamilyControls
 
 @available(iOS 16.0, *)
 struct AppGroupHelper {
-  static let suiteName = "group.com.ricardo.bethunter"
+  static let suiteName = "group.com.bethunter.app.rick"
 
   private static let protectionEnabledKey = "protectionEnabled"
   private static let selectionKey = "familyActivitySelectionData"

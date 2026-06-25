@@ -549,7 +549,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick;
 				PRODUCT_NAME = BetHunter;
 				SWIFT_OBJC_BRIDGING_HEADER = "BetHunter/BetHunter-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -582,7 +582,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick;
 				PRODUCT_NAME = BetHunter;
 				SWIFT_OBJC_BRIDGING_HEADER = "BetHunter/BetHunter-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -725,7 +725,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter.DNSProxy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
@@ -749,7 +749,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ricardo.bethunter.DNSProxy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;

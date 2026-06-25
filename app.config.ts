@@ -49,6 +49,8 @@ if (APP_ENV !== 'development') {
 
 const GOOGLE_SIGNIN_PKG = '@react-native-google-signin/google-signin';
 const IOS_SUFFIX = '.apps.googleusercontent.com';
+const IOS_BUNDLE_IDENTIFIER = 'com.bethunter.app.rick';
+const ANDROID_PACKAGE = 'com.bethunter.app';
 
 function iosUrlSchemeFromClientId(clientId: string): string | null {
   if (!clientId || !clientId.endsWith(IOS_SUFFIX)) return null;
@@ -89,6 +91,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: config.name ?? 'BetHunter',
     slug: config.slug ?? 'bethunter',
+    ios: {
+      ...(config.ios ?? {}),
+      bundleIdentifier: IOS_BUNDLE_IDENTIFIER,
+    },
+    android: {
+      ...(config.android ?? {}),
+      package: ANDROID_PACKAGE,
+    },
     plugins: [...existingPlugins, googlePlugin],
     extra: {
       ...(config.extra ?? {}),

@@ -161,6 +161,14 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
     year: "numeric",
   });
 
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+
   return (
     <Modal
       visible={visible}
@@ -222,6 +230,9 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
                   setDate(new Date(day.dateString + "T12:00:00"));
                   setShowCalendar(false);
                 }}
+                minDate={firstDayOfMonth}
+                maxDate={lastDayOfMonth}
+                renderArrow={() => <View />}
                 markedDates={{
                   [date.toISOString().split("T")[0]]: {
                     selected: true,

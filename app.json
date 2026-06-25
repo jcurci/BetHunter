@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bethunter.app"
+      "bundleIdentifier": "com.bethunter.app.rick"
     },
     "android": {
       "adaptiveIcon": {
