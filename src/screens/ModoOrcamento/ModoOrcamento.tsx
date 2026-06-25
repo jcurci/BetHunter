@@ -36,6 +36,8 @@ import BudgetSetupSheet from "./components/BudgetSetupSheet";
 import ExpenseSheet from "./components/ExpenseSheet";
 import NoEntriesBanner from "./components/NoEntriesBanner";
 
+const BUDGET_TTL = 3 * 60 * 1000; // 3 minutos
+
 function formatBrl(value: number): string {
   return value.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -165,15 +167,36 @@ const ModoOrcamento: React.FC = () => {
 
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFetchedRef = useRef<number | null>(null);
+  const hasLoadedRef = useRef(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const currentPeriodKeyRef = useRef(periodKeyFromDate(new Date()));
+  const [currentPeriodKey, setCurrentPeriodKey] = useState(() => periodKeyFromDate(new Date()));
 
-  const currentPeriodKey = useMemo(() => periodKeyFromDate(new Date()), []);
+  const refresh = useCallback(async (force = false) => {
+    const now = Date.now();
+    const freshPeriodKey = periodKeyFromDate(new Date());
 
-  const refresh = useCallback(async () => {
+    // Virada de mês: invalida cache e força refresh com o novo período
+    if (freshPeriodKey !== currentPeriodKeyRef.current) {
+      currentPeriodKeyRef.current = freshPeriodKey;
+      setCurrentPeriodKey(freshPeriodKey);
+      lastFetchedRef.current = null;
+      force = true;
+    }
+
+    if (
+      !force &&
+      lastFetchedRef.current !== null &&
+      now - lastFetchedRef.current < BUDGET_TTL
+    ) {
+      return;
+    }
     setIsLoading(true);
     try {
       const [current, periodData, banner] = await Promise.all([
-        getCurrentBudgetUseCase.execute(currentPeriodKey),
-        getPeriodExpensesUseCase.execute(currentPeriodKey),
+        getCurrentBudgetUseCase.execute(freshPeriodKey),
+        getPeriodExpensesUseCase.execute(freshPeriodKey),
         getDaysSinceLastEntryUseCase.execute(),
       ]);
       setBudget(current);
@@ -181,6 +204,7 @@ const ModoOrcamento: React.FC = () => {
       setExpenses(periodData.expenses);
       setBannerDays(banner.days);
       setShowBanner(banner.shouldShow);
+      lastFetchedRef.current = now;
       if (current == null) {
         setSetupIsEdit(false);
         setSetupVisible(true);
@@ -189,12 +213,15 @@ const ModoOrcamento: React.FC = () => {
       console.error("[ModoOrcamento] erro ao carregar dados:", error);
     } finally {
       setIsLoading(false);
+      if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        setHasLoaded(true);
+      }
     }
   }, [
     getCurrentBudgetUseCase,
     getPeriodExpensesUseCase,
     getDaysSinceLastEntryUseCase,
-    currentPeriodKey,
   ]);
 
   useFocusEffect(
@@ -261,13 +288,13 @@ const ModoOrcamento: React.FC = () => {
   const onSetupSaved = useCallback(
     async (_newValue: number) => {
       setSetupVisible(false);
-      await refresh();
+      await refresh(true);
     },
     [refresh],
   );
 
   const onExpenseSaved = useCallback(async () => {
-    await refresh();
+    await refresh(true);
     setShowBanner(false);
     showAnotadoToast();
   }, [refresh, showAnotadoToast]);
@@ -289,6 +316,17 @@ const ModoOrcamento: React.FC = () => {
   const goToCurrentPeriodList = useCallback(() => {
     navigation.navigate("BudgetMonthDetail", { periodKey: currentPeriodKey });
   }, [navigation, currentPeriodKey]);
+
+  if (!hasLoaded) {
+    return (
+      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+        <View style={styles.fullScreenLoader}>
+          <ActivityIndicator size="large" color="#D783D8" />
+        </View>
+        <Footer />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
@@ -385,7 +423,6 @@ const ModoOrcamento: React.FC = () => {
                   <Text
                     style={styles.balanceValue}
                     numberOfLines={1}
-                    adjustsFontSizeToFit
                   >
                     {formatBrl(remaining)}
                   </Text>
@@ -443,11 +480,7 @@ const ModoOrcamento: React.FC = () => {
           )}
         </View>
 
-        {isLoading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator color="#D783D8" />
-          </View>
-        ) : expenses.length === 0 ? (
+        {expenses.length === 0 && !isLoading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateTitle}>
               Nenhum gasto ainda. Aproveita.
@@ -537,6 +570,12 @@ const ModoOrcamento: React.FC = () => {
 
       <Footer />
 
+      {isLoading && hasLoaded && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#D783D8" />
+        </View>
+      )}
+
       <BudgetSetupSheet
         visible={setupVisible}
         onClose={onSetupClosed}
@@ -557,6 +596,11 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  fullScreenLoader: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     flex: 1,
@@ -740,9 +784,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
   },
-  loadingState: {
-    paddingVertical: 24,
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
     alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
   },
   emptyState: {
     borderRadius: 16,

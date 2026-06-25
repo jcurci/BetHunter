@@ -196,6 +196,7 @@ const CourseModules: React.FC = () => {
   const [modules, setModules] = useState<CourseModule[]>([]);
   const [processedSvgs, setProcessedSvgs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const hasDataRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
   const [statsReady, setStatsReady] = useState(false);
@@ -239,7 +240,7 @@ const CourseModules: React.FC = () => {
 
   const loadData = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!hasDataRef.current) setLoading(true);
       await loadDashboard();
 
       let resolvedCompleted = completedFallbackRef.current;
@@ -268,6 +269,7 @@ const CourseModules: React.FC = () => {
       });
       setProcessedSvgs(svgMap);
       setModules(result);
+      hasDataRef.current = true;
       setError(null);
     } catch (err) {
       const msg =

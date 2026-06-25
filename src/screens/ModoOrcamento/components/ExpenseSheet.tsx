@@ -133,10 +133,13 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
       onSaved();
       handleClose();
     } catch (error: any) {
-      Alert.alert(
-        "Não conseguimos salvar. Tenta de novo?",
-        error?.message || "",
-      );
+      const raw = error?.response?.data?.message;
+      const detail = Array.isArray(raw)
+        ? raw.join('\n')
+        : typeof raw === 'string'
+        ? raw
+        : error?.message || '';
+      Alert.alert("Não conseguimos salvar. Tenta de novo?", detail);
     } finally {
       setIsSaving(false);
     }

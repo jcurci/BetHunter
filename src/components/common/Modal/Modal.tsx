@@ -118,7 +118,7 @@ const CustomModal: React.FC<ModalProps> = ({
       <Animated.View
         style={[
           styles.modalContainer,
-          { height: modalHeight },
+          { maxHeight: modalHeight },
           animationType === 'slide'
             ? { transform: [{ translateY: slideAnim }] }
             : { opacity: fadeAnim },
@@ -352,14 +352,13 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   contentContainer: {
-    flex: 1,
+    flexShrink: 1,
   },
   contentInner: {
     padding: 20,
     flexGrow: 1,
   },
   contentInnerBottom: {
-    flex: 1,
     paddingHorizontal: 20,
   },
   // TODO: Remover estilos de botões quando usar componente Button comum

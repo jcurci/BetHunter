@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
-import { Container } from "../../infrastructure/di/Container";
+import { useCoursesStore } from "../../storage/coursesStore";
 import { CourseProgress } from "../../domain/entities/CourseProgress";
 import { AuthenticationError, ServerError } from "../../domain/errors/CustomErrors";
 
@@ -88,49 +88,32 @@ const Cursos = () => {
   const navigation = useNavigation<NavigationProp>();
   const authStore = useAuthStore();
   const user = authStore.user;
-  const { betStreak } = useDashboardStore();
-  const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { betStreak, dashboard, loadAll: loadDashboardAll } = useDashboardStore();
+  const { courses, isLoading: coursesLoading, loadCourses } = useCoursesStore();
+  const learningModules = courses.map(mapCourseProgressToLearningModule);
+  const loading = coursesLoading && courses.length === 0;
   const [statsReady, setStatsReady] = useState<boolean>(false);
-  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const { isSaved, toggleSave } = useSavedCoursesStore();
 
-  const loadDashboard = useCallback(async () => {
+  const loadData = useCallback(async (force = false) => {
     try {
-      const container = Container.getInstance();
-      const useCase = container.getLoadDashboardUseCase();
-      const result = await useCase.execute();
-      setDashboard({ energy: result.energy, streak: result.streak });
-    } catch (error: any) {
-      console.log("LoadDashboard:", error?.message ?? error);
-    }
-  }, []);
-
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      await loadDashboard();
-
-      const container = Container.getInstance();
-      const courses = await container.getGetCoursesWithProgressUseCase().execute();
-      setLearningModules(courses.map(mapCourseProgressToLearningModule));
+      await Promise.all([loadDashboardAll(), loadCourses(force)]);
       setError(null);
-    } catch (error) {
-      console.error("Error loading data:", error);
+    } catch (err) {
+      console.error("Error loading data:", err);
       const message =
-        error instanceof ServerError || error instanceof AuthenticationError
-          ? error.message
+        err instanceof ServerError || err instanceof AuthenticationError
+          ? (err as Error).message
           : "Erro ao carregar lições. Tente novamente.";
       setError(message);
     } finally {
-      setLoading(false);
       setStatsReady(true);
     }
-  }, [loadDashboard]);
+  }, [loadDashboardAll, loadCourses]);
 
   useFocusEffect(
     useCallback(() => {
@@ -246,7 +229,7 @@ const Cursos = () => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={loadData} style={styles.retryButton}>
+            <TouchableOpacity onPress={() => void loadData(true)} style={styles.retryButton}>
               <Text style={styles.retryButtonText}>Tentar novamente</Text>
             </TouchableOpacity>
           </View>

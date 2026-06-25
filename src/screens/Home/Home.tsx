@@ -55,8 +55,8 @@ import { Container } from "../../infrastructure/di/Container";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
+import { useCoursesStore, selectCurrentCourse } from "../../storage/coursesStore";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
-import { CourseProgress } from "../../domain/entities/CourseProgress";
 import { notifyStreakMilestone } from "../../services/notifications";
 
 // Constants
@@ -228,45 +228,22 @@ const Home: React.FC = () => {
 
   const [greetingLine, setGreetingLine] = useState<string>(() => periodGreetingLabel());
 
-  // Current course — stale-while-revalidate:
-  // state persists between focus events (component doesn't unmount),
-  // so cached value renders instantly while background fetch runs.
-  const [currentCourse, setCurrentCourse] = useState<CourseProgress | null>(null);
-  const [currentCourseLoading, setCurrentCourseLoading] = useState(true);
-  const hasCourseDataRef = useRef(false);
-
-  const fetchCurrentCourse = useCallback(async () => {
-    const courses = await Container.getInstance().getGetCoursesWithProgressUseCase().execute();
-    // Prefer the course actively in progress; fall back to the first not yet started
-    const inProgress = courses.find(
-      (c) => c.modulesCompleted > 0 && c.moduleCompletionPercentage < 100,
-    );
-    const notStarted = courses.find((c) => c.modulesCompleted === 0);
-    const resolved = inProgress ?? notStarted ?? courses[0] ?? null;
-    hasCourseDataRef.current = true;
-    setCurrentCourse(resolved);
-  }, []);
-
-  const loadCurrentCourse = useCallback(async () => {
-    // First load → show skeleton. Subsequent focuses → silent background refresh.
-    const isFirstLoad = !hasCourseDataRef.current;
-    if (isFirstLoad) {
-      setCurrentCourseLoading(true);
-    }
-    try {
-      await fetchCurrentCourse();
-    } catch {
-      if (isFirstLoad) {
-        triggerError(undefined, fetchCurrentCourse);
-      }
-    } finally {
-      setCurrentCourseLoading(false);
-    }
-  }, [fetchCurrentCourse, triggerError]);
+  const { courses, isLoading: coursesLoading, loadCourses } = useCoursesStore();
+  const currentCourse = selectCurrentCourse(courses);
+  const currentCourseLoading = coursesLoading && courses.length === 0;
 
   // Boot: run all data services in parallel before showing Home
   useEffect(() => {
-    Promise.all([loadAll(), loadCurrentCourse()]).finally(() => {
+    const loadCoursesHandled = async () => {
+      try {
+        await loadCourses();
+      } catch {
+        if (courses.length === 0) {
+          triggerError(undefined, () => loadCourses(true));
+        }
+      }
+    };
+    Promise.all([loadAll(), loadCoursesHandled()]).finally(() => {
       sessionBooted = true;
       setHasBooted(true);
     });
@@ -302,9 +279,9 @@ const Home: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      if (!hasBooted) return; // boot effect handles first load
-      void loadCurrentCourse();
-    }, [loadCurrentCourse, hasBooted]),
+      if (!hasBooted) return;
+      void loadCourses().catch(() => {});
+    }, [loadCourses, hasBooted]),
   );
 
   // Auto-close reset confirm modal after 3 seconds
