@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
 import com.bethunter.app.vpn.BetBlockerVpnService
+import com.bethunter.app.work.BlocklistRefreshWorker
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -45,6 +46,7 @@ class BetBlockerModule(
     }
 
     repository.setBlockingEnabled(true)
+    BlocklistRefreshWorker.schedule(reactContext.applicationContext)
     val prepareIntent = VpnService.prepare(reactContext.currentActivity ?: reactContext)
     if (prepareIntent == null) {
       startVpnService()
@@ -64,6 +66,7 @@ class BetBlockerModule(
     } catch (e: Exception) {
       pendingVpnPromise = null
       repository.setBlockingEnabled(false)
+      BlocklistRefreshWorker.cancel(reactContext.applicationContext)
       promise.reject("VPN_PREPARE_FAILED", e.message)
     }
   }
@@ -71,6 +74,7 @@ class BetBlockerModule(
   @ReactMethod
   fun stopBlocking() {
     repository.setBlockingEnabled(false)
+    BlocklistRefreshWorker.cancel(reactContext.applicationContext)
 
     val intent = Intent(reactContext, BetBlockerVpnService::class.java)
     intent.action = BetBlockerVpnService.ACTION_STOP
@@ -162,6 +166,7 @@ class BetBlockerModule(
       p?.resolve(true)
     } else {
       repository.setBlockingEnabled(false)
+      BlocklistRefreshWorker.cancel(reactContext.applicationContext)
       p?.resolve(false)
       Log.w(TAG, "VPN permission denied by user")
     }

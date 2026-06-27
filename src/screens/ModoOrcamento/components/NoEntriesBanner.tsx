@@ -17,7 +17,9 @@ const NoEntriesBanner: React.FC<NoEntriesBannerProps> = ({
     <View style={styles.container} accessibilityRole="alert">
       <View style={styles.textColumn}>
         <Text style={styles.message} numberOfLines={2}>
-          Você não registra gastos há {days} dias. Quer atualizar?
+          {days >= 999
+            ? "Que tal registrar seus primeiros gastos?"
+            : `Você não registra gastos há ${days} dias. Quer atualizar?`}
         </Text>
         <TouchableOpacity
           onPress={onRegister}

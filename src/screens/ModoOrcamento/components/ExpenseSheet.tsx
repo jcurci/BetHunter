@@ -162,12 +162,11 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
   });
 
   const now = new Date();
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const firstDayOfMonth = `${y}-${m}-01`;
+  const lastDayOfMonth = `${y}-${m}-${String(lastDay).padStart(2, "0")}`;
 
   return (
     <Modal

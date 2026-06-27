@@ -33,12 +33,19 @@ class BlockedDomainsRepository(private val context: Context) {
     prefs.edit().putBoolean(KEY_LOG_ENABLED, enabled).apply()
   }
 
+  fun getETag(): String? = prefs.getString(KEY_ETAG, null)
+
+  fun setETag(etag: String?) {
+    prefs.edit().putString(KEY_ETAG, etag).apply()
+  }
+
   companion object {
     private const val PREFS_NAME = "bet_blocker"
     private const val KEY_ENABLED = "enabled"
     private const val KEY_BLOCKED = "blocked_domains"
     private const val KEY_LAST_FETCH = "last_fetch_timestamp"
     private const val KEY_LOG_ENABLED = "debug_logs_enabled"
+    private const val KEY_ETAG = "blocked_domains_etag"
 
     private val DOMAIN_REGEX = Regex("^[a-z0-9.-]+$")
     val DEFAULT_BLOCKED_DOMAINS = setOf(

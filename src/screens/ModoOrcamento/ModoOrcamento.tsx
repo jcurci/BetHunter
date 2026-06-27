@@ -21,7 +21,6 @@ import {
   BACKGROUND_GRADIENT_LOCATIONS,
   HORIZONTAL_GRADIENT_COLORS,
   HORIZONTAL_GRADIENT_LOCATIONS,
-  SHADOW_OVERLAY_COLORS,
 } from "../../config/colors";
 import { Container } from "../../infrastructure/di/Container";
 import {
@@ -194,23 +193,40 @@ const ModoOrcamento: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      const [current, periodData, banner] = await Promise.all([
+      const [budgetResult, periodResult, bannerResult] = await Promise.allSettled([
         getCurrentBudgetUseCase.execute(freshPeriodKey),
         getPeriodExpensesUseCase.execute(freshPeriodKey),
         getDaysSinceLastEntryUseCase.execute(),
       ]);
-      setBudget(current);
-      setSummary(periodData.summary);
-      setExpenses(periodData.expenses);
-      setBannerDays(banner.days);
-      setShowBanner(banner.shouldShow);
-      lastFetchedRef.current = now;
-      if (current == null) {
-        setSetupIsEdit(false);
-        setSetupVisible(true);
+
+      if (budgetResult.status === 'fulfilled') {
+        const current = budgetResult.value;
+        setBudget(current);
+        if (current == null) {
+          setSetupIsEdit(false);
+          setSetupVisible(true);
+        }
+      } else {
+        console.error("[ModoOrcamento] erro ao buscar orçamento:", budgetResult.reason);
+      }
+
+      if (periodResult.status === 'fulfilled') {
+        setSummary(periodResult.value.summary);
+        setExpenses(periodResult.value.expenses);
+      } else {
+        console.error("[ModoOrcamento] erro ao buscar gastos:", periodResult.reason);
+      }
+
+      if (bannerResult.status === 'fulfilled') {
+        setBannerDays(bannerResult.value.days);
+        setShowBanner(bannerResult.value.shouldShow);
+      }
+
+      if (budgetResult.status === 'fulfilled') {
+        lastFetchedRef.current = now;
       }
     } catch (error) {
-      console.error("[ModoOrcamento] erro ao carregar dados:", error);
+      console.error("[ModoOrcamento] erro inesperado:", error);
     } finally {
       setIsLoading(false);
       if (!hasLoadedRef.current) {
@@ -254,7 +270,9 @@ const ModoOrcamento: React.FC = () => {
   }, [toastOpacity]);
 
   const budgetValue = budget?.value ?? 0;
-  const totalSpent = summary?.totalSpent ?? 0;
+  const totalSpent =
+    summary?.totalSpent ??
+    expenses.reduce((acc, e) => acc + e.value, 0);
   const balance = budgetValue - totalSpent;
   const remaining = Math.max(0, balance);
 
@@ -382,27 +400,13 @@ const ModoOrcamento: React.FC = () => {
             </LinearGradient>
           </View>
         ) : (
-          <View style={styles.balanceCardWrapper}>
-            <LinearGradient
-              colors={BACKGROUND_GRADIENT_COLORS}
-              locations={BACKGROUND_GRADIENT_LOCATIONS}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <LinearGradient
-              colors={SHADOW_OVERLAY_COLORS}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <LinearGradient
-              colors={SHADOW_OVERLAY_COLORS}
-              start={{ x: 1, y: 0 }}
-              end={{ x: 0.5, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-
+          <LinearGradient
+            colors={BACKGROUND_GRADIENT_COLORS}
+            locations={BACKGROUND_GRADIENT_LOCATIONS}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.balanceCardWrapper}
+          >
             <View style={styles.balanceContent}>
               <View style={styles.balanceTopRow}>
                 <Text style={styles.balanceLabel}>Você tem disponível</Text>
@@ -462,7 +466,7 @@ const ModoOrcamento: React.FC = () => {
                 <Feather name="arrow-right" size={14} color="#C8C4CF" />
               </TouchableOpacity>
             </View>
-          </View>
+          </LinearGradient>
         )}
 
         <View style={styles.sectionHeaderRow}>
@@ -638,6 +642,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
   },
   balanceContent: {
     paddingHorizontal: 20,

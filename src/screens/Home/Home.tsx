@@ -16,6 +16,7 @@ import {
   Easing,
   Linking,
   useWindowDimensions,
+  AppState,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -132,6 +133,16 @@ const Home: React.FC = () => {
       checkBlockerStatus();
     }, [checkBlockerStatus])
   );
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && isBlockerEnabled && BetBlocker?.refreshBlockedDomains) {
+        BetBlocker.refreshBlockedDomains().catch(() => {});
+      }
+    });
+    return () => subscription.remove();
+  }, [isBlockerEnabled]);
 
   // Error modal
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);

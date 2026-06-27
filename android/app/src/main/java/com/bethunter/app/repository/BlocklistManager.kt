@@ -16,6 +16,12 @@ class BlocklistManager(
     private val REFRESH_INTERVAL_MS = TimeUnit.HOURS.toMillis(24)
   }
 
+  private sealed class FetchResult {
+    data class Updated(val domains: Set<String>) : FetchResult()
+    object NotModified : FetchResult()
+    object Failed : FetchResult()
+  }
+
   fun ensureBlocklistPresent() {
     if (repository.getBlockedDomains().isEmpty()) {
       repository.setBlockedDomains(BlockedDomainsRepository.DEFAULT_BLOCKED_DOMAINS.toList())
@@ -35,18 +41,28 @@ class BlocklistManager(
   }
 
   fun forceRefresh(): Boolean {
-    val domains = fetchRemoteBlocklist() ?: return false
-    if (domains.isEmpty()) {
-      Log.i(TAG, "Remote blocklist returned no valid domains")
-      return false
+    return when (val result = fetchFromGist()) {
+      is FetchResult.Updated -> {
+        if (result.domains.isEmpty()) {
+          Log.i(TAG, "Remote blocklist returned no valid domains")
+          false
+        } else {
+          repository.setBlockedDomains(result.domains.toList())
+          repository.setLastFetchTimestamp(System.currentTimeMillis())
+          Log.i(TAG, "Blocklist updated: ${result.domains.size} domains")
+          true
+        }
+      }
+      is FetchResult.NotModified -> {
+        repository.setLastFetchTimestamp(System.currentTimeMillis())
+        Log.i(TAG, "Blocklist unchanged (304 Not Modified)")
+        false
+      }
+      is FetchResult.Failed -> false
     }
-
-    repository.setBlockedDomains(domains.toList())
-    repository.setLastFetchTimestamp(System.currentTimeMillis())
-    return true
   }
 
-  private fun fetchRemoteBlocklist(): Set<String>? {
+  private fun fetchFromGist(): FetchResult {
     var connection: HttpURLConnection? = null
     return try {
       val url = URL(GIST_RAW_URL)
@@ -56,21 +72,36 @@ class BlocklistManager(
       connection.readTimeout = 8000
       connection.instanceFollowRedirects = true
 
-      if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-        Log.w(TAG, "Failed to fetch remote blocklist: ${connection.responseCode}")
-        return null
+      repository.getETag()?.let { etag ->
+        connection.setRequestProperty("If-None-Match", etag)
       }
 
-      val reader = BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8))
-      reader.useLines { lines ->
-        lines.mapNotNull { line ->
-          val candidate = line.substringBefore('#').substringBefore("//").trim()
-          BlockedDomainsRepository.normalizeDomain(candidate)
-        }.toSet()
+      when (connection.responseCode) {
+        HttpURLConnection.HTTP_NOT_MODIFIED -> FetchResult.NotModified
+
+        HttpURLConnection.HTTP_OK -> {
+          val etag = connection.getHeaderField("ETag")
+            ?: connection.getHeaderField("Last-Modified")
+          if (etag != null) repository.setETag(etag)
+
+          val reader = BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8))
+          val domains = reader.useLines { lines ->
+            lines.mapNotNull { line ->
+              val candidate = line.substringBefore('#').substringBefore("//").trim()
+              BlockedDomainsRepository.normalizeDomain(candidate)
+            }.toSet()
+          }
+          FetchResult.Updated(domains)
+        }
+
+        else -> {
+          Log.w(TAG, "Failed to fetch remote blocklist: ${connection.responseCode}")
+          FetchResult.Failed
+        }
       }
     } catch (error: Exception) {
       Log.w(TAG, "Failed to download remote blocklist", error)
-      null
+      FetchResult.Failed
     } finally {
       connection?.disconnect()
     }
