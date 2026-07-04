@@ -212,8 +212,14 @@ class BetBlockerVpnService : VpnService() {
   private fun scheduleRestart() {
     val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
     val intent = Intent(this, BetBlockerVpnService::class.java)
-    val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
-    val pi = PendingIntent.getService(this, 1, intent, flags)
+    val piFlags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+    // getForegroundService requer API 26 e dispara startForegroundService, que é
+    // permitido a partir do background — ao contrário de getService/startService.
+    val pi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      PendingIntent.getForegroundService(this, 1, intent, piFlags)
+    } else {
+      PendingIntent.getService(this, 1, intent, piFlags)
+    }
     val triggerAt = System.currentTimeMillis() + 1500
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
@@ -226,7 +232,7 @@ class BetBlockerVpnService : VpnService() {
   private fun refreshBlocklistIfNeeded() {
     thread(name = "BetBlockerRefreshCheck") {
       try {
-        if (blocklistManager.refreshIfStale()) {
+        if (blocklistManager.forceRefresh()) {
           domainMatcher.reload()
           Log.i(TAG, "Blocklist refreshed from remote source")
         }
@@ -240,7 +246,7 @@ class BetBlockerVpnService : VpnService() {
     refreshThread = thread(name = "BetBlockerRefreshLoop") {
       while (running && !Thread.currentThread().isInterrupted) {
         try {
-          Thread.sleep(TimeUnit.HOURS.toMillis(24))
+          Thread.sleep(TimeUnit.HOURS.toMillis(1))
         } catch (_: InterruptedException) {
           break
         }

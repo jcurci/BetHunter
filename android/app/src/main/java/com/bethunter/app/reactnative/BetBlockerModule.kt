@@ -3,7 +3,10 @@ package com.bethunter.app.reactnative
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.VpnService
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.net.Uri
@@ -38,8 +41,6 @@ class BetBlockerModule(
   @ReactMethod
   fun startBlocking(promise: Promise) {
     // Guard: rejeita chamadas paralelas enquanto um diálogo de permissão já está aberto.
-    // Isso previne a race condition onde pendingVpnPromise seria sobrescrito se o JS
-    // disparar startBlocking duas vezes antes de onActivityResult ser chamado.
     if (pendingVpnPromise != null) {
       promise.reject("ALREADY_IN_PROGRESS", "A VPN permission dialog is already open")
       return
@@ -49,9 +50,17 @@ class BetBlockerModule(
     BlocklistRefreshWorker.schedule(reactContext.applicationContext)
     val prepareIntent = VpnService.prepare(reactContext.currentActivity ?: reactContext)
     if (prepareIntent == null) {
-      startVpnService()
-      requestBatteryOptimizationExemption()
-      promise.resolve(true)
+      // Permissão já concedida — tenta iniciar imediatamente
+      try {
+        startVpnService()
+        requestBatteryOptimizationExemption()
+        promise.resolve(true)
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to start VPN service after permission check", e)
+        repository.setBlockingEnabled(false)
+        BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+        promise.resolve(false)
+      }
       return
     }
     val activity = reactContext.currentActivity
@@ -89,6 +98,32 @@ class BetBlockerModule(
   @ReactMethod
   fun isBlockingEnabled(promise: Promise) {
     promise.resolve(repository.isBlockingEnabled())
+  }
+
+  /**
+   * Verifica se a VPN está realmente ativa no Android e reconcilia com SharedPreferences.
+   * Se o estado salvo diz "ativo" mas não há VPN rodando, tenta reiniciar automaticamente.
+   * Deve ser usado no lugar de isBlockingEnabled() para checagens de integridade do estado.
+   */
+  @ReactMethod
+  fun checkAndSyncBlockingStatus(promise: Promise) {
+    val stored = repository.isBlockingEnabled()
+    val running = isVpnActuallyRunning()
+
+    if (stored && !running) {
+      Log.w(TAG, "VPN inconsistency detected: stored=true but VPN not running. Attempting restart.")
+      try {
+        startVpnService()
+        promise.resolve(true)
+      } catch (e: Exception) {
+        Log.e(TAG, "VPN restart failed during sync, rolling back flag", e)
+        repository.setBlockingEnabled(false)
+        BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+        promise.resolve(false)
+      }
+    } else {
+      promise.resolve(stored)
+    }
   }
 
   @ReactMethod
@@ -134,11 +169,25 @@ class BetBlockerModule(
   }
 
   private fun startVpnService() {
-    try {
-      val i = Intent(reactContext, BetBlockerVpnService::class.java)
-      ContextCompat.startForegroundService(reactContext, i)
+    val i = Intent(reactContext, BetBlockerVpnService::class.java)
+    ContextCompat.startForegroundService(reactContext, i)
+  }
+
+  private fun isVpnActuallyRunning(): Boolean {
+    return try {
+      val cm = reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        cm.allNetworks.any { network ->
+          cm.getNetworkCapabilities(network)
+            ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        }
+      } else {
+        @Suppress("DEPRECATION")
+        cm.getNetworkInfo(ConnectivityManager.TYPE_VPN)?.isConnected == true
+      }
     } catch (e: Exception) {
-      Log.e(TAG, "Failed to start VPN service: ${e.message}")
+      Log.w(TAG, "Could not check VPN running state: ${e.message}")
+      false
     }
   }
 
@@ -161,9 +210,16 @@ class BetBlockerModule(
     val p = pendingVpnPromise
     pendingVpnPromise = null
     if (resultCode == Activity.RESULT_OK) {
-      startVpnService()
-      requestBatteryOptimizationExemption()
-      p?.resolve(true)
+      try {
+        startVpnService()
+        requestBatteryOptimizationExemption()
+        p?.resolve(true)
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to start VPN service after user approval", e)
+        repository.setBlockingEnabled(false)
+        BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+        p?.resolve(false)
+      }
     } else {
       repository.setBlockingEnabled(false)
       BlocklistRefreshWorker.cancel(reactContext.applicationContext)

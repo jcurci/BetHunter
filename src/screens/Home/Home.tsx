@@ -111,12 +111,21 @@ const Home: React.FC = () => {
   const [isBlockerEnabled, setIsBlockerEnabled] = useState<boolean>(false);
   const [isBlockerLoading, setIsBlockerLoading] = useState<boolean>(false);
   const blockingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blockingTimedOutRef = useRef<boolean>(false);
 
   const checkBlockerStatus = useCallback(async () => {
     try {
-      if (Platform.OS === "android" && BetBlocker?.isBlockingEnabled) {
-        const enabled: boolean = await BetBlocker.isBlockingEnabled();
+      if (Platform.OS === "android" && BetBlocker) {
+        // checkAndSyncBlockingStatus verifica o estado real da VPN no Android e
+        // reinicia automaticamente se há inconsistência (ex: após update do app).
+        // Fallback para isBlockingEnabled em versões antigas do módulo nativo.
+        const enabled: boolean = BetBlocker.checkAndSyncBlockingStatus
+          ? await BetBlocker.checkAndSyncBlockingStatus()
+          : await BetBlocker.isBlockingEnabled();
         setIsBlockerEnabled(enabled);
+        if (enabled && BetBlocker?.refreshBlockedDomains) {
+          BetBlocker.refreshBlockedDomains().catch(() => {});
+        }
       } else if (Platform.OS === "ios" && BetBlocking?.isBlockingEnabled) {
         const enabled: boolean = await BetBlocking.isBlockingEnabled();
         setIsBlockerEnabled(enabled);
@@ -383,10 +392,12 @@ const Home: React.FC = () => {
 
     // Ativa loading imediatamente — antes de qualquer await
     setIsBlockerLoading(true);
+    blockingTimedOutRef.current = false;
 
     // Timeout de segurança: se o sistema travar ou o usuário minimizar o app
     // e nunca voltar, reseta o estado após 20s para não ficar em loading infinito.
     blockingTimeoutRef.current = setTimeout(() => {
+      blockingTimedOutRef.current = true;
       setIsBlockerLoading(false);
       setShowBlockModal(false);
       triggerError(
@@ -416,6 +427,14 @@ const Home: React.FC = () => {
       const granted: boolean = await BetBlocker.startBlocking();
 
       clearLoadingTimeout();
+
+      // Se o timeout já disparou, o modal de erro está visível. Apenas atualiza
+      // o estado do bloqueador silenciosamente e sai sem abrir mais modais.
+      if (blockingTimedOutRef.current) {
+        if (granted) setIsBlockerEnabled(true);
+        return;
+      }
+
       setIsBlockerLoading(false);
       setShowBlockModal(false);
 
@@ -437,6 +456,7 @@ const Home: React.FC = () => {
       }
     } catch (error: any) {
       clearLoadingTimeout();
+      if (blockingTimedOutRef.current) return;
       setIsBlockerLoading(false);
       console.log("BetBlocker error", error);
       setShowBlockModal(false);

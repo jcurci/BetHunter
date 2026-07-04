@@ -6,7 +6,7 @@ class BlockedDomainsRepository(private val context: Context) {
   private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
   fun setBlockingEnabled(enabled: Boolean) {
-    prefs.edit().putBoolean(KEY_ENABLED, enabled).apply()
+    prefs.edit().putBoolean(KEY_ENABLED, enabled).commit()
   }
 
   fun isBlockingEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)

@@ -48,7 +48,7 @@ class BlocklistRefreshWorker(ctx: Context, params: WorkerParameters) : Worker(ct
       val constraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
         .build()
-      val request = PeriodicWorkRequestBuilder<BlocklistRefreshWorker>(12, TimeUnit.HOURS)
+      val request = PeriodicWorkRequestBuilder<BlocklistRefreshWorker>(1, TimeUnit.HOURS)
         .setConstraints(constraints)
         .build()
       WorkManager.getInstance(context).enqueueUniquePeriodicWork(

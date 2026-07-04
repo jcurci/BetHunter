@@ -40,7 +40,7 @@
     },
     "production": {
       "distribution": "store",
-      "credentialsSource": "local",
+      "credentialsSource": "remote",
       "android": {
         "buildType": "app-bundle"
       },
@@ -53,9 +53,9 @@
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1058790722417-070a7rh7rib75970luhs57holfd09css.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1058790722417-qk1jkb8tg3ark49fmstc2h7pqbtn0ahq.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1058790722417-ont4hmrcb9babd7t8d2ulv3kq6ond3tp.apps.googleusercontent.com",
-        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "test_XRnfEBeCyBAiAckEbLAdYxjECkJ",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_lHjGlnWAmAnwdzmafcGMbkRGGgw",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_fNOKXdnJLtOuUGVwnDYUbyphqOH",
-        "EXPO_PUBLIC_REVENUECAT_API_KEY": "test_XRnfEBeCyBAiAckEbLAdYxjECkJ",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "appl_lHjGlnWAmAnwdzmafcGMbkRGGgw",
         "EXPO_PUBLIC_REVENUECAT_DEFAULT_OFFERING_IDENTIFIER": "default"
       }
     }
