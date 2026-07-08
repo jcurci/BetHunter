@@ -39,7 +39,7 @@
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
-    <key>LSMinimumSystemVersion</key>
+    <key>MinimumOSVersion</key>
     <string>16.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
