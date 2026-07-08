@@ -16,10 +16,12 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.bethunter.app.MainActivity
 import com.bethunter.app.R
+import com.bethunter.app.diagnostics.VpnEventLog
 import com.bethunter.app.dns.DnsInterceptor
 import com.bethunter.app.domain.DomainMatcher
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
+import com.bethunter.app.work.VpnHealthWorker
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramSocket
@@ -52,13 +54,19 @@ class BetBlockerVpnService : VpnService() {
     )
     refreshBlocklistIfNeeded()
     startAsForeground()
+    VpnEventLog.log(this, "service_create")
+    // Self-heal: garante que o health check periódico existe mesmo que
+    // o agendamento original tenha se perdido (update do app, clear de dados do WM).
+    VpnHealthWorker.schedule(applicationContext)
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     if (intent?.action == ACTION_STOP) {
         Log.d(TAG, "STOP action received")
+        VpnEventLog.log(this, "stop_requested_by_user")
 
         repository.setBlockingEnabled(false)
+        repository.setRevoked(false)
 
         stopVpn()
 
@@ -68,7 +76,7 @@ class BetBlockerVpnService : VpnService() {
 
         return START_NOT_STICKY
     }
-    
+
     if (intent?.action == ACTION_RELOAD) {
       Log.i(TAG, "Reload requested")
       try {
@@ -83,6 +91,14 @@ class BetBlockerVpnService : VpnService() {
       stopSelf()
       return Service.START_NOT_STICKY
     }
+    // Restart vindo de alarme/boot/worker: se o consentimento foi revogado,
+    // establish() falharia — só a Activity pode re-pedir via prepare().
+    if (repository.isRevoked() || VpnService.prepare(this) != null) {
+      Log.w(TAG, "VPN consent missing, cannot start — prompting reactivation")
+      VpnEventLog.log(this, "start_blocked_needs_consent")
+      handleRevoked()
+      return Service.START_NOT_STICKY
+    }
     if (running) return Service.START_STICKY
     startVpn()
     return Service.START_STICKY
@@ -92,19 +108,39 @@ class BetBlockerVpnService : VpnService() {
     stopVpn()
     super.onDestroy()
 
-    if (repository.isBlockingEnabled()) {
+    if (repository.isBlockingEnabled() && !repository.isRevoked()) {
       Log.i(TAG, "VPN killed unexpectedly, restarting")
+      VpnEventLog.log(this, "service_destroy_unexpected")
       scheduleRestart()
     } else {
       Log.i(TAG, "VPN stopped intentionally")
+      VpnEventLog.log(this, "service_destroy_intentional")
     }
   }
 
   override fun onRevoke() {
     Log.w(TAG, "VPN permission revoked")
-    repository.setBlockingEnabled(false)
-    stopVpn()
+    VpnEventLog.log(this, "revoked_by_system")
+    handleRevoked()
     super.onRevoke()
+  }
+
+  /**
+   * O sistema retirou o consentimento da VPN (outra VPN assumiu, usuário desligou
+   * em Configurações, ou battery manager de OEM derrubou). A intenção do usuário
+   * (isBlockingEnabled) é preservada; marcamos revoked e avisamos com notificação
+   * de alta prioridade — o toque abre a Activity, único caminho para re-pedir
+   * o prepare().
+   */
+  private fun handleRevoked() {
+    repository.setRevoked(true)
+    BlockerNotifications.showReactivationNotification(
+      this,
+      "Proteção desativada",
+      "O bloqueio de sites de apostas foi interrompido pelo sistema. Toque para reativar."
+    )
+    stopVpn()
+    stopSelf()
   }
 
   private fun startVpn() {
@@ -120,12 +156,27 @@ class BetBlockerVpnService : VpnService() {
     builder.addDnsServer(FAKE_DNS_SERVER)
 
     // Some apps try IPv6 DNS; explicitly disable by not adding IPv6 routes/dns.
-    tunInterface = builder.establish()
+    tunInterface = try {
+      builder.establish()
+    } catch (e: Exception) {
+      // SecurityException aqui = consentimento revogado entre o kill e o restart
+      // (alarme/boot/worker). Tratar como revoke para notificar o usuário.
+      Log.e(TAG, "establish() failed: ${e.message}")
+      VpnEventLog.log(this, "establish_failed:${e.javaClass.simpleName}")
+      running = false
+      handleRevoked()
+      return
+    }
     if (tunInterface == null) {
       Log.e(TAG, "Failed to establish VPN interface")
+      VpnEventLog.log(this, "establish_returned_null")
       running = false
       return
     }
+
+    // VPN de pé: qualquer alerta de reativação pendente deixou de valer.
+    BlockerNotifications.cancelReactivationNotification(this)
+    VpnEventLog.log(this, "vpn_established")
 
     val fd = tunInterface!!.fileDescriptor
     val input = FileInputStream(fd)
@@ -210,23 +261,41 @@ class BetBlockerVpnService : VpnService() {
   }
 
   private fun scheduleRestart() {
-    val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    val intent = Intent(this, BetBlockerVpnService::class.java)
-    val piFlags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
-    // getForegroundService requer API 26 e dispara startForegroundService, que é
-    // permitido a partir do background — ao contrário de getService/startService.
-    val pi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      PendingIntent.getForegroundService(this, 1, intent, piFlags)
-    } else {
-      PendingIntent.getService(this, 1, intent, piFlags)
+    // Corpo inteiro em try/catch: roda dentro de onDestroy e NUNCA pode crashar
+    // o processo (era o que acontecia com setExactAndAllowWhileIdle sem
+    // SCHEDULE_EXACT_ALARM em API 31+, matando o watchdog silenciosamente).
+    try {
+      val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+      val intent = Intent(this, BetBlockerVpnService::class.java)
+      val piFlags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+      // getForegroundService requer API 26 e dispara startForegroundService, que é
+      // permitido a partir do background — ao contrário de getService/startService.
+      val pi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        PendingIntent.getForegroundService(this, 1, intent, piFlags)
+      } else {
+        PendingIntent.getService(this, 1, intent, piFlags)
+      }
+      val triggerAt = System.currentTimeMillis() + 2000
+      val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
+      if (canExact) {
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+      } else {
+        // Sem SCHEDULE_EXACT_ALARM (negada por padrão em 14+): alarme inexato
+        // while-idle não exige permissão; o VpnHealthWorker cobre o resto.
+        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+      }
+      Log.i(TAG, "Scheduled VPN restart (exact=$canExact)")
+      VpnEventLog.log(this, "restart_alarm_scheduled:exact=$canExact")
+    } catch (e: Exception) {
+      Log.w(TAG, "Failed to schedule restart alarm: ${e.message}")
+      VpnEventLog.log(this, "restart_alarm_failed:${e.javaClass.simpleName}")
     }
-    val triggerAt = System.currentTimeMillis() + 1500
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-    } else {
-      am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+    // Segundo caminho de recuperação, independente do AlarmManager.
+    try {
+      VpnHealthWorker.enqueueExpeditedCheck(applicationContext)
+    } catch (e: Exception) {
+      Log.w(TAG, "Failed to enqueue expedited health check: ${e.message}")
     }
-    Log.i(TAG, "Scheduled VPN restart in 1.5s")
   }
 
   private fun refreshBlocklistIfNeeded() {
@@ -403,7 +472,37 @@ class BetBlockerVpnService : VpnService() {
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .build()
 
-    startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+      // startForeground(id, notification, type) só existe a partir da API 29.
+      startForeground(NOTIF_ID, notification)
+      return
+    }
+
+    // systemExempted é o tipo que o Android reserva para apps de VPN (isento das
+    // restrições de economia de energia), mas só é válido enquanto somos a VPN
+    // autorizada — após um revoke, o fallback é specialUse.
+    val preferredType = if (Build.VERSION.SDK_INT >= 34 && VpnService.prepare(this) == null) {
+      ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+    } else {
+      ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+    }
+    try {
+      startForeground(NOTIF_ID, notification, preferredType)
+    } catch (e: Exception) {
+      Log.w(TAG, "startForeground with type $preferredType failed, falling back: ${e.message}")
+      val fallbackType = if (preferredType == ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE && Build.VERSION.SDK_INT >= 34) {
+        ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+      } else {
+        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+      }
+      try {
+        startForeground(NOTIF_ID, notification, fallbackType)
+      } catch (e2: Exception) {
+        Log.e(TAG, "startForeground fallback also failed: ${e2.message}")
+        VpnEventLog.log(this, "start_foreground_failed:${e2.javaClass.simpleName}")
+        startForeground(NOTIF_ID, notification)
+      }
+    }
   }
 
   companion object {

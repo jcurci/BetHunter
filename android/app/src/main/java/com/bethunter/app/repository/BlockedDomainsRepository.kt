@@ -11,6 +11,17 @@ class BlockedDomainsRepository(private val context: Context) {
 
   fun isBlockingEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
 
+  /**
+   * Revogação pelo sistema (outra VPN assumiu ou consentimento retirado).
+   * Diferente de isBlockingEnabled(), que representa a intenção do usuário e
+   * NÃO deve ser zerada num revoke — reativar exige VpnService.prepare() via Activity.
+   */
+  fun setRevoked(revoked: Boolean) {
+    prefs.edit().putBoolean(KEY_REVOKED, revoked).commit()
+  }
+
+  fun isRevoked(): Boolean = prefs.getBoolean(KEY_REVOKED, false)
+
   fun setBlockedDomains(domains: List<String>) {
     val cleaned = domains
       .mapNotNull { normalizeDomain(it) }
@@ -42,6 +53,7 @@ class BlockedDomainsRepository(private val context: Context) {
   companion object {
     private const val PREFS_NAME = "bet_blocker"
     private const val KEY_ENABLED = "enabled"
+    private const val KEY_REVOKED = "vpn_revoked_pending_reactivation"
     private const val KEY_BLOCKED = "blocked_domains"
     private const val KEY_LAST_FETCH = "last_fetch_timestamp"
     private const val KEY_LOG_ENABLED = "debug_logs_enabled"

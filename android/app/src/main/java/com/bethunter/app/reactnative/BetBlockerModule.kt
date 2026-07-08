@@ -12,10 +12,13 @@ import android.provider.Settings
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.bethunter.app.diagnostics.VpnEventLog
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
 import com.bethunter.app.vpn.BetBlockerVpnService
+import com.bethunter.app.vpn.BlockerNotifications
 import com.bethunter.app.work.BlocklistRefreshWorker
+import com.bethunter.app.work.VpnHealthWorker
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -52,6 +55,8 @@ class BetBlockerModule(
     if (prepareIntent == null) {
       // Permissão já concedida — tenta iniciar imediatamente
       try {
+        repository.setRevoked(false)
+        VpnHealthWorker.schedule(reactContext.applicationContext)
         startVpnService()
         requestBatteryOptimizationExemption()
         promise.resolve(true)
@@ -83,7 +88,10 @@ class BetBlockerModule(
   @ReactMethod
   fun stopBlocking() {
     repository.setBlockingEnabled(false)
+    repository.setRevoked(false)
     BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+    VpnHealthWorker.cancel(reactContext.applicationContext)
+    BlockerNotifications.cancelReactivationNotification(reactContext.applicationContext)
 
     val intent = Intent(reactContext, BetBlockerVpnService::class.java)
     intent.action = BetBlockerVpnService.ACTION_STOP
@@ -111,6 +119,16 @@ class BetBlockerModule(
     val running = isVpnActuallyRunning()
 
     if (stored && !running) {
+      // Consentimento revogado (outra VPN assumiu ou usuário desligou em Config):
+      // blind-start falharia no establish(). A intenção (enabled) é preservada;
+      // resolve false para a UI mostrar desligado e oferecer a reativação, que
+      // passa pelo fluxo do prepare() em startBlocking().
+      if (repository.isRevoked() || VpnService.prepare(reactContext) != null) {
+        Log.w(TAG, "VPN consent missing during sync — user must reactivate")
+        VpnEventLog.log(reactContext.applicationContext, "sync_needs_consent")
+        promise.resolve(false)
+        return
+      }
       Log.w(TAG, "VPN inconsistency detected: stored=true but VPN not running. Attempting restart.")
       try {
         startVpnService()
@@ -119,11 +137,53 @@ class BetBlockerModule(
         Log.e(TAG, "VPN restart failed during sync, rolling back flag", e)
         repository.setBlockingEnabled(false)
         BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+        VpnHealthWorker.cancel(reactContext.applicationContext)
         promise.resolve(false)
       }
     } else {
       promise.resolve(stored)
     }
+  }
+
+  /** true se o app está isento da otimização de bateria (Doze whitelist). */
+  @ReactMethod
+  fun isBatteryOptimizationExempt(promise: Promise) {
+    try {
+      val pm = reactContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+      promise.resolve(pm.isIgnoringBatteryOptimizations(reactContext.packageName))
+    } catch (e: Exception) {
+      promise.reject("BATTERY_CHECK_FAILED", e.message)
+    }
+  }
+
+  /**
+   * Versão promisificada do pedido de isenção: resolve true se o dialog do
+   * sistema foi aberto (o resultado real deve ser re-checado no AppState active).
+   */
+  @ReactMethod
+  fun requestBatteryExemption(promise: Promise) {
+    try {
+      val pm = reactContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+      if (pm.isIgnoringBatteryOptimizations(reactContext.packageName)) {
+        promise.resolve(true)
+        return
+      }
+      val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        data = Uri.parse("package:${reactContext.packageName}")
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+      }
+      reactContext.startActivity(intent)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      Log.w(TAG, "Could not open battery optimization settings: ${e.message}")
+      promise.resolve(false)
+    }
+  }
+
+  /** Timeline de eventos de lifecycle da VPN (JSON string) para diagnóstico. */
+  @ReactMethod
+  fun getVpnEventLog(promise: Promise) {
+    promise.resolve(VpnEventLog.getEventsJson(reactContext.applicationContext))
   }
 
   @ReactMethod
@@ -211,6 +271,8 @@ class BetBlockerModule(
     pendingVpnPromise = null
     if (resultCode == Activity.RESULT_OK) {
       try {
+        repository.setRevoked(false)
+        VpnHealthWorker.schedule(reactContext.applicationContext)
         startVpnService()
         requestBatteryOptimizationExemption()
         p?.resolve(true)

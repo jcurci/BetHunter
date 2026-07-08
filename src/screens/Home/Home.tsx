@@ -110,8 +110,19 @@ const Home: React.FC = () => {
   // Blocker state
   const [isBlockerEnabled, setIsBlockerEnabled] = useState<boolean>(false);
   const [isBlockerLoading, setIsBlockerLoading] = useState<boolean>(false);
+  // true por padrão para não piscar o banner antes da primeira checagem nativa
+  const [isBatteryExempt, setIsBatteryExempt] = useState<boolean>(true);
   const blockingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blockingTimedOutRef = useRef<boolean>(false);
+
+  const checkBatteryExemption = useCallback(async () => {
+    try {
+      if (Platform.OS === "android" && BetBlocker?.isBatteryOptimizationExempt) {
+        const exempt: boolean = await BetBlocker.isBatteryOptimizationExempt();
+        setIsBatteryExempt(exempt);
+      }
+    } catch {}
+  }, []);
 
   const checkBlockerStatus = useCallback(async () => {
     try {
@@ -126,12 +137,13 @@ const Home: React.FC = () => {
         if (enabled && BetBlocker?.refreshBlockedDomains) {
           BetBlocker.refreshBlockedDomains().catch(() => {});
         }
+        checkBatteryExemption();
       } else if (Platform.OS === "ios" && BetBlocking?.isBlockingEnabled) {
         const enabled: boolean = await BetBlocking.isBlockingEnabled();
         setIsBlockerEnabled(enabled);
       }
     } catch {}
-  }, []);
+  }, [checkBatteryExemption]);
 
   useEffect(() => {
     checkBlockerStatus();
@@ -146,12 +158,22 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (Platform.OS !== "android") return;
     const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active" && isBlockerEnabled && BetBlocker?.refreshBlockedDomains) {
-        BetBlocker.refreshBlockedDomains().catch(() => {});
+      if (nextState === "active") {
+        // Re-checa ao voltar de background/configurações para reconciliar
+        // quedas/revogações da VPN com o estado exibido na Home.
+        checkBlockerStatus();
       }
     });
     return () => subscription.remove();
-  }, [isBlockerEnabled]);
+  }, [checkBlockerStatus]);
+
+  const handleRequestBatteryExemption = useCallback(async () => {
+    try {
+      if (BetBlocker?.requestBatteryExemption) {
+        await BetBlocker.requestBatteryExemption();
+      }
+    } catch {}
+  }, []);
 
   // Error modal
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
@@ -726,6 +748,31 @@ const Home: React.FC = () => {
           {renderFreeOfBetDaysDisplay()}
           
           {renderFreeOfBetBox()}
+
+          {/* Aviso: otimização de bateria pode matar a VPN de bloqueio */}
+          {Platform.OS === "android" && isBlockerEnabled && !isBatteryExempt && (
+            <TouchableOpacity
+              style={styles.batteryWarningBanner}
+              onPress={handleRequestBatteryExemption}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons
+                name="battery-alert-variant-outline"
+                size={22}
+                color="#E8B07A"
+              />
+              <View style={styles.batteryWarningTextBox}>
+                <Text style={styles.batteryWarningTitle}>
+                  Proteja o bloqueio contra a economia de bateria
+                </Text>
+                <Text style={styles.batteryWarningDesc}>
+                  O Android pode desligar o bloqueio em segundo plano. Toque para
+                  permitir que o BetHunter continue ativo.
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={22} color="#E8B07A" />
+            </TouchableOpacity>
+          )}
 
           {/* Divider */}
           <View style={styles.dividerTouchable}>
@@ -1359,6 +1406,34 @@ const styles = StyleSheet.create({
   blockChoiceCardMuted: {
     borderColor: "#3A3428",
     backgroundColor: "#121018",
+  },
+  batteryWarningBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#3A3428",
+    backgroundColor: "rgba(232, 176, 122, 0.08)",
+  },
+  batteryWarningTextBox: {
+    flex: 1,
+    minWidth: 0,
+  },
+  batteryWarningTitle: {
+    color: "#E8B07A",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  batteryWarningDesc: {
+    color: "#A09CAB",
+    fontSize: 12,
+    marginTop: 3,
+    lineHeight: 17,
   },
   blockChoiceHeader: {
     flexDirection: "row",

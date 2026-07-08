@@ -56,7 +56,7 @@ class BlocklistRefreshWorker(ctx: Context, params: WorkerParameters) : Worker(ct
         ExistingPeriodicWorkPolicy.KEEP,
         request
       )
-      Log.i(TAG, "Periodic blocklist refresh scheduled (12h)")
+      Log.i(TAG, "Periodic blocklist refresh scheduled (1h)")
     }
 
     fun cancel(context: Context) {
