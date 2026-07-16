@@ -11,8 +11,4 @@ export class AffiliateApi {
     const response = await apiClient.post<ValidateCouponResponse>('/affiliate/validate', { coupon });
     return response.data;
   }
-
-  async linkCoupon(coupon: string): Promise<void> {
-    await apiClient.post('/affiliate/link', { coupon });
-  }
 }

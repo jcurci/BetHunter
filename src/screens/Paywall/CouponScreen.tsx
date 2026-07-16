@@ -49,29 +49,15 @@ const CouponScreen: React.FC = () => {
         setError(result.message || 'Cupom inválido ou não encontrado.');
         return;
       }
-      // Cupom válido: link + RC sync + save em paralelo (independentes entre si)
-      let linkError: unknown = null;
+      // Cupom válido: aplica o atributo na RevenueCat e salva localmente (só para
+      // pré-preencher o campo depois). O vínculo com o afiliado só é criado pelo
+      // backend no webhook de INITIAL_PURCHASE, após a compra ser confirmada.
       await Promise.all([
-        affiliateApi.linkCoupon(code.trim()).catch((e) => { linkError = e; }),
-        applyAndSyncCoupon(true).catch((e) => {
+        applyAndSyncCoupon(true, code.trim()).catch((e) => {
           if (__DEV__) console.warn('[COUPON] applyAndSyncCoupon error', e);
         }),
         AsyncStorage.setItem(AFFILIATE_COUPON_KEY, code.trim()).catch(() => {}),
       ]);
-      if (linkError) {
-        const status = (linkError as any)?.response?.status;
-        if (__DEV__) console.warn(`[COUPON] linkCoupon error (HTTP ${status})`, linkError);
-        if (status === 401) {
-          setError('Sessão expirada. Saia e entre novamente para aplicar o cupom.');
-        } else if (status === 404) {
-          setError('Cupom não encontrado no sistema. Contate o suporte.');
-        } else if (status === 400) {
-          setError('Cupom inativo ou já utilizado por outra conta.');
-        } else {
-          setError('Não foi possível vincular o cupom. Verifique sua conexão e tente novamente.');
-        }
-        return;
-      }
       navigation.replace('Paywall');
     } catch (e: any) {
       if (__DEV__) console.warn('[COUPON] validateCoupon error', e);

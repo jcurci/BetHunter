@@ -4,4 +4,5 @@ import { Dashboard } from '../entities/Dashboard';
 export interface UserRepository {
   getById(userId: string): Promise<UserProfile>;
   loadDashboard(): Promise<Dashboard>;
+  completeOnboarding(): Promise<void>;
 }

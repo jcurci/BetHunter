@@ -4,6 +4,7 @@ import android.content.Context
 
 class BlockedDomainsRepository(private val context: Context) {
   private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+  private val domainsDb = BlockedDomainsDb(context)
 
   fun setBlockingEnabled(enabled: Boolean) {
     prefs.edit().putBoolean(KEY_ENABLED, enabled).commit()
@@ -22,15 +23,34 @@ class BlockedDomainsRepository(private val context: Context) {
 
   fun isRevoked(): Boolean = prefs.getBoolean(KEY_REVOKED, false)
 
+  /** true assim que o usuário tocou no fluxo de pedido de isenção pelo menos uma vez. */
+  fun setBatteryExemptionRequested(requested: Boolean) {
+    prefs.edit().putBoolean(KEY_BATTERY_EXEMPTION_REQUESTED, requested).apply()
+  }
+
+  fun isBatteryExemptionRequested(): Boolean = prefs.getBoolean(KEY_BATTERY_EXEMPTION_REQUESTED, false)
+
+  /**
+   * Timestamp em que o usuário confirmou manualmente ter concedido a isenção
+   * (usado quando a tela do fabricante não propaga para isIgnoringBatteryOptimizations()).
+   * 0L = nunca confirmado.
+   */
+  fun setBatteryWarningConfirmedAt(timestamp: Long) {
+    prefs.edit().putLong(KEY_BATTERY_WARNING_CONFIRMED_AT, timestamp).apply()
+  }
+
+  fun getBatteryWarningConfirmedAt(): Long = prefs.getLong(KEY_BATTERY_WARNING_CONFIRMED_AT, 0L)
+
   fun setBlockedDomains(domains: List<String>) {
     val cleaned = domains
       .mapNotNull { normalizeDomain(it) }
       .toSet()
-    prefs.edit().putStringSet(KEY_BLOCKED, cleaned).apply()
+    domainsDb.replaceAll(cleaned)
   }
 
-  fun getBlockedDomains(): Set<String> =
-    prefs.getStringSet(KEY_BLOCKED, emptySet()) ?: emptySet()
+  fun getBlockedDomains(): Set<String> = domainsDb.getAll()
+
+  fun getBlockedDomainsCount(): Int = domainsDb.count()
 
   fun getLastFetchTimestamp(): Long = prefs.getLong(KEY_LAST_FETCH, 0L)
 
@@ -54,7 +74,8 @@ class BlockedDomainsRepository(private val context: Context) {
     private const val PREFS_NAME = "bet_blocker"
     private const val KEY_ENABLED = "enabled"
     private const val KEY_REVOKED = "vpn_revoked_pending_reactivation"
-    private const val KEY_BLOCKED = "blocked_domains"
+    private const val KEY_BATTERY_EXEMPTION_REQUESTED = "battery_exemption_requested"
+    private const val KEY_BATTERY_WARNING_CONFIRMED_AT = "battery_warning_confirmed_at"
     private const val KEY_LAST_FETCH = "last_fetch_timestamp"
     private const val KEY_LOG_ENABLED = "debug_logs_enabled"
     private const val KEY_ETAG = "blocked_domains_etag"
@@ -86,9 +107,11 @@ class BlockedDomainsRepository(private val context: Context) {
       candidate = candidate
         .removePrefix("https://")
         .removePrefix("http://")
+        .removePrefix("||")
         .removePrefix("*.")
         .removePrefix(".")
         .substringBefore("/")
+        .removeSuffix("^")
         .trimEnd('.')
 
       if (candidate.isBlank()) return null

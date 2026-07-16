@@ -2,7 +2,7 @@
   "expo": {
     "name": "BetHunter",
     "slug": "bethunter",
-    "version": "1.1.1",
+    "version": "1.1.4",
     "orientation": "portrait",
     "icon": "./src/assets/logo-img/logo_full.png",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bethunter.app.rick"
+      "bundleIdentifier": "com.bethunter.app.rick",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +25,7 @@
         "backgroundColor": "#2C1A35"
       },
       "package": "com.bethunter.app",
-      "versionCode": 18
+      "versionCode": 21
     },
     "web": {
       "favicon": "./src/assets/logo-img/logo_full.png"
@@ -35,7 +36,7 @@
       "GOOGLE_WEB_CLIENT_ID": "1058790722417-070a7rh7rib75970luhs57holfd09css.apps.googleusercontent.com",
       "GOOGLE_IOS_CLIENT_ID": "1058790722417-qk1jkb8tg3ark49fmstc2h7pqbtn0ahq.apps.googleusercontent.com",
       "GOOGLE_ANDROID_CLIENT_ID": "1058790722417-ont4hmrcb9babd7t8d2ulv3kq6ond3tp.apps.googleusercontent.com",
-      "REVENUECAT_IOS_API_KEY": "test_XRnfEBeCyBAiAckEbLAdYxjECkJ",
+      "REVENUECAT_IOS_API_KEY": "appl_lHjGlnWAmAnwdzmafcGMbkRGGgw",
       "REVENUECAT_ANDROID_API_KEY": "goog_fNOKXdnJLtOuUGVwnDYUbyphqOH",
       "REVENUECAT_DEFAULT_OFFERING_IDENTIFIER": "default",
       "eas": {

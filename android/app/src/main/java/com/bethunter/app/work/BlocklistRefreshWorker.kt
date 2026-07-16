@@ -20,7 +20,7 @@ class BlocklistRefreshWorker(ctx: Context, params: WorkerParameters) : Worker(ct
   override fun doWork(): Result {
     return try {
       val repo = BlockedDomainsRepository(applicationContext)
-      val manager = BlocklistManager(repo)
+      val manager = BlocklistManager(repo, applicationContext)
       val updated = manager.forceRefresh()
       if (updated) {
         val intent = Intent(applicationContext, BetBlockerVpnService::class.java).apply {

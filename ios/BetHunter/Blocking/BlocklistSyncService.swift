@@ -5,7 +5,7 @@ class BlocklistSyncService {
   static let shared = BlocklistSyncService()
 
   private static let gistURL =
-    "https://gist.github.com/hidekiiwasa/2fb62fe5fa9781f30a369b1fc41e204f/raw/latin_america_blacklist_bets_cassino_brazil.txt"
+    "https://raw.githubusercontent.com/hidekiiwasa/blacklist-cassino/main/latin_america_blacklist_bets_cassino_brazil.txt"
   private static let refreshInterval: TimeInterval = 24 * 60 * 60
 
   private init() {}

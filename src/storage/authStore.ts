@@ -18,7 +18,7 @@ interface AuthStore {
   
   // Actions
   setToken: (token: string) => Promise<void>;
-  setUser: (user: AuthUser) => void;
+  setUser: (user: AuthUser) => Promise<void>;
   login: (token: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
   loadAuth: () => Promise<void>;
@@ -49,8 +49,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ token, isAuthenticated: true });
   },
 
-  setUser: (user: AuthUser) => {
+  setUser: async (user: AuthUser) => {
     set({ user });
+    try {
+      await authStorageService.updateUser(user);
+    } catch (error) {
+      console.error('❌ [AuthStore] Erro ao persistir usuário atualizado:', error);
+    }
   },
 
   /**

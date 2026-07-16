@@ -45,7 +45,7 @@ class BetBlockerVpnService : VpnService() {
   override fun onCreate() {
     super.onCreate()
     repository = BlockedDomainsRepository(applicationContext)
-    blocklistManager = BlocklistManager(repository)
+    blocklistManager = BlocklistManager(repository, applicationContext)
     blocklistManager.ensureBlocklistPresent()
     domainMatcher = DomainMatcher(repository)
     dnsInterceptor = DnsInterceptor(

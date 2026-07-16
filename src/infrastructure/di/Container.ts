@@ -25,6 +25,7 @@ import { FinancialEntryApi } from "../services/FinancialEntry.api";
 
 // User profile imports
 import { GetCurrentUserUseCase } from "../../domain/usercases/GetCurrentUserUseCase";
+import { CompleteOnboardingUseCase } from "../../domain/usercases/CompleteOnboardingUseCase";
 import { LoadDashboardUseCase } from "../../domain/usercases/LoadDashboardUseCase";
 import { UserRepositoryImpl } from "../../domain/data/repositories/UserRepositoryImpl";
 import { UserApi } from "../services/User.api";
@@ -95,6 +96,7 @@ export class Container {
   // User profile
   private getCurrentUserUseCase: GetCurrentUserUseCase | null = null;
   private loadDashboardUseCase: LoadDashboardUseCase | null = null;
+  private completeOnboardingUseCase: CompleteOnboardingUseCase | null = null;
 
   private getCoursesWithProgressUseCase: GetCoursesWithProgressUseCase | null = null;
   private getCourseModulesUseCase: GetCourseModulesUseCase | null = null;
@@ -244,6 +246,15 @@ export class Container {
       this.loadDashboardUseCase = new LoadDashboardUseCase(userRepository);
     }
     return this.loadDashboardUseCase;
+  }
+
+  getCompleteOnboardingUseCase(): CompleteOnboardingUseCase {
+    if (!this.completeOnboardingUseCase) {
+      const userApi = new UserApi();
+      const userRepository = new UserRepositoryImpl(userApi);
+      this.completeOnboardingUseCase = new CompleteOnboardingUseCase(userRepository);
+    }
+    return this.completeOnboardingUseCase;
   }
 
   getGetCoursesWithProgressUseCase(): GetCoursesWithProgressUseCase {

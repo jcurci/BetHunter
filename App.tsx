@@ -57,6 +57,7 @@ import CouponScreen from "./src/screens/Paywall/CouponScreen";
 import { RootStackParamList } from "./src/types/navigation";
 import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardingStorage";
+import { Container } from "./src/infrastructure/di/Container";
 import {
   configureNotifications,
   hasPermission,
@@ -130,7 +131,21 @@ const App: React.FC = () => {
         return;
       }
 
-      const onboardingDone = await isOnboardingFlowCompleted();
+      // OR, não ??: o backend retorna onboarding_completed=false (valor real, não
+      // ausente) pra qualquer usuário que nunca chamou completeOnboarding — inclusive
+      // quem já tinha terminado o onboarding localmente antes desse campo existir.
+      // Um "??" nunca cairia no fallback local nesse caso. Com OR, o dispositivo
+      // também conta como fonte de verdade, e sincronizamos de volta pro backend
+      // quando só o local sabia disso.
+      let onboardingDone = !!user?.onboardingCompleted;
+      if (!onboardingDone) {
+        onboardingDone = await isOnboardingFlowCompleted();
+        if (onboardingDone) {
+          Container.getInstance().getCompleteOnboardingUseCase().execute()
+            .then(() => useAuthStore.getState().setUser({ ...user!, onboardingCompleted: true }))
+            .catch(() => {});
+        }
+      }
       if (!onboardingDone) {
         finishBoot("OnboardingFlow");
         return;

@@ -6,6 +6,7 @@ interface StoredUser {
   email: string;
   points: number;
   betcoins: number;
+  onboardingCompleted?: boolean;
 }
 
 const TOKEN_KEY = '@BetHunter:token';
@@ -74,10 +75,26 @@ export class AuthStorageService {
         email: parsed.email ?? "",
         points: parsed.points ?? 0,
         betcoins: parsed.betcoins ?? 0,
+        // Sem default: undefined preserva o fallback local em App.tsx/Login.tsx
+        // para sessões persistidas antes deste campo existir.
+        onboardingCompleted: parsed.onboardingCompleted,
       };
     } catch (error) {
       console.error('❌ [AuthStorageService] Erro ao buscar usuário:', error);
       return null;
+    }
+  }
+
+  /**
+   * Sobrescreve o usuário salvo (mantém o token intacto). Usado quando algum
+   * campo do usuário muda em memória e precisa sobreviver a um restart do app.
+   */
+  async updateUser(user: StoredUser): Promise<void> {
+    try {
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.error('❌ [AuthStorageService] Erro ao atualizar usuário:', error);
+      throw error;
     }
   }
 

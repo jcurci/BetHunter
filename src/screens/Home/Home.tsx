@@ -109,9 +109,16 @@ const Home: React.FC = () => {
 
   // Blocker state
   const [isBlockerEnabled, setIsBlockerEnabled] = useState<boolean>(false);
+  const [isDeviceAdminActive, setIsDeviceAdminActive] = useState<boolean>(false);
+  const [isRequestingDeviceAdmin, setIsRequestingDeviceAdmin] = useState<boolean>(false);
   const [isBlockerLoading, setIsBlockerLoading] = useState<boolean>(false);
   // true por padrão para não piscar o banner antes da primeira checagem nativa
   const [isBatteryExempt, setIsBatteryExempt] = useState<boolean>(true);
+  const [hasRequestedBatteryExemptionBefore, setHasRequestedBatteryExemptionBefore] =
+    useState<boolean>(false);
+  const [isBatteryWarningSuppressed, setIsBatteryWarningSuppressed] = useState<boolean>(false);
+  const [isXiaomi, setIsXiaomi] = useState<boolean>(false);
+  const [showBatteryHintModal, setShowBatteryHintModal] = useState<boolean>(false);
   const blockingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blockingTimedOutRef = useRef<boolean>(false);
 
@@ -121,19 +128,53 @@ const Home: React.FC = () => {
         const exempt: boolean = await BetBlocker.isBatteryOptimizationExempt();
         setIsBatteryExempt(exempt);
       }
+      if (Platform.OS === "android" && BetBlocker?.isBatteryExemptionRequested) {
+        const requested: boolean = await BetBlocker.isBatteryExemptionRequested();
+        setHasRequestedBatteryExemptionBefore(requested);
+      }
+      if (Platform.OS === "android" && BetBlocker?.isBatteryWarningSuppressed) {
+        const suppressed: boolean = await BetBlocker.isBatteryWarningSuppressed();
+        setIsBatteryWarningSuppressed(suppressed);
+      }
+      if (Platform.OS === "android" && BetBlocker?.getManufacturerInfo) {
+        const info: { isXiaomi: boolean } = await BetBlocker.getManufacturerInfo();
+        setIsXiaomi(!!info?.isXiaomi);
+      }
+    } catch {}
+  }, []);
+
+  const checkProtectionStatus = useCallback(async () => {
+    try {
+      if (Platform.OS !== "android" || !BetBlocker?.getProtectionStatus) return;
+      const status: { vpnEnabled?: boolean; deviceAdminActive?: boolean } =
+        await BetBlocker.getProtectionStatus();
+      if (typeof status?.vpnEnabled === "boolean") {
+        setIsBlockerEnabled(status.vpnEnabled);
+      }
+      if (typeof status?.deviceAdminActive === "boolean") {
+        setIsDeviceAdminActive(status.deviceAdminActive);
+      }
+      return status;
     } catch {}
   }, []);
 
   const checkBlockerStatus = useCallback(async () => {
     try {
       if (Platform.OS === "android" && BetBlocker) {
-        // checkAndSyncBlockingStatus verifica o estado real da VPN no Android e
-        // reinicia automaticamente se há inconsistência (ex: após update do app).
-        // Fallback para isBlockingEnabled em versões antigas do módulo nativo.
-        const enabled: boolean = BetBlocker.checkAndSyncBlockingStatus
-          ? await BetBlocker.checkAndSyncBlockingStatus()
-          : await BetBlocker.isBlockingEnabled();
-        setIsBlockerEnabled(enabled);
+        let enabled = false;
+        if (BetBlocker.getProtectionStatus) {
+          const status = await BetBlocker.getProtectionStatus();
+          enabled = !!status?.vpnEnabled;
+          setIsBlockerEnabled(enabled);
+          setIsDeviceAdminActive(!!status?.deviceAdminActive);
+        } else {
+          // checkAndSyncBlockingStatus verifica o estado real da VPN no Android e
+          // reinicia automaticamente se há inconsistência (ex: após update do app).
+          enabled = BetBlocker.checkAndSyncBlockingStatus
+            ? await BetBlocker.checkAndSyncBlockingStatus()
+            : await BetBlocker.isBlockingEnabled();
+          setIsBlockerEnabled(enabled);
+        }
         if (enabled && BetBlocker?.refreshBlockedDomains) {
           BetBlocker.refreshBlockedDomains().catch(() => {});
         }
@@ -174,6 +215,56 @@ const Home: React.FC = () => {
       }
     } catch {}
   }, []);
+
+  const handleBatteryBannerPress = useCallback(() => {
+    setShowBatteryHintModal(true);
+  }, []);
+
+  const handleConfirmBatteryHint = useCallback(async () => {
+    setShowBatteryHintModal(false);
+    await handleRequestBatteryExemption();
+  }, [handleRequestBatteryExemption]);
+
+  const handleConfirmBatteryExceptionManually = useCallback(async () => {
+    try {
+      if (BetBlocker?.confirmBatteryExceptionManually) {
+        await BetBlocker.confirmBatteryExceptionManually();
+      }
+      setIsBatteryWarningSuppressed(true);
+    } catch {}
+  }, []);
+
+  const handleOpenAutoStartSettings = useCallback(async () => {
+    try {
+      if (BetBlocker?.openAutoStartSettings) {
+        await BetBlocker.openAutoStartSettings();
+      }
+    } catch {}
+  }, []);
+
+  const handleOpenVpnSettings = useCallback(async () => {
+    try {
+      if (BetBlocker?.openVpnSettings) {
+        await BetBlocker.openVpnSettings();
+      }
+    } catch {}
+  }, []);
+
+  const handleRequestDeviceAdmin = useCallback(async () => {
+    if (Platform.OS !== "android" || !BetBlocker?.requestDeviceAdmin) return;
+    setIsRequestingDeviceAdmin(true);
+    try {
+      const accepted: boolean = await BetBlocker.requestDeviceAdmin();
+      await checkProtectionStatus();
+      if (accepted) {
+        setShowBlockSuccessModal(false);
+      }
+    } catch {
+      triggerError("Não foi possível ativar a proteção contra remoção. Tente novamente.");
+    } finally {
+      setIsRequestingDeviceAdmin(false);
+    }
+  }, [checkProtectionStatus]);
 
   // Error modal
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
@@ -336,16 +427,6 @@ const Home: React.FC = () => {
     }
   }, [showResetConfirmModal]);
 
-  // Auto-close block success modal after 3 seconds
-  useEffect(() => {
-    if (showBlockSuccessModal) {
-      const timer = setTimeout(() => {
-        setShowBlockSuccessModal(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showBlockSuccessModal]);
-
   // Cleanup do timeout de segurança da VPN ao desmontar o componente
   useEffect(() => {
     return () => {
@@ -463,6 +544,9 @@ const Home: React.FC = () => {
       if (granted) {
         setIsBlockerEnabled(true);
         setShowBlockSuccessModal(true);
+        if (BetBlocker?.requestDeviceAdmin && !isDeviceAdminActive) {
+          handleRequestDeviceAdmin();
+        }
       } else {
         Alert.alert(
           "Permissão necessária",
@@ -749,30 +833,92 @@ const Home: React.FC = () => {
           
           {renderFreeOfBetBox()}
 
-          {/* Aviso: otimização de bateria pode matar a VPN de bloqueio */}
-          {Platform.OS === "android" && isBlockerEnabled && !isBatteryExempt && (
-            <TouchableOpacity
-              style={styles.batteryWarningBanner}
-              onPress={handleRequestBatteryExemption}
-              activeOpacity={0.85}
-            >
-              <MaterialCommunityIcons
-                name="battery-alert-variant-outline"
-                size={22}
-                color="#E8B07A"
-              />
-              <View style={styles.batteryWarningTextBox}>
-                <Text style={styles.batteryWarningTitle}>
-                  Proteja o bloqueio contra a economia de bateria
-                </Text>
-                <Text style={styles.batteryWarningDesc}>
-                  O Android pode desligar o bloqueio em segundo plano. Toque para
-                  permitir que o BetHunter continue ativo.
+          {/* Reforço: proteção contra remoção (Device Admin) */}
+          {Platform.OS === "android" &&
+            isBlockerEnabled &&
+            !isDeviceAdminActive && (
+              <TouchableOpacity
+                style={styles.removalProtectionBanner}
+                onPress={handleRequestDeviceAdmin}
+                activeOpacity={0.85}
+                disabled={isRequestingDeviceAdmin}
+              >
+                <MaterialCommunityIcons
+                  name="shield-lock-outline"
+                  size={22}
+                  color="#C9A7E8"
+                />
+                <View style={styles.batteryWarningTextBox}>
+                  <Text style={styles.removalProtectionTitle}>
+                    Reforce: ative a proteção contra remoção
+                  </Text>
+                  <Text style={styles.batteryWarningDesc}>
+                    Impede desinstalar o BetHunter enquanto o bloqueio estiver ativo.
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={22} color="#C9A7E8" />
+              </TouchableOpacity>
+            )}
+
+          {/* Selo: proteção contra remoção ativa */}
+          {Platform.OS === "android" &&
+            isBlockerEnabled &&
+            isDeviceAdminActive && (
+              <View style={styles.removalProtectionActiveBadge}>
+                <MaterialCommunityIcons
+                  name="shield-check"
+                  size={20}
+                  color="#7BE8A7"
+                />
+                <Text style={styles.removalProtectionActiveText}>
+                  Proteção contra remoção ativa
                 </Text>
               </View>
-              <Icon name="chevron-right" size={22} color="#E8B07A" />
-            </TouchableOpacity>
-          )}
+            )}
+
+          {/* Aviso: otimização de bateria pode matar a VPN de bloqueio */}
+          {Platform.OS === "android" &&
+            isBlockerEnabled &&
+            !isBatteryExempt &&
+            !isBatteryWarningSuppressed && (
+              <>
+                <TouchableOpacity
+                  style={styles.batteryWarningBanner}
+                  onPress={handleBatteryBannerPress}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons
+                    name="battery-alert-variant-outline"
+                    size={22}
+                    color="#E8B07A"
+                  />
+                  <View style={styles.batteryWarningTextBox}>
+                    <Text style={styles.batteryWarningTitle}>
+                      {hasRequestedBatteryExemptionBefore
+                        ? "Ainda não protegido"
+                        : "Proteja o bloqueio contra a economia de bateria"}
+                    </Text>
+                    <Text style={styles.batteryWarningDesc}>
+                      {hasRequestedBatteryExemptionBefore
+                        ? "Na tela de bateria do seu aparelho, escolha 'Sem restrições' para o BetHunter."
+                        : "O Android pode desligar o bloqueio em segundo plano. Toque para permitir que o BetHunter continue ativo."}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-right" size={22} color="#E8B07A" />
+                </TouchableOpacity>
+                {hasRequestedBatteryExemptionBefore && (
+                  <TouchableOpacity
+                    style={styles.batteryWarningManualLink}
+                    onPress={handleConfirmBatteryExceptionManually}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.batteryWarningManualLinkText}>
+                      Já configurei, mas o aviso continua aparecendo
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
 
           {/* Divider */}
           <View style={styles.dividerTouchable}>
@@ -899,13 +1045,27 @@ const Home: React.FC = () => {
                     </Text>
                     <Text style={styles.blockChoiceDesc}>
                       {isBlockerEnabled
-                        ? "O bloqueio está ativo neste dispositivo e não pode ser desativado."
+                        ? isDeviceAdminActive
+                          ? "O bloqueio e a proteção contra remoção estão ativos neste dispositivo."
+                          : "O bloqueio está ativo neste dispositivo e não pode ser desativado pelo app."
                         : Platform.OS === "ios"
                         ? "Abre Tempo de Uso para escolher apps e aplicar bloqueios."
                         : "Instalação do perfil VPN para filtrar sites de apostas no dispositivo."}
                     </Text>
                   </View>
                 </View>
+                {isBlockerEnabled && isDeviceAdminActive && (
+                  <View style={styles.blockChoiceAdminBadge}>
+                    <MaterialCommunityIcons
+                      name="shield-check"
+                      size={16}
+                      color="#7BE8A7"
+                    />
+                    <Text style={styles.blockChoiceAdminBadgeText}>
+                      Proteção contra remoção ativa
+                    </Text>
+                  </View>
+                )}
                 {!isBlockerEnabled && (
                   <GradientBorderButton
                     label={
@@ -1046,6 +1206,41 @@ const Home: React.FC = () => {
         </View>
       </Modal>
 
+      {/* Modal de Instrução - Isenção de bateria */}
+      <Modal
+        visible={showBatteryHintModal}
+        onClose={() => setShowBatteryHintModal(false)}
+        size="small"
+        title="Antes de continuar"
+        subtitle="Na próxima tela, escolha a opção 'Sem restrições' (pode aparecer como 'Nenhuma restrição' ou 'Permitir'). Isso garante que o bloqueio continue ativo mesmo com o app em segundo plano.
+
+Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o cadeado para travá-lo — assim a limpeza de memória do aparelho não fecha o app."
+      >
+        <View style={styles.blockModalContent}>
+          <GradientBorderButton label="Entendi, continuar" onPress={handleConfirmBatteryHint} />
+          {isXiaomi && (
+            <TouchableOpacity
+              style={styles.batteryWarningManualLink}
+              onPress={handleOpenAutoStartSettings}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.batteryWarningManualLinkText}>
+                Ativar Início automático (MIUI)
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.batteryWarningManualLink}
+            onPress={handleOpenVpnSettings}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.batteryWarningManualLinkText}>
+              Ativar VPN sempre ativa (proteção mais forte)
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {/* Modal de Bloqueio Sucesso - Menor */}
       <Modal
         visible={showBlockSuccessModal}
@@ -1055,7 +1250,19 @@ const Home: React.FC = () => {
         subtitle="Bloqueamos apps e sites de aposta, para você usar seu dispositivo tranquilo."
         showCloseButton={false}
       >
-        <View style={styles.resetConfirmModalContent} />
+        <View style={styles.blockModalContent}>
+          {Platform.OS === "android" && !isDeviceAdminActive && (
+            <Text style={styles.blockSuccessHint}>
+              Ativando também a proteção contra remoção, para impedir desinstalar o
+              BetHunter enquanto o bloqueio estiver ativo.
+            </Text>
+          )}
+          <GradientBorderButton
+            label="Fechar"
+            onPress={() => setShowBlockSuccessModal(false)}
+            disabled={isRequestingDeviceAdmin}
+          />
+        </View>
       </Modal>
 
       {/* Modal de Check-in (Apostou / Não apostei) */}
@@ -1419,6 +1626,65 @@ const styles = StyleSheet.create({
     borderColor: "#3A3428",
     backgroundColor: "rgba(232, 176, 122, 0.08)",
   },
+  removalProtectionBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#3A2F4A",
+    backgroundColor: "rgba(168, 120, 220, 0.08)",
+  },
+  removalProtectionTitle: {
+    color: "#C9A7E8",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  removalProtectionActiveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "center",
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(123, 232, 167, 0.35)",
+    backgroundColor: "rgba(123, 232, 167, 0.1)",
+  },
+  removalProtectionActiveText: {
+    color: "#7BE8A7",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  blockChoiceAdminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(123, 232, 167, 0.1)",
+    alignSelf: "flex-start",
+  },
+  blockChoiceAdminBadgeText: {
+    color: "#7BE8A7",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  blockSuccessHint: {
+    color: "#A09CAB",
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+    textAlign: "center",
+  },
   batteryWarningTextBox: {
     flex: 1,
     minWidth: 0,
@@ -1434,6 +1700,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 3,
     lineHeight: 17,
+  },
+  batteryWarningManualLink: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    alignSelf: "flex-start",
+  },
+  batteryWarningManualLinkText: {
+    color: "#A09CAB",
+    fontSize: 12,
+    textDecorationLine: "underline",
   },
   blockChoiceHeader: {
     flexDirection: "row",

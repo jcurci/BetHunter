@@ -24,9 +24,17 @@ export function clearPendingCoupon(): void {
 /**
  * Define o atributo de cupom e força um fetch fresco dos offerings com
  * Targeting reavaliado. Deve ser chamado antes de navegar para o Paywall.
+ *
+ * `couponCode` vira o subscriber attribute `affiliate_coupon` na RevenueCat —
+ * é dali que o backend extrai o cupom no webhook de INITIAL_PURCHASE, só
+ * depois que a compra é confirmada (o vínculo com o afiliado não é criado
+ * antes disso).
  */
-export async function applyAndSyncCoupon(withCoupon: boolean): Promise<void> {
-  await Purchases.setAttributes({ cupom_ativo: withCoupon ? 'true' : 'false' });
+export async function applyAndSyncCoupon(withCoupon: boolean, couponCode?: string): Promise<void> {
+  await Purchases.setAttributes({
+    cupom_ativo: withCoupon ? 'true' : 'false',
+    affiliate_coupon: withCoupon && couponCode ? couponCode.toUpperCase() : '',
+  });
   pendingCouponOffering = withCoupon;
   try {
     await Purchases.syncAttributesAndOfferingsIfNeeded();
@@ -36,19 +44,33 @@ export async function applyAndSyncCoupon(withCoupon: boolean): Promise<void> {
   }
 }
 
+function isValidRevenueCatApiKey(apiKey: string, platform: typeof Platform.OS): boolean {
+  if (!apiKey) return false;
+  if (apiKey.startsWith('test_')) return __DEV__;
+  if (platform === 'ios') return apiKey.startsWith('appl_');
+  if (platform === 'android') return apiKey.startsWith('goog_');
+  return false;
+}
+
 export async function initRevenueCat(): Promise<void> {
   if (isConfigured) return;
 
   const apiKey =
     Platform.OS === 'ios' ? ENV.REVENUECAT_IOS_API_KEY : ENV.REVENUECAT_ANDROID_API_KEY;
 
-  if (!apiKey && __DEV__) {
+  if (!isValidRevenueCatApiKey(apiKey, Platform.OS)) {
+    const hint =
+      Platform.OS === 'ios'
+        ? 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY (appl_…)'
+        : 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY (goog_…)';
     console.warn(
-      `[REVENUECAT] Chave SDK em falta (${Platform.OS}). Defina EXPO_PUBLIC_REVENUECAT_${Platform.OS === 'ios' ? 'IOS' : 'ANDROID'}_API_KEY ou EXPO_PUBLIC_REVENUECAT_API_KEY.`,
+      `[REVENUECAT] Chave SDK inválida ou ausente (${Platform.OS}). ` +
+        `Em Release/use loja, use ${hint}. configure() foi ignorado para evitar crash nativo com test_/vazia.`,
     );
+    return;
   }
 
-  Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+  Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.INFO);
 
   Purchases.configure({
     apiKey,

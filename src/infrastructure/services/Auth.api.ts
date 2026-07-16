@@ -32,6 +32,7 @@ export class AuthApi {
               email: dataUser.email ?? '',
               energy: dataUser.energy,
               app_streak: dataUser.app_streak,
+              onboarding_completed: dataUser.onboarding_completed ?? false,
             }
           : undefined;
 
@@ -75,6 +76,7 @@ export class AuthApi {
               email: dataUser.email ?? '',
               energy: dataUser.energy,
               app_streak: dataUser.app_streak,
+              onboarding_completed: dataUser.onboarding_completed ?? false,
             }
           : undefined;
 

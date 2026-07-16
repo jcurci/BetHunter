@@ -14,9 +14,12 @@ function resolveApiBaseUrl(): string {
     return 'http://127.0.0.1:3000';
   }
 
-  throw new Error(
-    '[ENV] API_BASE_URL não configurada para produção. Defina EXPO_PUBLIC_API_BASE_URL.',
+  // Soft-fail: throw no import derruba o app no launch (App Store Review).
+  // Requests falham de forma controlada na camada de API.
+  console.warn(
+    '[ENV] API_BASE_URL não configurada para produção. Defina EXPO_PUBLIC_API_BASE_URL no build.',
   );
+  return '';
 }
 
 function resolveGoogleWebClientId(): string {

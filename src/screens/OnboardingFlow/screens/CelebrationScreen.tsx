@@ -34,6 +34,7 @@ import { useAuthStore } from '../../../storage/authStore';
 import { identifyUser, applyAndSyncCoupon, getPaywallOffering } from '../../../services/revenueCat';
 import { setOnboardingFlowCompleted } from '../onboardingStorage';
 import { AffiliateApi } from '../../../infrastructure/services/Affiliate.api';
+import { Container } from '../../../infrastructure/di/Container';
 
 const affiliateApi = new AffiliateApi();
 const AFFILIATE_COUPON_KEY = '@bethunter_affiliate_coupon';
@@ -48,6 +49,23 @@ type Props = {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CONFETTI_COUNT = 50;
 const CONFETTI_COLORS = ['#D783D8', '#34C759', '#FFD866', '#6366F1', '#FF6A56', '#7456C8', '#FF90A5', '#00C9FF'];
+
+/**
+ * Marca o onboarding como concluído no backend (fonte de verdade entre dispositivos).
+ * Não bloqueia a navegação em caso de falha — a flag local do AsyncStorage
+ * (setOnboardingFlowCompleted) já garante que este aparelho não repita o fluxo.
+ */
+async function persistOnboardingCompletedRemote(): Promise<void> {
+  try {
+    await Container.getInstance().getCompleteOnboardingUseCase().execute();
+    const { user, setUser } = useAuthStore.getState();
+    if (user) {
+      await setUser({ ...user, onboardingCompleted: true });
+    }
+  } catch (error) {
+    console.warn('[ONBOARDING] Falha ao marcar onboarding concluído no servidor', error);
+  }
+}
 
 function ConfettiPiece({ delay, color, startX }: { delay: number; color: string; startX: number }) {
   const fallAnim = useRef(new Animated.Value(0)).current;
@@ -182,7 +200,7 @@ const StatBubble: React.FC<StatBubbleProps> = ({ value, label, icon, color, bgCo
             // @ts-ignore
             borderRadius={18}
           />
-          <Text style={styles.statIcon}>{icon}</Text>
+          <Icon name={icon} size={20} color={color} />
           <Text style={[styles.statValue, { color }]}>{value}</Text>
           <Text style={styles.statLabel}>{label}</Text>
         </Animated.View>
@@ -335,6 +353,7 @@ export const CelebrationScreen: React.FC<Props> = ({
         await AsyncStorage.removeItem(AFFILIATE_COUPON_KEY);
       } catch {}
       await setOnboardingFlowCompleted();
+      await persistOnboardingCompletedRemote();
       setShowingPaywall(false);
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch {
@@ -348,6 +367,7 @@ export const CelebrationScreen: React.FC<Props> = ({
 
   const handleGoToLogin = async () => {
     await setOnboardingFlowCompleted();
+    await persistOnboardingCompletedRemote();
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
@@ -381,26 +401,14 @@ export const CelebrationScreen: React.FC<Props> = ({
           return;
         }
 
-        // Salva o cupom localmente (garantia para o link pós-login)
+        // Salva o cupom localmente (só para pré-preencher o campo se o usuário voltar a esta tela)
         await AsyncStorage.setItem(AFFILIATE_COUPON_KEY, couponCode.trim()).catch(() => {});
 
-        // Aplica o atributo no RevenueCat (não depende de autenticação)
-        await applyAndSyncCoupon(true).catch((e) => {
+        // Aplica o atributo na RevenueCat — o vínculo com o afiliado só é criado
+        // pelo backend no webhook de INITIAL_PURCHASE, após a compra ser confirmada.
+        await applyAndSyncCoupon(true, couponCode.trim()).catch((e) => {
           if (__DEV__) console.warn('[COUPON] applyAndSyncCoupon error', e);
         });
-
-        // Só tenta linkar se o usuário já está autenticado
-        const { user } = useAuthStore.getState();
-        if (user?.id) {
-          try {
-            await affiliateApi.linkCoupon(couponCode.trim());
-          } catch (e: any) {
-            const status = e?.response?.status;
-            if (__DEV__) console.warn(`[COUPON] linkCoupon error (HTTP ${status})`, e);
-            // Não bloqueia — cupom está salvo no AsyncStorage para retentar após login
-          }
-        }
-        // Se não autenticado: cupom ficou no AsyncStorage, será linkado após o login
       } else {
         await applyAndSyncCoupon(false).catch((e) => {
           if (__DEV__) console.warn('[COUPON] applyAndSyncCoupon(false) error', e);
@@ -457,7 +465,7 @@ export const CelebrationScreen: React.FC<Props> = ({
         style={styles.couponContainer}
       >
         <View style={styles.couponContent}>
-          <Text style={styles.couponEmoji}>🎟️</Text>
+          <Icon name="tag" size={48} color="#D783D8" />
           <Text style={styles.couponTitle}>Tem um cupom?</Text>
           <Text style={styles.couponSubtitle}>
             Digite seu código para obter um desconto especial
@@ -574,7 +582,7 @@ export const CelebrationScreen: React.FC<Props> = ({
                 ],
               }}
             >
-              <Text style={styles.heroEmoji}>🎉</Text>
+              <Icon name="gift" size={56} color="#D783D8" />
             </Animated.View>
 
             <Animated.View
@@ -593,7 +601,7 @@ export const CelebrationScreen: React.FC<Props> = ({
             <StatBubble
               value={`+${betcoinsEarned}`}
               label="Betcoins"
-              icon="🪙"
+              icon="dollar-sign"
               color="#FFD866"
               bgColor="rgba(255,216,102,0.12)"
               delay={380}
@@ -601,7 +609,7 @@ export const CelebrationScreen: React.FC<Props> = ({
             <StatBubble
               value={`+${xpEarned}`}
               label="XP"
-              icon="⚡"
+              icon="zap"
               color="#6366F1"
               bgColor="rgba(99,102,241,0.12)"
               delay={520}
@@ -609,7 +617,7 @@ export const CelebrationScreen: React.FC<Props> = ({
             <StatBubble
               value={`${streak}`}
               label="Streak"
-              icon="🔥"
+              icon="trending-up"
               color="#FF6A56"
               bgColor="rgba(255,106,86,0.12)"
               delay={660}
@@ -657,7 +665,7 @@ export const CelebrationScreen: React.FC<Props> = ({
                 </Text>
                 <Text style={styles.rankingSubtext}>entre novos usuários de hoje</Text>
               </View>
-              <Text style={styles.rankingTrophy}>🏆</Text>
+              <Icon name="award" size={28} color="#34C759" />
             </LinearGradient>
           </Animated.View>
         </ScrollView>
@@ -707,9 +715,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(215,131,216,0.2)',
     overflow: 'hidden',
   },
-  heroEmoji: {
-    fontSize: 64,
-  },
   heroTitle: {
     fontSize: 32,
     fontWeight: '800',
@@ -746,9 +751,6 @@ const styles = StyleSheet.create({
     gap: 5,
     overflow: 'hidden',
     backgroundColor: '#16141F',
-  },
-  statIcon: {
-    fontSize: 20,
   },
   statValue: {
     fontSize: 22,
@@ -840,10 +842,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#34C759',
   },
-  rankingTrophy: {
-    fontSize: 28,
-  },
-
   // Bottom bar
   bottomBar: {
     paddingBottom: 36,
@@ -885,10 +883,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 28,
     gap: 16,
-  },
-  couponEmoji: {
-    fontSize: 60,
-    marginBottom: 4,
   },
   couponTitle: {
     fontSize: 28,

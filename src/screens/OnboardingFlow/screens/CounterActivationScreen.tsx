@@ -8,6 +8,7 @@ import {
   Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/Feather';
 import { useOnboarding } from '../OnboardingContext';
 import { OnboardingLayout } from './OnboardingLayout';
 import {
@@ -239,14 +240,14 @@ export const CounterActivationScreen: React.FC<Props> = ({
           style={[styles.motivationRow, { opacity: messageFade }]}
         >
           {[
-            { emoji: '🧠', text: 'Clareza mental' },
-            { emoji: '💰', text: 'Economia real' },
-            { emoji: '❤️', text: 'Saúde emocional' },
+            { iconName: 'sun', color: '#FFD866', text: 'Clareza mental' },
+            { iconName: 'dollar-sign', color: '#34C759', text: 'Economia real' },
+            { iconName: 'heart', color: '#FF6A56', text: 'Saúde emocional' },
           ].map((item, i) => (
             <React.Fragment key={i}>
               {i > 0 && <View style={styles.motivationDivider} />}
               <View style={styles.motivationItem}>
-                <Text style={styles.motivationEmoji}>{item.emoji}</Text>
+                <Icon name={item.iconName} size={20} color={item.color} />
                 <Text style={styles.motivationText}>{item.text}</Text>
               </View>
             </React.Fragment>
@@ -264,7 +265,8 @@ export const CounterActivationScreen: React.FC<Props> = ({
               end={{ x: 1, y: 0 }}
               style={styles.startButton}
             >
-              <Text style={styles.startButtonText}>🚀  Começar minha jornada</Text>
+              <Icon name="send" size={18} color="#FFFFFF" />
+              <Text style={styles.startButtonText}>Começar minha jornada</Text>
             </LinearGradient>
           </TouchableOpacity>
         ) : (
@@ -395,9 +397,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  motivationEmoji: {
-    fontSize: 22,
-  },
   motivationText: {
     fontSize: 12,
     color: '#8A8595',
@@ -416,8 +415,10 @@ const styles = StyleSheet.create({
   startButton: {
     borderRadius: 999,
     paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
   startButtonText: {
     color: '#FFFFFF',

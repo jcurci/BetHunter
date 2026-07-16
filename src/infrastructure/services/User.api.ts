@@ -108,4 +108,21 @@ export class UserApi {
       throw new AuthenticationError(`Erro ao buscar dashboard (${error.response.status}). Tente novamente.`);
     }
   }
+
+  async completeOnboarding(): Promise<void> {
+    try {
+      const url = '/users/onboarding-complete';
+      console.log('🔗 UserApi.completeOnboarding - Fazendo requisição POST para:', url);
+
+      await apiClient.post(url);
+    } catch (error: any) {
+      console.error('🚨 UserApi.completeOnboarding - Erro detalhado:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        isNetworkError: !error.response,
+      });
+      throw error;
+    }
+  }
 }

@@ -144,7 +144,22 @@ const Login: React.FC = () => {
     // decision reflects the actual subscription status from RevenueCat servers.
     await waitForRCSync(3000);
 
-    const onboardingDone = await isOnboardingFlowCompleted();
+    // OR, não ??: o backend retorna onboarding_completed=false (valor real, não
+    // ausente) pra qualquer usuário que nunca chamou completeOnboarding — inclusive
+    // quem já tinha terminado o onboarding localmente antes desse campo existir.
+    // Um "??" nunca cairia no fallback local nesse caso. Com OR, o dispositivo
+    // também conta como fonte de verdade, e sincronizamos de volta pro backend
+    // quando só o local sabia disso.
+    let onboardingDone = !!useAuthStore.getState().user?.onboardingCompleted;
+    if (!onboardingDone) {
+      onboardingDone = await isOnboardingFlowCompleted();
+      if (onboardingDone) {
+        const { user: currentUser, setUser } = useAuthStore.getState();
+        Container.getInstance().getCompleteOnboardingUseCase().execute()
+          .then(() => currentUser && setUser({ ...currentUser, onboardingCompleted: true }))
+          .catch(() => {});
+      }
+    }
     if (!onboardingDone) return "OnboardingFlow";
 
     const { isPremium } = useSubscriptionStore.getState();
@@ -181,6 +196,7 @@ const Login: React.FC = () => {
           email: session.user.email,
           points: session.user.energy ?? 0,
           betcoins: 0,
+          onboardingCompleted: session.user.onboarding_completed ?? false,
         };
         await authStore.login(session.accessToken, userMapeado);
         userId = session.user.id;
@@ -228,6 +244,7 @@ const Login: React.FC = () => {
           email: session.user.email,
           points: session.user.energy ?? 0,
           betcoins: 0,
+          onboardingCompleted: session.user.onboarding_completed ?? false,
         };
         await authStore.login(session.accessToken, userMapeado);
         userId = session.user.id;

@@ -7,6 +7,7 @@ export interface LoginUser {
   email: string;
   energy?: number;
   app_streak?: number;
+  onboarding_completed?: boolean;
 }
 
 export interface AuthSession {

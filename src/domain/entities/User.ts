@@ -7,4 +7,6 @@ export interface AuthUser {
   email: string;
   points: number;
   betcoins: number;
+  /** undefined = sessão antiga persistida antes do rollout deste campo; usar fallback local. */
+  onboardingCompleted?: boolean;
 }

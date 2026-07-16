@@ -11,4 +11,8 @@ export class UserRepositoryImpl implements UserRepository {
   async loadDashboard() {
     return await this.userApi.getDashboard();
   }
+
+  async completeOnboarding() {
+    return await this.userApi.completeOnboarding();
+  }
 }
