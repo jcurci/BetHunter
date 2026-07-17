@@ -26,10 +26,14 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import android.content.pm.ServiceInfo
 import java.net.DatagramPacket
+import com.bethunter.app.BuildConfig
 
 class BetBlockerVpnService : VpnService() {
   @Volatile private var running = false
@@ -42,12 +46,28 @@ class BetBlockerVpnService : VpnService() {
   private lateinit var domainMatcher: DomainMatcher
   private lateinit var dnsInterceptor: DnsInterceptor
 
+  // Executor serial dedicado a trabalho pesado de DB/trie (reload da blocklist,
+  // seed inicial). NUNCA rodar isso na main thread: a trie é reconstruída a partir
+  // de uma varredura de ~300k linhas do SQLite e travava o app (ANR) quando vários
+  // reloads chegavam em rajada. `reloadDirty` coalesce rajadas em 1–2 rebuilds.
+  private val reloadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+  @Volatile private var reloadDirty = false
+
   override fun onCreate() {
     super.onCreate()
     repository = BlockedDomainsRepository(applicationContext)
     blocklistManager = BlocklistManager(repository, applicationContext)
-    blocklistManager.ensureBlocklistPresent()
     domainMatcher = DomainMatcher(repository)
+    // Seed inicial da blocklist (query count() + possível insert de defaults) fora da
+    // main thread. domainMatcher só lê o DB no primeiro pacote/reload, e o executor é
+    // serial, então este seed roda antes de qualquer reload subsequente.
+    reloadExecutor.execute {
+      try {
+        blocklistManager.ensureBlocklistPresent()
+      } catch (e: Exception) {
+        Log.w(TAG, "ensureBlocklistPresent failed: ${e.message}")
+      }
+    }
     dnsInterceptor = DnsInterceptor(
       domainMatcher = domainMatcher,
       protect = { socket: DatagramSocket -> protect(socket) }
@@ -79,11 +99,7 @@ class BetBlockerVpnService : VpnService() {
 
     if (intent?.action == ACTION_RELOAD) {
       Log.i(TAG, "Reload requested")
-      try {
-        domainMatcher.reload()
-      } catch (e: Exception) {
-        Log.w(TAG, "Reload failed: ${e.message}")
-      }
+      scheduleReload()
       return Service.START_STICKY
     }
     if (!repository.isBlockingEnabled()) {
@@ -104,8 +120,35 @@ class BetBlockerVpnService : VpnService() {
     return Service.START_STICKY
   }
 
+  /**
+   * Agenda um reload da trie de domínios no executor serial de background.
+   * Coalesce rajadas: cada chamada marca `reloadDirty` e enfileira uma tarefa; a
+   * tarefa só reconstrói se ainda houver trabalho pendente, então N reloads
+   * quase-simultâneos resultam em 1–2 rebuilds em vez de N na main thread.
+   */
+  private fun scheduleReload() {
+    reloadDirty = true
+    try {
+      reloadExecutor.execute {
+        if (!reloadDirty) return@execute
+        reloadDirty = false
+        try {
+          domainMatcher.reload()
+        } catch (e: Exception) {
+          Log.w(TAG, "Reload failed: ${e.message}")
+        }
+      }
+    } catch (e: Exception) {
+      // Executor já encerrado (serviço parando) — ignora.
+      Log.w(TAG, "scheduleReload skipped: ${e.message}")
+    }
+  }
+
   override fun onDestroy() {
     stopVpn()
+    try {
+      reloadExecutor.shutdownNow()
+    } catch (_: Exception) {}
     super.onDestroy()
 
     if (repository.isBlockingEnabled() && !repository.isRevoked()) {
@@ -154,6 +197,21 @@ class BetBlockerVpnService : VpnService() {
     builder.addAddress(VPN_ADDRESS, 32)
     builder.addRoute(FAKE_DNS_SERVER, 32)
     builder.addDnsServer(FAKE_DNS_SERVER)
+
+    // Camada B — bloqueio por IP: roteia cada IP bloqueado (/32) para dentro da tun.
+    // O runLoop descarta todo pacote não-DNS (parse retorna null p/ TCP), então esses
+    // IPs ficam blackholados — a conexão direta para eles morre. O resto do tráfego
+    // continua saindo direto (fail-open preservado). IPs inválidos são ignorados.
+    var blockedIpRoutes = 0
+    for (ip in repository.getBlockedIps()) {
+      try {
+        builder.addRoute(ip, 32)
+        blockedIpRoutes++
+      } catch (e: Exception) {
+        Log.w(TAG, "Rota de IP bloqueado inválida ignorada: $ip (${e.message})")
+      }
+    }
+    Log.i(TAG, "Bloqueio por IP ativo: $blockedIpRoutes rota(s)")
 
     // Some apps try IPv6 DNS; explicitly disable by not adding IPv6 routes/dns.
     tunInterface = try {
@@ -240,7 +298,7 @@ class BetBlockerVpnService : VpnService() {
       if (length <= 0) continue
 
       val packet = Ipv4UdpPacket.parse(buffer, length) ?: continue
-      Log.d(TAG, "Packet port: ${packet.dstPort}")
+      if (BuildConfig.DEBUG) Log.d(TAG, "Packet port: ${packet.dstPort}")
       // Only intercept UDP/53 (DNS) destined to our fake DNS IP.
       if (packet.protocol != OsConstants.IPPROTO_UDP) continue
       if (packet.dstPort != 53) continue

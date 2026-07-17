@@ -91,6 +91,7 @@ struct BlockingControlView: View {
               activateBlocking(with: selection)
             } else {
               BlockingManager.shared.removeBlocking()
+              SubscriptionEnforcementTask.cancel()
             }
           }
       }
@@ -144,6 +145,7 @@ struct BlockingControlView: View {
         protectionEnabled = false
         AppGroupHelper.isProtectionEnabled = false
         BlockingManager.shared.removeBlocking()
+        SubscriptionEnforcementTask.cancel()
         selection = FamilyActivitySelection()
         AppGroupHelper.saveFamilyActivitySelection(selection)
       } label: {
@@ -168,6 +170,8 @@ struct BlockingControlView: View {
         protectionEnabled = false
         AppGroupHelper.isProtectionEnabled = false
         showError = true
+      } else if AppGroupHelper.apiBaseUrl != nil {
+        SubscriptionEnforcementTask.scheduleNext()
       }
     }
   }

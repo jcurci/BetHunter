@@ -9,6 +9,7 @@ import com.bethunter.app.diagnostics.VpnEventLog
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.vpn.BetBlockerVpnService
 import com.bethunter.app.work.BlocklistRefreshWorker
+import com.bethunter.app.work.SubscriptionEnforcementWorker
 import com.bethunter.app.work.VpnHealthWorker
 
 class BootReceiver : BroadcastReceiver() {
@@ -31,6 +32,9 @@ class BootReceiver : BroadcastReceiver() {
       }
       BlocklistRefreshWorker.schedule(context)
       VpnHealthWorker.schedule(context)
+      if (repo.getAuthToken() != null) {
+        SubscriptionEnforcementWorker.schedule(context)
+      }
     }
   }
 }

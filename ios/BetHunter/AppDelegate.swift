@@ -17,6 +17,9 @@ public class AppDelegate: ExpoAppDelegate {
     Self.ensureBundleURLProvider()
 #endif
 
+    // Precisa ser registrado antes desse método retornar (exigência da Apple).
+    SubscriptionEnforcementTask.register()
+
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()

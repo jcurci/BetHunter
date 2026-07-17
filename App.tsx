@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { AppState, Platform } from "react-native";
+import { AppState, NativeModules, Platform } from "react-native";
 import * as NavigationBar from "expo-navigation-bar";
 import { AppLoadingScreen } from "./src/components/AppLoadingScreen";
 import { StatusBar } from "expo-status-bar";
@@ -208,6 +208,15 @@ const App: React.FC = () => {
         const { isAuthenticated: stillAuthed } = useAuthStore.getState();
 
         if (!confirmedPremium && stillAuthed) {
+          try {
+            if (Platform.OS === "android") {
+              NativeModules.BetBlocker?.stopBlocking?.();
+            } else if (Platform.OS === "ios") {
+              NativeModules.BetBlocking?.stopBlocking?.();
+            }
+          } catch (e) {
+            if (__DEV__) console.warn("[EXPIRATION GUARD] failed to stop blocker", e);
+          }
           navigationRef.current?.reset({ index: 0, routes: [{ name: 'CouponScreen' }] });
         }
       }, 3000);

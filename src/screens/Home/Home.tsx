@@ -162,19 +162,28 @@ const Home: React.FC = () => {
     try {
       if (Platform.OS === "android" && BetBlocker) {
         let enabled = false;
-        if (BetBlocker.getProtectionStatus) {
+        // Fonte do estado "ligado": checkAndSyncBlockingStatus verifica o estado REAL
+        // da VPN e RELIGA automaticamente se estava ligada mas o serviço caiu (ex.:
+        // após um ANR/crash). getProtectionStatus só lê a flag persistida e não
+        // reinicia — por isso não servia para religar ao reabrir o app.
+        if (BetBlocker.checkAndSyncBlockingStatus) {
+          enabled = !!(await BetBlocker.checkAndSyncBlockingStatus());
+        } else if (BetBlocker.getProtectionStatus) {
           const status = await BetBlocker.getProtectionStatus();
           enabled = !!status?.vpnEnabled;
-          setIsBlockerEnabled(enabled);
-          setIsDeviceAdminActive(!!status?.deviceAdminActive);
-        } else {
-          // checkAndSyncBlockingStatus verifica o estado real da VPN no Android e
-          // reinicia automaticamente se há inconsistência (ex: após update do app).
-          enabled = BetBlocker.checkAndSyncBlockingStatus
-            ? await BetBlocker.checkAndSyncBlockingStatus()
-            : await BetBlocker.isBlockingEnabled();
-          setIsBlockerEnabled(enabled);
+        } else if (BetBlocker.isBlockingEnabled) {
+          enabled = !!(await BetBlocker.isBlockingEnabled());
         }
+        setIsBlockerEnabled(enabled);
+
+        // deviceAdminActive continua vindo de getProtectionStatus (quando disponível).
+        if (BetBlocker.getProtectionStatus) {
+          try {
+            const status = await BetBlocker.getProtectionStatus();
+            setIsDeviceAdminActive(!!status?.deviceAdminActive);
+          } catch {}
+        }
+
         if (enabled && BetBlocker?.refreshBlockedDomains) {
           BetBlocker.refreshBlockedDomains().catch(() => {});
         }

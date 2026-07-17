@@ -4,6 +4,7 @@ import { AuthStorageService } from '../infrastructure/storage/AuthStorageService
 import { setOnTokenExpired, clearOnTokenExpired } from '../services/api/apiClient';
 import { AuthUser } from '../domain/entities/User';
 import { cancelAllReminders } from '../services/notifications';
+import { syncAuthSessionToNative, clearAuthSessionFromNative } from '../infrastructure/native/authSessionBridge';
 
 const TOKEN_KEY = '@BetHunter:token';
 
@@ -64,14 +65,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   login: async (token: string, user: AuthUser) => {
     try {
       await authStorageService.login(token, user);
-      
+
       console.log('✅ [AuthStore] Login realizado');
-      
+
       set({
         token,
         user,
         isAuthenticated: true,
       });
+
+      syncAuthSessionToNative(token);
     } catch (error) {
       console.error('❌ [AuthStore] Erro ao fazer login:', error);
       throw error;
@@ -90,14 +93,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       await authStorageService.logout();
-      
+
       console.log('✅ [AuthStore] Logout realizado');
-      
+
       set({
         token: null,
         user: null,
         isAuthenticated: false,
       });
+
+      clearAuthSessionFromNative();
 
       // Limpa cache do dashboard quando usuário faz logout
       try {
@@ -123,12 +128,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       if (token && user) {
         console.log('✅ [AuthStore] Autenticação carregada');
-        
+
         set({
           token,
           user,
           isAuthenticated: true,
         });
+
+        syncAuthSessionToNative(token);
       } else {
         console.log('ℹ️ [AuthStore] Nenhuma autenticação encontrada');
         set({

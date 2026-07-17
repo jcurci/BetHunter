@@ -22,6 +22,7 @@ import com.bethunter.app.repository.BlocklistManager
 import com.bethunter.app.vpn.BetBlockerVpnService
 import com.bethunter.app.vpn.BlockerNotifications
 import com.bethunter.app.work.BlocklistRefreshWorker
+import com.bethunter.app.work.SubscriptionEnforcementWorker
 import com.bethunter.app.work.VpnHealthWorker
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
@@ -60,6 +61,9 @@ class BetBlockerModule(
 
     repository.setBlockingEnabled(true)
     BlocklistRefreshWorker.schedule(reactContext.applicationContext)
+    if (repository.getAuthToken() != null) {
+      SubscriptionEnforcementWorker.schedule(reactContext.applicationContext)
+    }
     val prepareIntent = VpnService.prepare(reactContext.currentActivity ?: reactContext)
     if (prepareIntent == null) {
       // Permissão já concedida — tenta iniciar imediatamente
@@ -73,6 +77,7 @@ class BetBlockerModule(
         Log.e(TAG, "Failed to start VPN service after permission check", e)
         repository.setBlockingEnabled(false)
         BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+        SubscriptionEnforcementWorker.cancel(reactContext.applicationContext)
         promise.resolve(false)
       }
       return
@@ -90,6 +95,7 @@ class BetBlockerModule(
       pendingVpnPromise = null
       repository.setBlockingEnabled(false)
       BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+      SubscriptionEnforcementWorker.cancel(reactContext.applicationContext)
       promise.reject("VPN_PREPARE_FAILED", e.message)
     }
   }
@@ -100,6 +106,7 @@ class BetBlockerModule(
     repository.setRevoked(false)
     BlocklistRefreshWorker.cancel(reactContext.applicationContext)
     VpnHealthWorker.cancel(reactContext.applicationContext)
+    SubscriptionEnforcementWorker.cancel(reactContext.applicationContext)
     BlockerNotifications.cancelReactivationNotification(reactContext.applicationContext)
 
     val intent = Intent(reactContext, BetBlockerVpnService::class.java)
@@ -399,6 +406,19 @@ class BetBlockerModule(
         promise.reject("REFRESH_FAILED", e)
       }
     }
+  }
+
+  @ReactMethod
+  fun syncAuthSession(token: String, apiBaseUrl: String) {
+    repository.setAuthSession(token, apiBaseUrl)
+    if (repository.isBlockingEnabled()) {
+      SubscriptionEnforcementWorker.schedule(reactContext.applicationContext)
+    }
+  }
+
+  @ReactMethod
+  fun clearAuthSession() {
+    repository.clearAuthSession()
   }
 
   private fun startVpnService() {

@@ -62,6 +62,14 @@ function resolvePublicSdkKey(
     .map((v) => (typeof v === 'string' ? v.trim() : ''))
     .filter(Boolean);
 
+  // Dev/simulador: se o desenvolvedor definiu EXPLICITAMENTE uma chave test_
+  // (RevenueCat Test Store) na fonte preferida (.env), respeita a intenção.
+  // Em builds de loja (IS_STORE_LIKE) o test_ continua bloqueado logo abaixo.
+  if (!IS_STORE_LIKE) {
+    const preferredTrim = typeof preferred === 'string' ? preferred.trim() : '';
+    if (preferredTrim.startsWith('test_')) return preferredTrim;
+  }
+
   for (const key of candidates) {
     // Sempre ignora test_ — não aborta só porque um fallback legado ainda é test_.
     if (key.startsWith('test_')) continue;

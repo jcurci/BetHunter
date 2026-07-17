@@ -9,6 +9,7 @@ struct AppGroupHelper {
   private static let selectionKey = "familyActivitySelectionData"
   static let domainsKey = "blocked_domains_list"
   static let domainsLastFetchKey = "blocked_domains_last_fetch"
+  private static let apiBaseUrlKey = "auth_api_base_url"
 
   private static var sharedDefaults: UserDefaults? {
     UserDefaults(suiteName: suiteName)
@@ -58,5 +59,14 @@ struct AppGroupHelper {
   static var blockedDomainsLastFetch: Double {
     get { sharedDefaults?.double(forKey: domainsLastFetchKey) ?? 0 }
     set { sharedDefaults?.set(newValue, forKey: domainsLastFetchKey) }
+  }
+
+  // MARK: - Sessão de auth (usado pelo SubscriptionEnforcementTask)
+
+  /// A URL base não é sensível — fica no UserDefaults compartilhado. O token
+  /// em si vive no Keychain (ver AuthSessionKeychain), nunca aqui.
+  static var apiBaseUrl: String? {
+    get { sharedDefaults?.string(forKey: apiBaseUrlKey) }
+    set { sharedDefaults?.set(newValue, forKey: apiBaseUrlKey) }
   }
 }

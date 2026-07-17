@@ -20,7 +20,9 @@ class DomainMatcher(
   fun isBlocked(domain: String): Boolean {
     if (!loaded) reload()
     val normalized = BlockedDomainsRepository.normalizeDomain(domain) ?: return false
-    return trie.matches(normalized)
+    // 1) match exato/sufixo na lista mapeada; 2) heurística por palavra-chave para
+    // pegar mirrors não mapeados (23bet*, bet\d+, tokens de aposta).
+    return trie.matches(normalized) || KeywordMatcher.isGamblingDomain(normalized)
   }
 }
 

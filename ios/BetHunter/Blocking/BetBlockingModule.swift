@@ -28,6 +28,23 @@ class BetBlockingModule: NSObject {
         AppGroupHelper.isProtectionEnabled = false
       }
     }
+    SubscriptionEnforcementTask.cancel()
+  }
+
+  @objc
+  func syncAuthSession(_ token: String, apiBaseUrl: String) {
+    AuthSessionKeychain.saveToken(token)
+    if #available(iOS 16.0, *) {
+      AppGroupHelper.apiBaseUrl = apiBaseUrl
+      if AppGroupHelper.isProtectionEnabled {
+        SubscriptionEnforcementTask.scheduleNext()
+      }
+    }
+  }
+
+  @objc
+  func clearAuthSession() {
+    AuthSessionKeychain.deleteToken()
   }
 
   @objc
