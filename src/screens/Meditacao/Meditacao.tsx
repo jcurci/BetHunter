@@ -26,6 +26,15 @@ const MEDITATION_AUDIO = require("./mixkit-relaxation-2-253.mp3");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CIRCLE_SIZE = SCREEN_WIDTH * 0.7;
 
+// === RESPIRAÇÃO GUIADA (SOS — Recuperar o Controle) ===
+// Ciclo 4-2-6: inspira 4s (círculo cresce), segura 2s, expira 6s (círculo diminui).
+type BreathPhase = "in" | "hold" | "out";
+const BREATH_PHASES: Array<{ phase: BreathPhase; duration: number; label: string }> = [
+  { phase: "in", duration: 4000, label: "Inspire pelo nariz" },
+  { phase: "hold", duration: 2000, label: "Segure" },
+  { phase: "out", duration: 6000, label: "Solte o ar devagar" },
+];
+
 // Morphism color palette - limited, soft, organic
 const CIRCLE_OUTER_COLORS = ["#7B5BAF", "#9B6BB8", "#C87BA0", "#E08B8B"] as const;
 const CIRCLE_INNER_COLORS = ["#A890D0", "#C4A0D8", "#D8B0C8", "#E8C0B8", "#F0D0C0"] as const;
@@ -38,12 +47,18 @@ const Meditacao: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isAudioLoaded, setIsAudioLoaded] = useState(false);
-  const [selectedDuration] = useState(5);
-  const [timeRemaining, setTimeRemaining] = useState(5 * 60);
+  // SOS: sessão curta (2 min) — alívio rápido, sem compromisso longo.
+  const [selectedDuration] = useState(2);
+  const [timeRemaining, setTimeRemaining] = useState(2 * 60);
   const [sessionComplete, setSessionComplete] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Respiração guiada
+  const [breathLabel, setBreathLabel] = useState<string>(BREATH_PHASES[0].label);
+  const breathTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const breathIndexRef = useRef(0);
 
   const stopAndUnloadAudio = async () => {
     setIsPlaying(false);
@@ -111,6 +126,7 @@ const Meditacao: React.FC = () => {
     
     return () => {
       clearTimeout(timer);
+      stopBreathingAnimation();
       void stopAndUnloadAudio();
     };
   }, []);
@@ -186,24 +202,37 @@ const Meditacao: React.FC = () => {
 
   // === MORPHISM ANIMATIONS ===
   
-  // Breathing - extremely subtle (1.5% variation over 13.5s)
+  // Respiração guiada: o círculo cresce na inspiração e diminui na expiração,
+  // sincronizado com o label de instrução (ciclo 4-2-6).
+  const runBreathPhase = () => {
+    const { phase, duration, label } = BREATH_PHASES[breathIndexRef.current];
+    setBreathLabel(label);
+
+    const target = phase === "in" ? 1.14 : phase === "hold" ? 1.14 : 0.9;
+    Animated.timing(breatheAnim, {
+      toValue: target,
+      duration,
+      easing: Easing.inOut(Easing.sin),
+      useNativeDriver: true,
+    }).start();
+
+    breathTimeoutRef.current = setTimeout(() => {
+      breathIndexRef.current = (breathIndexRef.current + 1) % BREATH_PHASES.length;
+      runBreathPhase();
+    }, duration);
+  };
+
   const startBreathingAnimation = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(breatheAnim, {
-          toValue: 1.008,
-          duration: 6500,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(breatheAnim, {
-          toValue: 0.993,
-          duration: 7000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    breathIndexRef.current = 0;
+    breatheAnim.setValue(0.9);
+    runBreathPhase();
+  };
+
+  const stopBreathingAnimation = () => {
+    if (breathTimeoutRef.current) {
+      clearTimeout(breathTimeoutRef.current);
+      breathTimeoutRef.current = null;
+    }
   };
 
   // Glow - very slow variation
@@ -558,6 +587,7 @@ const Meditacao: React.FC = () => {
   };
 
   const stopAnimations = () => {
+    stopBreathingAnimation();
     breatheAnim.stopAnimation();
     glowAnim.stopAnimation();
     morphLayer1X.stopAnimation();
@@ -685,6 +715,11 @@ const Meditacao: React.FC = () => {
       </View>
 
       <View style={styles.content}>
+        {/* Guia de respiração sincronizado com o círculo */}
+        <Text style={styles.breathLabel}>
+          {isPlaying ? breathLabel : "Toque no círculo para começar"}
+        </Text>
+
         <TouchableOpacity 
           activeOpacity={1} 
           onPress={togglePlayPause}
@@ -915,6 +950,15 @@ const styles = StyleSheet.create({
     height: CIRCLE_SIZE + 80,
     alignItems: "center",
     justifyContent: "center",
+  },
+  breathLabel: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#E8E2F2",
+    textAlign: "center",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    minHeight: 26,
   },
   outerGlow: {
     position: "absolute",

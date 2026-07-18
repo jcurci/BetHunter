@@ -50,6 +50,19 @@ const Config = () => {
           </View>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.optionItem}
+          onPress={() => navigation.navigate("EmergencyContact")}
+        >
+          <Icon name="life-buoy" size={24} color="#FFFFFF" />
+          <View style={styles.optionTextContainer}>
+            <Text style={styles.optionTitle}>Contato de resgate</Text>
+            <Text style={styles.optionSubtitle}>
+              Quem o SOS chama quando a vontade aperta
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.optionItem}>
           <Icon name="log-out" size={24} color="#FF0000" />
           <View style={styles.optionTextContainer}>

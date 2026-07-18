@@ -48,6 +48,9 @@ import BudgetMonthDetailScreen from "./src/screens/ModoOrcamento/BudgetMonthDeta
 import MinhaJornada from "./src/screens/MinhaJornada/MinhaJornada";
 import CursosSalvos from "./src/screens/Educacional/CursosSalvos";
 import Meditacao from "./src/screens/Meditacao/Meditacao";
+import SOSMenu from "./src/screens/SOS/SOSMenu";
+import ChoqueFisiologico from "./src/screens/SOS/ChoqueFisiologico";
+import EmergencyContactScreen from "./src/screens/SOS/EmergencyContactScreen";
 import MinhaConta from "./src/screens/MinhaConta/MinhaConta";
 import SobreNos from "./src/screens/MinhaConta/SobreNos";
 import SejaParceiro from "./src/screens/MinhaConta/SejaParceiro";
@@ -495,6 +498,28 @@ const App: React.FC = () => {
         <Stack.Screen
           name="Meditacao"
           component={Meditacao}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SOSMenu"
+          component={SOSMenu}
+          options={{
+            headerShown: false,
+            animation: "fade_from_bottom",
+          }}
+        />
+        <Stack.Screen
+          name="ChoqueFisiologico"
+          component={ChoqueFisiologico}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="EmergencyContact"
+          component={EmergencyContactScreen}
           options={{
             headerShown: false,
           }}

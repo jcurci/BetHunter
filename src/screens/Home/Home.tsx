@@ -43,9 +43,6 @@ import {
 } from "../../config/colors";
 
 // Assets
-import Meditation from "../../assets/home/meditation.svg";
-import Reset from "../../assets/home/reset.svg";
-import Block from "../../assets/home/block.svg";
 import BetHunterIcon from "../../assets/home/bethunter.svg";
 import AcessorIcon from "../../assets/home/acessor.svg";
 import CursosIcon from "../../assets/home/cursos.svg";
@@ -749,13 +746,15 @@ const Home: React.FC = () => {
       <View style={styles.actionsRow}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => navigation.navigate("Meditacao")}
+          onPress={() => navigation.navigate("SOSMenu")}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="SOS: ferramentas de socorro imediato contra a fissura"
         >
           <View style={styles.actionIconCircle}>
-            <Meditation width={24} height={24} />
+            <MaterialCommunityIcons name="shield-alert" size={26} color="#FF90A5" />
           </View>
-          <Text style={styles.actionText}>Meditar</Text>
+          <Text style={styles.actionText}>SOS</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -764,7 +763,7 @@ const Home: React.FC = () => {
           activeOpacity={0.85}
         >
           <View style={styles.actionIconCircle}>
-            <Reset width={24} height={24} />
+            <MaterialCommunityIcons name="timer-sand" size={26} color="#D783D8" />
           </View>
           <Text style={styles.actionText}>Resetar</Text>
         </TouchableOpacity>
@@ -779,7 +778,7 @@ const Home: React.FC = () => {
           activeOpacity={0.85}
         >
           <View style={styles.actionIconCircle}>
-            <Block width={27} height={27} />
+            <MaterialCommunityIcons name="cancel" size={26} color="#FF6A56" />
           </View>
           <Text style={styles.actionText}>Bloquear</Text>
         </TouchableOpacity>
