@@ -15,7 +15,10 @@ class BlockedDomainsDb(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
     // Este DB agora é multi-processo (VPN roda em :vpn, módulo RN no principal).
     // busy_timeout faz uma operação ESPERAR um lock em vez de lançar SQLITE_BUSY
     // — ex.: ler o flag enabled/revoked enquanto o refresh de ~300k domínios grava.
-    db.execSQL("PRAGMA busy_timeout = 3000")
+    // PRAGMA busy_timeout RETORNA o valor, então precisa de rawQuery (execSQL recusa
+    // statements com retorno). Usamos o `db` recebido (não getWritableDatabase) para
+    // não recursar durante a configuração.
+    db.rawQuery("PRAGMA busy_timeout = 3000", null).use { it.moveToFirst() }
   }
 
   override fun onCreate(db: SQLiteDatabase) {
