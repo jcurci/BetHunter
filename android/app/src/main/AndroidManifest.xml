@@ -51,6 +51,12 @@
         <action android:name="android.app.action.DEVICE_ADMIN_ENABLED"/>
       </intent-filter>
     </receiver>
+    <provider android:name="androidx.startup.InitializationProvider" android:authorities="${applicationId}.androidx-startup" android:exported="false" tools:node="merge">
+      <!-- Remove a init automática do WorkManager (só rodava no processo principal).
+           MainApplication implementa Configuration.Provider para init on-demand em
+           todos os processos, inclusive :vpn. -->
+      <meta-data android:name="androidx.work.WorkManagerInitializer" android:value="androidx.startup" tools:node="remove"/>
+    </provider>
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustPan" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>

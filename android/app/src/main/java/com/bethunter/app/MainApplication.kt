@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Process
+import android.util.Log
+
+import androidx.work.Configuration as WorkManagerConfiguration
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -21,7 +24,17 @@ import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 import com.bethunter.app.reactnative.BetBlockerPackage
 
-class MainApplication : Application(), ReactApplication {
+class MainApplication : Application(), ReactApplication, WorkManagerConfiguration.Provider {
+
+  // Init on-demand do WorkManager, válida em TODOS os processos (inclusive :vpn).
+  // O InitializationProvider padrão (androidx.startup) só instancia no processo
+  // principal, então workers agendados de dentro do BetBlockerVpnService (:vpn)
+  // falhavam com "WorkManager is not initialized properly". O inicializador padrão
+  // é removido no AndroidManifest para esta config on-demand assumir.
+  override val workManagerConfiguration: WorkManagerConfiguration
+    get() = WorkManagerConfiguration.Builder()
+      .setMinimumLoggingLevel(if (BuildConfig.DEBUG) Log.DEBUG else Log.INFO)
+      .build()
 
   override val reactNativeHost: ReactNativeHost = ReactNativeHostWrapper(
       this,

@@ -198,6 +198,19 @@ class BetBlockerVpnService : VpnService() {
     builder.addRoute(FAKE_DNS_SERVER, 32)
     builder.addDnsServer(FAKE_DNS_SERVER)
 
+    // O próprio app fica FORA do túnel: seu DNS (RevenueCat, API, Google Sign-In)
+    // não pode depender do DnsInterceptor. Quando o upstream não responde (rede
+    // corporativa, captive portal, operadora que bloqueia 1.1.1.1/8.8.8.8), o
+    // forward retorna null e o pacote é descartado — o que deixaria o BetHunter
+    // sem resolver nada enquanto a proteção estivesse ligada. Não enfraquece o
+    // bloqueio: navegadores e apps de aposta rodam em outro UID e continuam na tun.
+    try {
+      builder.addDisallowedApplication(packageName)
+      Log.i(TAG, "App excluído do túnel: $packageName")
+    } catch (e: Exception) {
+      Log.w(TAG, "Falha ao excluir o app do túnel: ${e.message}")
+    }
+
     // Camada B — bloqueio por IP: roteia cada IP bloqueado (/32) para dentro da tun.
     // O runLoop descarta todo pacote não-DNS (parse retorna null p/ TCP), então esses
     // IPs ficam blackholados — a conexão direta para eles morre. O resto do tráfego
