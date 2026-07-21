@@ -8,14 +8,12 @@ import {
   ActivityIndicator,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import {
-  BUTTON_BORDER_GRADIENT_COLORS,
-  BUTTON_BORDER_GRADIENT_LOCATIONS,
-  BUTTON_BORDER_GRADIENT,
-  BUTTON_HIGHLIGHT_COLORS,
-  BUTTON_INNER_BACKGROUND,
-  BUTTON_INNER_BORDER_COLOR,
+  BUTTON_GLASS_BACKGROUND,
+  BUTTON_GLASS_BORDER_COLOR,
+  BUTTON_GLASS_BLUR_INTENSITY,
+  BUTTON_GLASS_SHADOW,
 } from "../../../config/colors";
 
 interface GradientBorderButtonProps {
@@ -29,9 +27,15 @@ interface GradientBorderButtonProps {
 }
 
 /**
- * Botão com borda gradiente (estilo igual ao componente de pesquisa)
- * Usado para botões de confirmação (Continuar, Confirmar, Voltar, etc.)
- * Efeito: borda com gradiente + highlight no topo + fundo escuro interno
+ * Botão padrão do app — "Button/Glass/Inactive" do Figma.
+ * Preenchimento preto a 40%, blur do que está atrás e sombra 0/1/8 a 10%.
+ *
+ * O nome do componente vem do desenho anterior (borda gradiente + miolo
+ * escuro) e foi mantido para não quebrar as 7 telas que o importam.
+ *
+ * A view de fora carrega a sombra e o preenchimento; a de dentro recorta o
+ * blur. Separadas porque `overflow: hidden` na mesma view apagaria a sombra,
+ * e no iOS a sombra precisa de um fundo para ser desenhada.
  */
 const GradientBorderButton: React.FC<GradientBorderButtonProps> = ({
   label,
@@ -43,25 +47,24 @@ const GradientBorderButton: React.FC<GradientBorderButtonProps> = ({
   fullWidth = true,
 }) => {
   return (
-    <View style={[styles.wrapper, fullWidth && styles.fullWidth, style]}>
-      <LinearGradient
-        colors={BUTTON_BORDER_GRADIENT_COLORS}
-        locations={BUTTON_BORDER_GRADIENT_LOCATIONS}
-        start={BUTTON_BORDER_GRADIENT.start}
-        end={BUTTON_BORDER_GRADIENT.end}
-        style={[styles.gradientBorder, fullWidth && styles.fullWidth]}
-      >
-        {/* Highlight no topo */}
-        <LinearGradient
-          colors={BUTTON_HIGHLIGHT_COLORS}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.highlight}
+    <View
+      style={[
+        styles.shadow,
+        fullWidth && styles.fullWidth,
+        disabled && styles.disabled,
+        style,
+      ]}
+    >
+      <View style={styles.clip}>
+        <BlurView
+          intensity={BUTTON_GLASS_BLUR_INTENSITY}
+          tint="dark"
+          style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        
+
         <TouchableOpacity
-          style={[styles.innerButton, fullWidth && styles.fullWidth]}
+          style={styles.button}
           onPress={onPress}
           disabled={disabled || loading}
           activeOpacity={0.8}
@@ -72,41 +75,34 @@ const GradientBorderButton: React.FC<GradientBorderButtonProps> = ({
             <Text style={[styles.buttonText, textStyle]}>{label}</Text>
           )}
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    overflow: "hidden",
+  shadow: {
     borderRadius: 30,
-  },
-  gradientBorder: {
-    borderRadius: 30,
-    padding: 1,
+    backgroundColor: BUTTON_GLASS_BACKGROUND,
+    ...BUTTON_GLASS_SHADOW,
   },
   fullWidth: {
     width: "100%",
   },
-  highlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "60%",
-    borderRadius: 30,
-    opacity: 0.9,
+  disabled: {
+    opacity: 0.5,
   },
-  innerButton: {
-    backgroundColor: BUTTON_INNER_BACKGROUND,
+  clip: {
+    borderRadius: 30,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: BUTTON_GLASS_BORDER_COLOR,
+  },
+  button: {
     paddingVertical: 16,
     paddingHorizontal: 40,
-    borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: BUTTON_INNER_BORDER_COLOR,
   },
   buttonText: {
     color: "#FFFFFF",
@@ -116,4 +112,3 @@ const styles = StyleSheet.create({
 });
 
 export default GradientBorderButton;
-

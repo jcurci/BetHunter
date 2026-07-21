@@ -80,5 +80,31 @@ export const BUTTON_BORDER_GRADIENT = {
   end: { x: 0, y: 1 },
 } as const;
 
+/**
+ * Botão de vidro — "Button/Glass/Inactive" no Figma.
+ * Preenchimento preto a 40%, blur do que está atrás e sombra sutil.
+ * Substitui a borda gradiente no GradientBorderButton.
+ */
+export const BUTTON_GLASS_BACKGROUND = "rgba(0,0,0,0.4)";
+export const BUTTON_GLASS_BORDER_COLOR = "rgba(255,255,255,0.08)";
+
+/**
+ * O Figma especifica blur de 5px; o expo-blur usa uma escala 0–100 sem
+ * equivalência direta em pixels. 20 é a aproximação mais próxima do efeito.
+ */
+export const BUTTON_GLASS_BLUR_INTENSITY = 20;
+
+/**
+ * Sombra do Figma: X 0 · Y 1 · Blur 8 · #000 10%.
+ * shadowRadius do RN equivale a ~metade do blur do Figma.
+ */
+export const BUTTON_GLASS_SHADOW = {
+  shadowColor: "#000000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 2,
+} as const;
+
 
 
