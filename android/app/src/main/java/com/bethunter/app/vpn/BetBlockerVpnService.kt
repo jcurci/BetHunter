@@ -97,6 +97,20 @@ class BetBlockerVpnService : VpnService() {
         return START_NOT_STICKY
     }
 
+    // Pausa por assinatura: derruba a VPN mas NÃO mexe em isBlockingEnabled.
+    // Quem pausa (SubscriptionEnforcementWorker) já marcou premiumPaused; assim
+    // o bloqueio volta sozinho quando o premium for confirmado de novo.
+    if (intent?.action == ACTION_PAUSE) {
+      Log.i(TAG, "PAUSE action received (subscription)")
+      VpnEventLog.log(this, "paused_subscription_expired")
+
+      stopVpn()
+      stopForeground(true)
+      stopSelf()
+
+      return START_NOT_STICKY
+    }
+
     if (intent?.action == ACTION_RELOAD) {
       Log.i(TAG, "Reload requested")
       scheduleReload()
@@ -585,6 +599,7 @@ class BetBlockerVpnService : VpnService() {
     private const val NOTIF_ID = 42
     const val ACTION_RELOAD = "com.bethunter.app.action.RELOAD_BLOCKED_DOMAINS"
     const val ACTION_STOP = "com.bethunter.app.action.STOP_VPN"
+    const val ACTION_PAUSE = "com.bethunter.app.action.PAUSE_VPN"
   }
 }
 

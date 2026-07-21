@@ -60,6 +60,18 @@ class BlockedDomainsRepository(private val context: Context) {
 
   fun isRevoked(): Boolean = readFlag(KEY_REVOKED)
 
+  /**
+   * Bloqueio pausado por assinatura expirada (confirmada pelo backend). Diferente
+   * de setBlockingEnabled(false): a INTENÇÃO do usuário é preservada, então basta
+   * o premium voltar para o enforcement religar sozinho. O health worker respeita
+   * a pausa e não fica brigando para subir a VPN.
+   */
+  fun setPremiumPaused(paused: Boolean) {
+    domainsDb.setFlag(KEY_PREMIUM_PAUSED, paused)
+  }
+
+  fun isPremiumPaused(): Boolean = readFlag(KEY_PREMIUM_PAUSED)
+
   /** true assim que o usuário tocou no fluxo de pedido de isenção pelo menos uma vez. */
   fun setBatteryExemptionRequested(requested: Boolean) {
     prefs.edit().putBoolean(KEY_BATTERY_EXEMPTION_REQUESTED, requested).apply()
@@ -143,6 +155,7 @@ class BlockedDomainsRepository(private val context: Context) {
     private const val KEY_API_BASE_URL = "api_base_url"
     private const val KEY_ENABLED = "enabled"
     private const val KEY_REVOKED = "vpn_revoked_pending_reactivation"
+    private const val KEY_PREMIUM_PAUSED = "premium_paused"
     private const val KEY_BATTERY_EXEMPTION_REQUESTED = "battery_exemption_requested"
     private const val KEY_BATTERY_WARNING_CONFIRMED_AT = "battery_warning_confirmed_at"
     private const val KEY_LAST_FETCH = "last_fetch_timestamp"

@@ -39,17 +39,34 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
     val baseUrl = repo.getApiBaseUrl() ?: return Result.success()
 
     return when (fetchIsPremium(baseUrl, token)) {
-      true -> Result.success()
-      false -> {
-        Log.i(TAG, "Subscription expired — stopping blocker")
-        VpnEventLog.log(applicationContext, "subscription_enforcement_stopped")
-        stopBlockingLocally(applicationContext)
+      true -> {
+        // Premium confirmado: se estávamos pausados por engano (ou a assinatura
+        // foi renovada), religa sem exigir nada do usuário.
+        if (repo.isPremiumPaused()) {
+          Log.i(TAG, "Subscription active again — resuming blocker")
+          VpnEventLog.log(applicationContext, "subscription_enforcement_resumed")
+          resumeBlocking(applicationContext, repo)
+        }
         Result.success()
       }
-      null -> Result.retry() // erro de rede/401/resposta ambígua — nunca derruba no escuro
+      false -> {
+        Log.i(TAG, "Subscription expired (verified) — pausing blocker")
+        VpnEventLog.log(applicationContext, "subscription_enforcement_paused")
+        pauseBlocking(applicationContext, repo)
+        Result.success()
+      }
+      // Erro de rede/401/resposta ambígua/status NÃO verificado pelo backend:
+      // ausência de informação nunca é prova de não-assinatura. Tenta de novo.
+      null -> Result.retry()
     }
   }
 
+  /**
+   * true/false só quando o backend CONFIRMOU com o RevenueCat (verified=true).
+   * Um `isPremium:false` derivado do cache do banco (verified=false) volta como
+   * null — foi exatamente esse caso que desligava o bloqueador de assinantes
+   * legítimos quando o webhook falhava em gravar o rc_customer_id.
+   */
   private fun fetchIsPremium(baseUrl: String, token: String): Boolean? {
     var connection: HttpURLConnection? = null
     return try {
@@ -66,7 +83,18 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
       }
 
       val body = connection.inputStream.bufferedReader().use { it.readText() }
-      JSONObject(body).getBoolean("isPremium")
+      val json = JSONObject(body)
+
+      // Backend antigo não manda `verified`. Tratamos a ausência como NÃO
+      // verificado: o enforcement é uma rede de segurança, e falhar para o lado
+      // de manter a proteção é sempre preferível a desligá-la sem certeza.
+      if (!json.optBoolean("verified", false)) {
+        Log.w(TAG, "subscription-status não verificado pelo backend — ignorando")
+        VpnEventLog.log(applicationContext, "subscription_status_unverified")
+        return null
+      }
+
+      json.getBoolean("isPremium")
     } catch (e: Exception) {
       Log.w(TAG, "Failed to check subscription status", e)
       null
@@ -75,24 +103,47 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
     }
   }
 
-  private fun stopBlockingLocally(context: Context) {
-    val repo = BlockedDomainsRepository(context)
-    repo.setBlockingEnabled(false)
-    repo.setRevoked(false)
-    BlocklistRefreshWorker.cancel(context)
-    VpnHealthWorker.cancel(context)
-    BlockerNotifications.cancelReactivationNotification(context)
+  /**
+   * Pausa reversível: preserva isBlockingEnabled (intenção do usuário) e mantém
+   * este worker agendado, para religar sozinho quando a assinatura voltar.
+   * A versão anterior apagava `enabled` e se autocancelava — o bloqueio caía
+   * para sempre, em silêncio, mesmo depois de o usuário renovar.
+   */
+  private fun pauseBlocking(context: Context, repo: BlockedDomainsRepository) {
+    repo.setPremiumPaused(true)
 
     val intent = Intent(context, BetBlockerVpnService::class.java).apply {
-      action = BetBlockerVpnService.ACTION_STOP
+      action = BetBlockerVpnService.ACTION_PAUSE
     }
     try {
       ContextCompat.startForegroundService(context, intent)
     } catch (e: Exception) {
-      Log.w(TAG, "Failed to send ACTION_STOP: ${e.message}")
+      Log.w(TAG, "Failed to send ACTION_PAUSE: ${e.message}")
     }
 
-    cancel(context) // nada mais pra fazer enforcement de — se cancela
+    BlockerNotifications.showReactivationNotification(
+      context,
+      "Bloqueio pausado",
+      "Sua assinatura não está ativa. Renove para voltar a bloquear sites de apostas."
+    )
+  }
+
+  private fun resumeBlocking(context: Context, repo: BlockedDomainsRepository) {
+    repo.setPremiumPaused(false)
+    BlockerNotifications.cancelReactivationNotification(context)
+    BlocklistRefreshWorker.schedule(context)
+    VpnHealthWorker.schedule(context)
+
+    try {
+      ContextCompat.startForegroundService(
+        context,
+        Intent(context, BetBlockerVpnService::class.java)
+      )
+    } catch (e: Exception) {
+      // FGS start bloqueado em background: o health worker e a reabertura do
+      // app cobrem o religamento; a intenção já está preservada.
+      Log.w(TAG, "Could not resume VPN from background: ${e.message}")
+    }
   }
 
   companion object {

@@ -39,6 +39,12 @@ class VpnHealthWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
       return Result.success()
     }
 
+    if (repo.isPremiumPaused()) {
+      // Pausado por assinatura: a intenção do usuário segue "bloqueando", então
+      // este worker continua vivo — mas religar aqui brigaria com o enforcement.
+      return Result.success()
+    }
+
     if (repo.isRevoked() || VpnService.prepare(context) != null) {
       // Sem consentimento não há o que religar; garante que o usuário está avisado.
       VpnEventLog.log(context, "health_check_needs_consent")

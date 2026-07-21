@@ -60,6 +60,9 @@ class BetBlockerModule(
     }
 
     repository.setBlockingEnabled(true)
+    // Ação explícita do usuário limpa qualquer pausa por assinatura: se ele
+    // renovou e está reativando, não faz sentido o health worker ficar inerte.
+    repository.setPremiumPaused(false)
     BlocklistRefreshWorker.schedule(reactContext.applicationContext)
     if (repository.getAuthToken() != null) {
       SubscriptionEnforcementWorker.schedule(reactContext.applicationContext)
@@ -183,6 +186,13 @@ class BetBlockerModule(
     val running = isVpnActuallyRunning()
 
     if (stored && !running) {
+      // Pausado por assinatura: não é inconsistência, é estado esperado. Religar
+      // aqui reabriria a VPN de quem o backend confirmou não ser assinante.
+      if (repository.isPremiumPaused()) {
+        VpnEventLog.log(reactContext.applicationContext, "sync_premium_paused")
+        promise.resolve(false)
+        return
+      }
       // Consentimento revogado (outra VPN assumiu ou usuário desligou em Config):
       // blind-start falharia no establish(). A intenção (enabled) é preservada;
       // resolve false para a UI mostrar desligado e oferecer a reativação, que
