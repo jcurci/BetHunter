@@ -15,6 +15,7 @@ import com.bethunter.app.diagnostics.VpnEventLog
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.vpn.BetBlockerVpnService
 import com.bethunter.app.vpn.BlockerNotifications
+import com.bethunter.app.vpn.VpnStatus
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.TimeUnit
@@ -112,13 +113,18 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
   private fun pauseBlocking(context: Context, repo: BlockedDomainsRepository) {
     repo.setPremiumPaused(true)
 
-    val intent = Intent(context, BetBlockerVpnService::class.java).apply {
-      action = BetBlockerVpnService.ACTION_PAUSE
-    }
-    try {
-      ContextCompat.startForegroundService(context, intent)
-    } catch (e: Exception) {
-      Log.w(TAG, "Failed to send ACTION_PAUSE: ${e.message}")
+    // Só manda o PAUSE se há o que pausar: onCreate() do serviço faz
+    // startAsForeground(), então um PAUSE com a VPN já parada subiria o serviço
+    // inteiro só para derrubá-lo em seguida.
+    if (VpnStatus.isVpnActive(context)) {
+      val intent = Intent(context, BetBlockerVpnService::class.java).apply {
+        action = BetBlockerVpnService.ACTION_PAUSE
+      }
+      try {
+        ContextCompat.startForegroundService(context, intent)
+      } catch (e: Exception) {
+        Log.w(TAG, "Failed to send ACTION_PAUSE: ${e.message}")
+      }
     }
 
     BlockerNotifications.showReactivationNotification(
