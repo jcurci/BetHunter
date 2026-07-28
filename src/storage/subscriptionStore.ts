@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
-import { ENTITLEMENT_ID } from '../services/revenueCat';
+import { ENTITLEMENT_ID, isRevenueCatConfigured } from '../services/revenueCat';
 import { useAuthStore } from './authStore';
 
 const RC_ANONYMOUS_PREFIX = '$RCAnonymousID:';
@@ -34,10 +34,18 @@ function computeIsPremium(info: CustomerInfo): boolean {
 type SubscriptionState = {
   isPremium: boolean;
   isInitialized: boolean;
+  /**
+   * `true` só quando `customerInfo` veio de verdade do RevenueCat. O boot
+   * fabrica um CustomerInfo vazio quando o `identifyUser` falha ou o SDK não
+   * está configurado — e um "sem entitlement" fabricado NÃO pode virar prova de
+   * não-assinatura para o gate do bloqueador (foi assim que a proteção de
+   * assinante legítimo caiu em 18/07).
+   */
+  rcSynced: boolean;
   customerInfo: CustomerInfo | null;
   loading: boolean;
   refresh: () => Promise<void>;
-  setFromCustomerInfo: (info: CustomerInfo) => void;
+  setFromCustomerInfo: (info: CustomerInfo, opts?: { rcSynced?: boolean }) => void;
 };
 
 let _refreshInFlight: Promise<void> | null = null;
@@ -45,11 +53,16 @@ let _refreshInFlight: Promise<void> | null = null;
 export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isPremium: false,
   isInitialized: false,
+  rcSynced: false,
   customerInfo: null,
   loading: true,
 
   refresh: async () => {
     if (_refreshInFlight) return _refreshInFlight;
+    if (!isRevenueCatConfigured()) {
+      set({ loading: false, isInitialized: true });
+      return;
+    }
 
     set({ loading: true });
     _refreshInFlight = (async () => {
@@ -62,9 +75,11 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
           console.log('[SUBSCRIPTION] refresh() — ENTITLEMENT_ID buscado:', ENTITLEMENT_ID);
           console.log('[SUBSCRIPTION] refresh() — isPremium:', isPremium);
         }
-        set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
+        set({ isPremium, customerInfo: info, loading: false, isInitialized: true, rcSynced: true });
       } catch (e) {
         if (__DEV__) console.warn('[SUBSCRIPTION] refresh() — getCustomerInfo falhou:', e);
+        // rcSynced não é zerado: o valor anterior continua sendo a melhor
+        // informação que temos. Uma falha de rede não pode virar evidência.
         set({ loading: false, isInitialized: true });
       } finally {
         _refreshInFlight = null;
@@ -74,13 +89,28 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
     return _refreshInFlight;
   },
 
-  setFromCustomerInfo: (info: CustomerInfo) => {
+  setFromCustomerInfo: (info: CustomerInfo, opts?: { rcSynced?: boolean }) => {
     const isPremium = computeIsPremium(info);
-    set({ isPremium, customerInfo: info, loading: false, isInitialized: true });
+    set({
+      isPremium,
+      customerInfo: info,
+      loading: false,
+      isInitialized: true,
+      rcSynced: opts?.rcSynced ?? true,
+    });
   },
 }));
 
+/**
+ * Só registra após Purchases.configure(). Chamar Purchases.shared antes
+ * disso causa fatalError nativo (Purchases has not been configured).
+ */
 export function setupCustomerInfoListener(): () => void {
+  if (!isRevenueCatConfigured()) {
+    console.warn('[SUBSCRIPTION] listener ignorado — RevenueCat ainda não configurado');
+    return () => {};
+  }
+
   const listener = (info: CustomerInfo) => {
     const isPremium = computeIsPremium(info);
     if (__DEV__) console.log('[SUBSCRIPTION] listener fired → isPremium:', isPremium);
@@ -89,6 +119,7 @@ export function setupCustomerInfoListener(): () => void {
       customerInfo: info,
       loading: false,
       isInitialized: true,
+      rcSynced: true,
     });
   };
 

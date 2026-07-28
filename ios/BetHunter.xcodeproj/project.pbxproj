@@ -16,13 +16,36 @@
 		A1B2C3D4E5F60000BB000004 /* BlockingControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000004 /* BlockingControlView.swift */; };
 		A1B2C3D4E5F60000BB000005 /* AppGroupHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */; };
 		A1B2C3D4E5F60000BB000006 /* BlockingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */; };
-		A1B2C3D4E5F60000BB000007 /* BlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */; };
 		A1B2C3D4E5F60000BB000008 /* BlocklistSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000C /* BlocklistSyncService.swift */; };
 		A1B2C3D4E5F60000BB000009 /* AuthSessionKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000D /* AuthSessionKeychain.swift */; };
 		A1B2C3D4E5F60000BB00000A /* SubscriptionEnforcementTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000E /* SubscriptionEnforcementTask.swift */; };
-		A1B2C3D4E5F60000CC000001 /* DNSProxyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */; };
-		A1B2C3D4E5F60000CC000002 /* BlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */; };
-		A1B2C3D4E5F60000DD000001 /* DNSProxy.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1B2C3D4E5F60000BB000101 /* SharedConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000101 /* SharedConstants.swift */; };
+		A1B2C3D4E5F60000BB000102 /* DomainNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000102 /* DomainNormalizer.swift */; };
+		A1B2C3D4E5F60000BB000103 /* DomainHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000103 /* DomainHash.swift */; };
+		A1B2C3D4E5F60000BB000104 /* BlocklistFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000104 /* BlocklistFormat.swift */; };
+		A1B2C3D4E5F60000BB000105 /* GamblingKeywordMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000105 /* GamblingKeywordMatcher.swift */; };
+		A1B2C3D4E5F60000BB000106 /* NeverBlockAllowlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000106 /* NeverBlockAllowlist.swift */; };
+		A1B2C3D4E5F60000BB000107 /* DefaultBlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000107 /* DefaultBlockedDomains.swift */; };
+		A1B2C3D4E5F60000BB000108 /* DoHEndpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000108 /* DoHEndpoints.swift */; };
+		A1B2C3D4E5F60000BB000301 /* BlocklistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000301 /* BlocklistStore.swift */; };
+		A1B2C3D4E5F60000BB000302 /* TunnelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000302 /* TunnelController.swift */; };
+		A1B2C3D4E5F60000BB000303 /* TunnelHealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000303 /* TunnelHealthMonitor.swift */; };
+		A1B2C3D4E5F60000CC000001 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000008 /* PacketTunnelProvider.swift */; };
+		A1B2C3D4E5F60000CC000101 /* SharedConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000101 /* SharedConstants.swift */; };
+		A1B2C3D4E5F60000CC000102 /* DomainNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000102 /* DomainNormalizer.swift */; };
+		A1B2C3D4E5F60000CC000103 /* DomainHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000103 /* DomainHash.swift */; };
+		A1B2C3D4E5F60000CC000104 /* BlocklistFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000104 /* BlocklistFormat.swift */; };
+		A1B2C3D4E5F60000CC000105 /* GamblingKeywordMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000105 /* GamblingKeywordMatcher.swift */; };
+		A1B2C3D4E5F60000CC000106 /* NeverBlockAllowlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000106 /* NeverBlockAllowlist.swift */; };
+		A1B2C3D4E5F60000CC000107 /* DefaultBlockedDomains.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000107 /* DefaultBlockedDomains.swift */; };
+		A1B2C3D4E5F60000CC000108 /* DoHEndpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000108 /* DoHEndpoints.swift */; };
+		A1B2C3D4E5F60000CC000202 /* IPPacket.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000202 /* IPPacket.swift */; };
+		A1B2C3D4E5F60000CC000203 /* DNSMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000203 /* DNSMessage.swift */; };
+		A1B2C3D4E5F60000CC000204 /* UpstreamResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000204 /* UpstreamResolver.swift */; };
+		A1B2C3D4E5F60000CC000205 /* BlocklistIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000205 /* BlocklistIndex.swift */; };
+		A1B2C3D4E5F60000CC000206 /* CircuitBreaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000206 /* CircuitBreaker.swift */; };
+		A1B2C3D4E5F60000CC000207 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA000207 /* PrivacyInfo.xcprivacy */; };
+		A1B2C3D4E5F60000DD000001 /* PacketTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60000AA00000B /* PacketTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B059F9B1B06C82BC328094CE /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B597602FB8DB49B1F174E1 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		D68788FC7D0097DD631A8054 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FCCF28C057236EECF70B8417 /* PrivacyInfo.xcprivacy */; };
@@ -35,7 +58,7 @@
 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A1B2C3D4E5F60000FF000001;
-			remoteInfo = DNSProxy;
+			remoteInfo = PacketTunnel;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -46,7 +69,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				A1B2C3D4E5F60000DD000001 /* DNSProxy.appex in Embed Foundation Extensions */,
+				A1B2C3D4E5F60000DD000001 /* PacketTunnel.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -65,14 +88,30 @@
 		A1B2C3D4E5F60000AA000004 /* BlockingControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingControlView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupHelper.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingManager.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedDomains.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSProxyProvider.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000008 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A1B2C3D4E5F60000AA00000A /* DNSProxy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DNSProxy.entitlements; sourceTree = "<group>"; };
-		A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DNSProxy.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60000AA00000A /* PacketTunnel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PacketTunnel.entitlements; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA00000B /* PacketTunnel.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PacketTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60000AA00000C /* BlocklistSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocklistSyncService.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA00000D /* AuthSessionKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionKeychain.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60000AA00000E /* SubscriptionEnforcementTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionEnforcementTask.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000101 /* SharedConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedConstants.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000102 /* DomainNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainNormalizer.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000103 /* DomainHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainHash.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000104 /* BlocklistFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocklistFormat.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000105 /* GamblingKeywordMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamblingKeywordMatcher.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000106 /* NeverBlockAllowlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeverBlockAllowlist.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000107 /* DefaultBlockedDomains.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultBlockedDomains.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000108 /* DoHEndpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoHEndpoints.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000202 /* IPPacket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPPacket.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000203 /* DNSMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSMessage.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000204 /* UpstreamResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpstreamResolver.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000205 /* BlocklistIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocklistIndex.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000206 /* CircuitBreaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircuitBreaker.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000207 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000301 /* BlocklistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocklistStore.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000302 /* TunnelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelController.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60000AA000303 /* TunnelHealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunnelHealthMonitor.swift; sourceTree = "<group>"; };
 		A4B597602FB8DB49B1F174E1 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BetHunter/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BetHunter/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
@@ -146,7 +185,8 @@
 			isa = PBXGroup;
 			children = (
 				13B07FAE1A68108700A75B9A /* BetHunter */,
-				A1B2C3D4E5F60000EE000002 /* DNSProxy */,
+				A1B2C3D4E5F60000EE000003 /* Shared */,
+				A1B2C3D4E5F60000EE000002 /* PacketTunnel */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -162,7 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* BetHunter.app */,
-				A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */,
+				A1B2C3D4E5F60000AA00000B /* PacketTunnel.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -176,7 +216,9 @@
 				A1B2C3D4E5F60000AA000004 /* BlockingControlView.swift */,
 				A1B2C3D4E5F60000AA000005 /* AppGroupHelper.swift */,
 				A1B2C3D4E5F60000AA000006 /* BlockingManager.swift */,
-				A1B2C3D4E5F60000AA000007 /* BlockedDomains.swift */,
+				A1B2C3D4E5F60000AA000301 /* BlocklistStore.swift */,
+				A1B2C3D4E5F60000AA000302 /* TunnelController.swift */,
+				A1B2C3D4E5F60000AA000303 /* TunnelHealthMonitor.swift */,
 				A1B2C3D4E5F60000AA00000C /* BlocklistSyncService.swift */,
 				A1B2C3D4E5F60000AA00000D /* AuthSessionKeychain.swift */,
 				A1B2C3D4E5F60000AA00000E /* SubscriptionEnforcementTask.swift */,
@@ -184,14 +226,35 @@
 			path = BetHunter/Blocking;
 			sourceTree = "<group>";
 		};
-		A1B2C3D4E5F60000EE000002 /* DNSProxy */ = {
+		A1B2C3D4E5F60000EE000002 /* PacketTunnel */ = {
 			isa = PBXGroup;
 			children = (
-				A1B2C3D4E5F60000AA000008 /* DNSProxyProvider.swift */,
+				A1B2C3D4E5F60000AA000008 /* PacketTunnelProvider.swift */,
+				A1B2C3D4E5F60000AA000202 /* IPPacket.swift */,
+				A1B2C3D4E5F60000AA000203 /* DNSMessage.swift */,
+				A1B2C3D4E5F60000AA000204 /* UpstreamResolver.swift */,
+				A1B2C3D4E5F60000AA000205 /* BlocklistIndex.swift */,
+				A1B2C3D4E5F60000AA000206 /* CircuitBreaker.swift */,
+				A1B2C3D4E5F60000AA000207 /* PrivacyInfo.xcprivacy */,
 				A1B2C3D4E5F60000AA000009 /* Info.plist */,
-				A1B2C3D4E5F60000AA00000A /* DNSProxy.entitlements */,
+				A1B2C3D4E5F60000AA00000A /* PacketTunnel.entitlements */,
 			);
-			path = DNSProxy;
+			path = PacketTunnel;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60000EE000003 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60000AA000101 /* SharedConstants.swift */,
+				A1B2C3D4E5F60000AA000102 /* DomainNormalizer.swift */,
+				A1B2C3D4E5F60000AA000103 /* DomainHash.swift */,
+				A1B2C3D4E5F60000AA000104 /* BlocklistFormat.swift */,
+				A1B2C3D4E5F60000AA000105 /* GamblingKeywordMatcher.swift */,
+				A1B2C3D4E5F60000AA000106 /* NeverBlockAllowlist.swift */,
+				A1B2C3D4E5F60000AA000107 /* DefaultBlockedDomains.swift */,
+				A1B2C3D4E5F60000AA000108 /* DoHEndpoints.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		B9577B8C3FBDA12E4C7E03DE /* ExpoModulesProviders */ = {
@@ -246,20 +309,21 @@
 			productReference = 13B07F961A680F5B00A75B9A /* BetHunter.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A1B2C3D4E5F60000FF000001 /* DNSProxy */ = {
+		A1B2C3D4E5F60000FF000001 /* PacketTunnel */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A1B2C3D4E5F60000FF000006 /* Build configuration list for PBXNativeTarget "DNSProxy" */;
+			buildConfigurationList = A1B2C3D4E5F60000FF000006 /* Build configuration list for PBXNativeTarget "PacketTunnel" */;
 			buildPhases = (
 				A1B2C3D4E5F60000FF000002 /* Sources */,
 				A1B2C3D4E5F60000FF000003 /* Frameworks */,
+				A1B2C3D4E5F60000FF00000A /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = DNSProxy;
-			productName = DNSProxy;
-			productReference = A1B2C3D4E5F60000AA00000B /* DNSProxy.appex */;
+			name = PacketTunnel;
+			productName = PacketTunnel;
+			productReference = A1B2C3D4E5F60000AA00000B /* PacketTunnel.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -292,7 +356,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* BetHunter */,
-				A1B2C3D4E5F60000FF000001 /* DNSProxy */,
+				A1B2C3D4E5F60000FF000001 /* PacketTunnel */,
 			);
 		};
 /* End PBXProject section */
@@ -306,6 +370,14 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				D68788FC7D0097DD631A8054 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1B2C3D4E5F60000FF00000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F60000CC000207 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -386,8 +458,8 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXApplication/ExpoApplication_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXNotifications/ExpoNotifications_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoNotifications/ExpoNotifications_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/GTMAppAuth/GTMAppAuth_Privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/GTMSessionFetcher/GTMSessionFetcher_Core_Privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/GoogleSignIn/GoogleSignIn.bundle",
@@ -426,8 +498,8 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoApplication_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXConstants.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoConstants_privacy.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoNotifications_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GTMAppAuth_Privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GTMSessionFetcher_Core_Privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleSignIn.bundle",
@@ -502,10 +574,20 @@
 				A1B2C3D4E5F60000BB000004 /* BlockingControlView.swift in Sources */,
 				A1B2C3D4E5F60000BB000005 /* AppGroupHelper.swift in Sources */,
 				A1B2C3D4E5F60000BB000006 /* BlockingManager.swift in Sources */,
-				A1B2C3D4E5F60000BB000007 /* BlockedDomains.swift in Sources */,
 				A1B2C3D4E5F60000BB000008 /* BlocklistSyncService.swift in Sources */,
 				A1B2C3D4E5F60000BB000009 /* AuthSessionKeychain.swift in Sources */,
 				A1B2C3D4E5F60000BB00000A /* SubscriptionEnforcementTask.swift in Sources */,
+				A1B2C3D4E5F60000BB000301 /* BlocklistStore.swift in Sources */,
+				A1B2C3D4E5F60000BB000302 /* TunnelController.swift in Sources */,
+				A1B2C3D4E5F60000BB000303 /* TunnelHealthMonitor.swift in Sources */,
+				A1B2C3D4E5F60000BB000101 /* SharedConstants.swift in Sources */,
+				A1B2C3D4E5F60000BB000102 /* DomainNormalizer.swift in Sources */,
+				A1B2C3D4E5F60000BB000103 /* DomainHash.swift in Sources */,
+				A1B2C3D4E5F60000BB000104 /* BlocklistFormat.swift in Sources */,
+				A1B2C3D4E5F60000BB000105 /* GamblingKeywordMatcher.swift in Sources */,
+				A1B2C3D4E5F60000BB000106 /* NeverBlockAllowlist.swift in Sources */,
+				A1B2C3D4E5F60000BB000107 /* DefaultBlockedDomains.swift in Sources */,
+				A1B2C3D4E5F60000BB000108 /* DoHEndpoints.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -513,8 +595,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1B2C3D4E5F60000CC000001 /* DNSProxyProvider.swift in Sources */,
-				A1B2C3D4E5F60000CC000002 /* BlockedDomains.swift in Sources */,
+				A1B2C3D4E5F60000CC000001 /* PacketTunnelProvider.swift in Sources */,
+				A1B2C3D4E5F60000CC000202 /* IPPacket.swift in Sources */,
+				A1B2C3D4E5F60000CC000203 /* DNSMessage.swift in Sources */,
+				A1B2C3D4E5F60000CC000204 /* UpstreamResolver.swift in Sources */,
+				A1B2C3D4E5F60000CC000205 /* BlocklistIndex.swift in Sources */,
+				A1B2C3D4E5F60000CC000206 /* CircuitBreaker.swift in Sources */,
+				A1B2C3D4E5F60000CC000101 /* SharedConstants.swift in Sources */,
+				A1B2C3D4E5F60000CC000102 /* DomainNormalizer.swift in Sources */,
+				A1B2C3D4E5F60000CC000103 /* DomainHash.swift in Sources */,
+				A1B2C3D4E5F60000CC000104 /* BlocklistFormat.swift in Sources */,
+				A1B2C3D4E5F60000CC000105 /* GamblingKeywordMatcher.swift in Sources */,
+				A1B2C3D4E5F60000CC000106 /* NeverBlockAllowlist.swift in Sources */,
+				A1B2C3D4E5F60000CC000107 /* DefaultBlockedDomains.swift in Sources */,
+				A1B2C3D4E5F60000CC000108 /* DoHEndpoints.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -523,7 +617,7 @@
 /* Begin PBXTargetDependency section */
 		A1B2C3D4E5F60000FF000007 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A1B2C3D4E5F60000FF000001 /* DNSProxy */;
+			target = A1B2C3D4E5F60000FF000001 /* PacketTunnel */;
 			targetProxy = A1B2C3D4E5F60000FF000008 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -537,7 +631,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BetHunter/BetHunter.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = K876CPA8FF;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -550,7 +644,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.6;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -575,7 +669,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BetHunter/BetHunter.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = K876CPA8FF;
 				INFOPLIST_FILE = BetHunter/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -583,7 +677,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.6;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -721,22 +815,24 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = DNSProxy/DNSProxy.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PacketTunnel/PacketTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = K876CPA8FF;
-				INFOPLIST_FILE = DNSProxy/Info.plist;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = PacketTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.6;
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.PacketTunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -746,22 +842,24 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = DNSProxy/DNSProxy.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PacketTunnel/PacketTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = K876CPA8FF;
-				INFOPLIST_FILE = DNSProxy/Info.plist;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = PacketTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.1.6;
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.DNSProxy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bethunter.app.rick.PacketTunnel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -788,7 +886,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A1B2C3D4E5F60000FF000006 /* Build configuration list for PBXNativeTarget "DNSProxy" */ = {
+		A1B2C3D4E5F60000FF000006 /* Build configuration list for PBXNativeTarget "PacketTunnel" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A1B2C3D4E5F60000FF000004 /* Debug */,

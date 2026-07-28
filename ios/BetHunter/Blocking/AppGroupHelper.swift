@@ -5,11 +5,10 @@ import FamilyControls
 struct AppGroupHelper {
   static let suiteName = "group.com.bethunter.app.rick"
 
-  private static let protectionEnabledKey = "protectionEnabled"
-  private static let selectionKey = "familyActivitySelectionData"
-  static let domainsKey = "blocked_domains_list"
+  private static let protectionEnabledKey = SharedConstants.Keys.protectionEnabled
+  private static let selectionKey = SharedConstants.Keys.familyActivitySelection
   static let domainsLastFetchKey = "blocked_domains_last_fetch"
-  private static let apiBaseUrlKey = "auth_api_base_url"
+  private static let apiBaseUrlKey = SharedConstants.Keys.authAPIBaseURL
 
   private static var sharedDefaults: UserDefaults? {
     UserDefaults(suiteName: suiteName)
@@ -46,19 +45,27 @@ struct AppGroupHelper {
     }
   }
 
-  // MARK: - Lista de domínios bloqueados (compartilhada com extensão DNS)
-
-  static func saveBlockedDomains(_ domains: [String]) {
-    sharedDefaults?.set(domains, forKey: domainsKey)
-  }
-
-  static func loadBlockedDomains() -> [String] {
-    sharedDefaults?.stringArray(forKey: domainsKey) ?? []
-  }
+  // MARK: - Blocklist
+  //
+  // Os domínios em si vivem num índice binário em mmap no container do App Group
+  // (ver BlocklistStore / BlocklistIndex), NÃO no UserDefaults. O array de ~300
+  // mil strings que existia aqui era re-serializado a cada acesso ao suite,
+  // inclusive dentro da extensão, que tem orçamento de ~15 MB.
 
   static var blockedDomainsLastFetch: Double {
     get { sharedDefaults?.double(forKey: domainsLastFetchKey) ?? 0 }
     set { sharedDefaults?.set(newValue, forKey: domainsLastFetchKey) }
+  }
+
+  static var blocklistETag: String? {
+    get { sharedDefaults?.string(forKey: SharedConstants.Keys.blocklistETag) }
+    set { sharedDefaults?.set(newValue, forKey: SharedConstants.Keys.blocklistETag) }
+  }
+
+  /// Marcado pela extensão quando o disjuntor entra em passthrough — a UI usa
+  /// para avisar que a proteção está degradada.
+  static var isTunnelDegraded: Bool {
+    sharedDefaults?.bool(forKey: SharedConstants.Keys.tunnelDegraded) ?? false
   }
 
   // MARK: - Sessão de auth (usado pelo SubscriptionEnforcementTask)

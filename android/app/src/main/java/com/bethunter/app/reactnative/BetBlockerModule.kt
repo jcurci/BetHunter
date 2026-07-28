@@ -21,6 +21,7 @@ import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
 import com.bethunter.app.vpn.BetBlockerVpnService
 import com.bethunter.app.vpn.BlockerNotifications
+import com.bethunter.app.vpn.VpnStatus
 import com.bethunter.app.work.BlocklistRefreshWorker
 import com.bethunter.app.work.SubscriptionEnforcementWorker
 import com.bethunter.app.work.VpnHealthWorker
@@ -41,6 +42,14 @@ class BetBlockerModule(
   // @Volatile garante visibilidade entre JS thread e UI thread
   @Volatile private var pendingVpnPromise: Promise? = null
   @Volatile private var pendingDeviceAdminPromise: Promise? = null
+  @Volatile private var pendingBatteryPromise: Promise? = null
+
+  /**
+   * Valor de premiumPaused antes de startBlocking() mexer nele, para desfazer
+   * caso a ativação não se complete. Sem isso, uma tentativa abortada deixava a
+   * pausa por assinatura limpa como se o usuário tivesse reativado de fato.
+   */
+  @Volatile private var premiumPausedBeforeStart = false
 
   private val adminComponent: ComponentName
     get() = ComponentName(reactContext, BetHunterDeviceAdminReceiver::class.java)
@@ -62,7 +71,11 @@ class BetBlockerModule(
     repository.setBlockingEnabled(true)
     // Ação explícita do usuário limpa qualquer pausa por assinatura: se ele
     // renovou e está reativando, não faz sentido o health worker ficar inerte.
+    premiumPausedBeforeStart = repository.isPremiumPaused()
     repository.setPremiumPaused(false)
+    // Só chega aqui quem passou pelo paywall. Sem emitir a licença, a VPN se
+    // recusaria a subir logo depois (ver o gate em BetBlockerVpnService).
+    repository.renewPremiumLease(null)
     BlocklistRefreshWorker.schedule(reactContext.applicationContext)
     if (repository.getAuthToken() != null) {
       SubscriptionEnforcementWorker.schedule(reactContext.applicationContext)
@@ -74,20 +87,20 @@ class BetBlockerModule(
         repository.setRevoked(false)
         VpnHealthWorker.schedule(reactContext.applicationContext)
         startVpnService()
-        requestBatteryOptimizationExemption()
+        // A isenção de bateria NÃO é mais disparada aqui: ela vira um passo
+        // explícito e explicado na jornada guiada do JS (evita empilhar diálogos
+        // de sistema e o aviso vazar como banner depois).
         promise.resolve(true)
       } catch (e: Exception) {
         Log.e(TAG, "Failed to start VPN service after permission check", e)
-        repository.setBlockingEnabled(false)
-        BlocklistRefreshWorker.cancel(reactContext.applicationContext)
-        SubscriptionEnforcementWorker.cancel(reactContext.applicationContext)
+        rollbackStartBlocking()
         promise.resolve(false)
       }
       return
     }
     val activity = reactContext.currentActivity
     if (activity == null) {
-      repository.setBlockingEnabled(false)
+      rollbackStartBlocking()
       promise.reject("NO_ACTIVITY", "No active Android activity")
       return
     }
@@ -96,11 +109,21 @@ class BetBlockerModule(
       activity.startActivityForResult(prepareIntent, REQ_PREPARE_VPN)
     } catch (e: Exception) {
       pendingVpnPromise = null
-      repository.setBlockingEnabled(false)
-      BlocklistRefreshWorker.cancel(reactContext.applicationContext)
-      SubscriptionEnforcementWorker.cancel(reactContext.applicationContext)
+      rollbackStartBlocking()
       promise.reject("VPN_PREPARE_FAILED", e.message)
     }
+  }
+
+  /**
+   * Desfaz os efeitos colaterais de startBlocking() quando a ativação não se
+   * completa — inclusive a limpeza da pausa por assinatura, que antes ficava
+   * aplicada mesmo com o usuário negando a VPN.
+   */
+  private fun rollbackStartBlocking() {
+    repository.setBlockingEnabled(false)
+    repository.setPremiumPaused(premiumPausedBeforeStart)
+    BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+    SubscriptionEnforcementWorker.cancel(reactContext.applicationContext)
   }
 
   @ReactMethod
@@ -119,6 +142,76 @@ class BetBlockerModule(
       ContextCompat.startForegroundService(reactContext, intent)
     } catch (e: Exception) {
       Log.e(TAG, "Failed to startForegroundService for stopping: ${e.message}")
+    }
+  }
+
+  /**
+   * Pausa reversível por assinatura inativa.
+   *
+   * Diferente de [stopBlocking]: preserva `isBlockingEnabled` (a intenção do
+   * usuário) e mantém o SubscriptionEnforcementWorker agendado, para religar
+   * sozinho na renovação. Sem isto exposto, o `pauseBlocking()` do JS não tinha
+   * como chegar até aqui e o App.tsx acabava chamando `stopBlocking`, apagando a
+   * configuração do usuário a cada lapso de pagamento.
+   */
+  @ReactMethod
+  fun pauseBlocking() {
+    if (repository.isPremiumPaused()) return
+    repository.setPremiumPaused(true)
+    repository.revokePremiumLease()
+
+    // Só manda o PAUSE se há o que pausar: onCreate() do serviço faz
+    // startAsForeground(), então um PAUSE com a VPN já parada subiria o serviço
+    // inteiro só para derrubá-lo em seguida (ver commit 2f7ac372).
+    if (VpnStatus.isVpnActive(reactContext)) {
+      val intent = Intent(reactContext, BetBlockerVpnService::class.java).apply {
+        action = BetBlockerVpnService.ACTION_PAUSE
+      }
+      try {
+        ContextCompat.startForegroundService(reactContext, intent)
+      } catch (e: Exception) {
+        Log.w(TAG, "Failed to send ACTION_PAUSE: ${e.message}")
+      }
+    }
+
+    BlockerNotifications.showReactivationNotification(
+      reactContext.applicationContext,
+      "Bloqueio pausado",
+      "Sua assinatura não está ativa. Renove para voltar a bloquear sites de apostas."
+    )
+  }
+
+  /**
+   * Renova a licença que o serviço de VPN confere para continuar filtrando.
+   *
+   * Separada de [resumeBlocking] de propósito: aquele sai cedo quando o usuário
+   * não estava pausado, ou seja, NÃO serve como caminho de renovação para quem
+   * está com tudo em dia. Se a renovação dependesse só do worker de
+   * enforcement, um assinante num aparelho que estrangula o WorkManager
+   * (Xiaomi e afins) veria a licença vencer e perderia a proteção.
+   */
+  @ReactMethod
+  fun renewPremiumLease(untilMs: Double) {
+    repository.setPremiumLeaseUntil(untilMs.toLong())
+  }
+
+  @ReactMethod
+  fun resumeBlocking() {
+    if (!repository.isPremiumPaused()) return
+    repository.setPremiumPaused(false)
+    BlockerNotifications.cancelReactivationNotification(reactContext.applicationContext)
+    BlocklistRefreshWorker.schedule(reactContext.applicationContext)
+    VpnHealthWorker.schedule(reactContext.applicationContext)
+
+    try {
+      ContextCompat.startForegroundService(
+        reactContext,
+        Intent(reactContext, BetBlockerVpnService::class.java)
+      )
+    } catch (e: Exception) {
+      // FGS bloqueado em background: o health worker e a reabertura do app
+      // cobrem o religamento; a intenção já está preservada.
+      Log.w(TAG, "Could not resume VPN: ${e.message}")
     }
   }
 
@@ -172,6 +265,9 @@ class BetBlockerModule(
     val result = Arguments.createMap()
     result.putBoolean("vpnEnabled", repository.isBlockingEnabled())
     result.putBoolean("deviceAdminActive", isDeviceAdminActiveInternal())
+    // Sem isto a Home mostra "desligado" para quem está só pausado por
+    // assinatura — a interface TS já declarava `paused`, o Android é que nunca mandava.
+    result.putBoolean("paused", repository.isPremiumPaused() || !repository.isPremiumLeaseValid())
     promise.resolve(result)
   }
 
@@ -190,6 +286,15 @@ class BetBlockerModule(
       // aqui reabriria a VPN de quem o backend confirmou não ser assinante.
       if (repository.isPremiumPaused()) {
         VpnEventLog.log(reactContext.applicationContext, "sync_premium_paused")
+        promise.resolve(false)
+        return
+      }
+      // Licença vencida: o serviço se recusaria a subir de qualquer forma, e o
+      // startVpnService() abaixo NÃO lançaria (o startForegroundService dá certo,
+      // quem para é o serviço logo depois) — resolveríamos `true` com a VPN morta.
+      if (!repository.isPremiumLeaseValid()) {
+        VpnEventLog.log(reactContext.applicationContext, "sync_premium_lease_expired")
+        SubscriptionEnforcementWorker.enqueueImmediateCheck(reactContext.applicationContext)
         promise.resolve(false)
         return
       }
@@ -231,24 +336,55 @@ class BetBlockerModule(
   }
 
   /**
-   * Versão promisificada do pedido de isenção: resolve true se o dialog do
-   * sistema foi aberto (o resultado real deve ser re-checado no AppState active).
+   * Pede a isenção de otimização de bateria e resolve com o estado REAL da
+   * permissão. Usa startActivityForResult para que a jornada guiada avance por
+   * callback determinístico, em vez de depender do JS re-checar no AppState —
+   * o que deixava o passo mudo quando o usuário voltava sem conceder.
+   *
+   * Fallback (sem Activity ou intent recusado): abre a tela em NEW_TASK e
+   * resolve com o estado atual; nesse caminho o re-check no AppState continua
+   * sendo o que reconcilia.
    */
   @ReactMethod
   fun requestBatteryExemption(promise: Promise) {
-    try {
-      repository.setBatteryExemptionRequested(true)
-      val pm = reactContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-      if (pm.isIgnoringBatteryOptimizations(reactContext.packageName)) {
-        promise.resolve(true)
-        return
-      }
-      val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-        data = Uri.parse("package:${reactContext.packageName}")
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-      }
-      reactContext.startActivity(intent)
+    val pm = try {
+      reactContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+    } catch (e: Exception) {
+      promise.resolve(false)
+      return
+    }
+    if (pm.isIgnoringBatteryOptimizations(reactContext.packageName)) {
       promise.resolve(true)
+      return
+    }
+    if (pendingBatteryPromise != null) {
+      promise.reject("ALREADY_IN_PROGRESS", "Battery exemption dialog already open")
+      return
+    }
+
+    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+      data = Uri.parse("package:${reactContext.packageName}")
+    }
+    val activity = reactContext.currentActivity
+    if (activity != null) {
+      pendingBatteryPromise = promise
+      try {
+        activity.startActivityForResult(intent, REQ_BATTERY_EXEMPTION)
+        // Só marca "já pediu" depois de a tela realmente abrir — a flag governa
+        // o texto do banner e antes mentia quando o intent falhava.
+        repository.setBatteryExemptionRequested(true)
+        return
+      } catch (e: Exception) {
+        pendingBatteryPromise = null
+        Log.w(TAG, "startActivityForResult for battery exemption failed: ${e.message}")
+      }
+    }
+
+    try {
+      intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+      reactContext.startActivity(intent)
+      repository.setBatteryExemptionRequested(true)
+      promise.resolve(pm.isIgnoringBatteryOptimizations(reactContext.packageName))
     } catch (e: Exception) {
       Log.w(TAG, "Could not open battery optimization settings: ${e.message}")
       promise.resolve(false)
@@ -464,20 +600,6 @@ class BetBlockerModule(
     }
   }
 
-  private fun requestBatteryOptimizationExemption() {
-    val pm = reactContext.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
-    if (pm.isIgnoringBatteryOptimizations(reactContext.packageName)) return
-    try {
-      val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-        data = Uri.parse("package:${reactContext.packageName}")
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-      }
-      reactContext.startActivity(intent)
-    } catch (e: Exception) {
-      Log.w(TAG, "Could not open battery optimization settings: ${e.message}")
-    }
-  }
-
   override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
     when (requestCode) {
       REQ_PREPARE_VPN -> {
@@ -488,20 +610,36 @@ class BetBlockerModule(
             repository.setRevoked(false)
             VpnHealthWorker.schedule(reactContext.applicationContext)
             startVpnService()
-            requestBatteryOptimizationExemption()
+            // Isenção de bateria é orquestrada pelo JS na jornada guiada — ver
+            // startBlocking(). Não disparar aqui para não soterrar sob outros diálogos.
             p?.resolve(true)
           } catch (e: Exception) {
             Log.e(TAG, "Failed to start VPN service after user approval", e)
-            repository.setBlockingEnabled(false)
-            BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+            rollbackStartBlocking()
             p?.resolve(false)
           }
         } else {
-          repository.setBlockingEnabled(false)
-          BlocklistRefreshWorker.cancel(reactContext.applicationContext)
+          rollbackStartBlocking()
           p?.resolve(false)
           Log.w(TAG, "VPN permission denied by user")
         }
+      }
+      REQ_BATTERY_EXEMPTION -> {
+        val p = pendingBatteryPromise
+        pendingBatteryPromise = null
+        // O resultCode desta tela não é confiável (vários fabricantes devolvem
+        // CANCELED mesmo após conceder): o que vale é reconsultar o PowerManager.
+        val exempt = try {
+          val pm = reactContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+          pm.isIgnoringBatteryOptimizations(reactContext.packageName)
+        } catch (e: Exception) {
+          false
+        }
+        VpnEventLog.log(
+          reactContext.applicationContext,
+          if (exempt) "battery_exemption_granted" else "battery_exemption_missing",
+        )
+        p?.resolve(exempt)
       }
       REQ_DEVICE_ADMIN -> {
         val p = pendingDeviceAdminPromise
@@ -526,6 +664,8 @@ class BetBlockerModule(
     pendingVpnPromise = null
     pendingDeviceAdminPromise?.reject("MODULE_DESTROYED", "Module was destroyed")
     pendingDeviceAdminPromise = null
+    pendingBatteryPromise?.reject("MODULE_DESTROYED", "Module was destroyed")
+    pendingBatteryPromise = null
     reactContext.removeActivityEventListener(this)
   }
 
@@ -533,6 +673,7 @@ class BetBlockerModule(
     private const val TAG = "BetBlockerModule"
     private const val REQ_PREPARE_VPN = 0xBEE
     private const val REQ_DEVICE_ADMIN = 0xBEF
+    private const val REQ_BATTERY_EXEMPTION = 0xBF0
     private const val SUPPRESSION_WINDOW_MS = 7L * 24 * 60 * 60 * 1000
   }
 }

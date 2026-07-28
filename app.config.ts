@@ -79,7 +79,8 @@ function resolvePublicSdkKey(
   if (IS_STORE_LIKE) {
     throw new Error(
       `[app.config.ts] ${label} ausente ou inválida para ${APP_ENV}. ` +
-        `Defina EXPO_PUBLIC_… com prefixo ${expectedPrefix} (não use test_…).`,
+        `Defina EXPO_PUBLIC_… com prefixo ${expectedPrefix} (não use test_…). ` +
+        `Nunca embuta test_ em staging/production — o SDK RevenueCat faz fatalError em Release.`,
     );
   }
 
@@ -146,6 +147,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     process.env.EXPO_PUBLIC_REVENUECAT_DEFAULT_OFFERING_IDENTIFIER ||
     extraString(existingExtra, 'REVENUECAT_DEFAULT_OFFERING_IDENTIFIER') ||
     'default';
+
+  if (IS_STORE_LIKE) {
+    console.log(
+      `[app.config.ts] ${APP_ENV}: RevenueCat iOS key prefix=${revenueCatIosApiKey.slice(0, 5)}… ` +
+        `(must be appl_)`,
+    );
+  }
 
   const iosUrlScheme = iosUrlSchemeFromClientId(googleIosClientId);
 

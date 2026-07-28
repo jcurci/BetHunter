@@ -13,6 +13,11 @@ const COUPON_OFFERING_ID = 'cupom_desconto';
 let isConfigured = false;
 let pendingCouponOffering = false;
 
+/** True only after a successful Purchases.configure() in this process. */
+export function isRevenueCatConfigured(): boolean {
+  return isConfigured;
+}
+
 export function markCouponApplied(): void {
   pendingCouponOffering = true;
 }
@@ -31,6 +36,10 @@ export function clearPendingCoupon(): void {
  * antes disso).
  */
 export async function applyAndSyncCoupon(withCoupon: boolean, couponCode?: string): Promise<void> {
+  if (!isConfigured) {
+    console.warn('[REVENUECAT] applyAndSyncCoupon ignorado — SDK não configurado');
+    return;
+  }
   await Purchases.setAttributes({
     cupom_ativo: withCoupon ? 'true' : 'false',
     affiliate_coupon: withCoupon && couponCode ? couponCode.toUpperCase() : '',
@@ -46,14 +55,20 @@ export async function applyAndSyncCoupon(withCoupon: boolean, couponCode?: strin
 
 function isValidRevenueCatApiKey(apiKey: string, platform: typeof Platform.OS): boolean {
   if (!apiKey) return false;
+  // Release + test_ → SDK nativo faz fatalError. Nunca configure() fora de __DEV__.
   if (apiKey.startsWith('test_')) return __DEV__;
   if (platform === 'ios') return apiKey.startsWith('appl_');
   if (platform === 'android') return apiKey.startsWith('goog_');
   return false;
 }
 
-export async function initRevenueCat(): Promise<void> {
-  if (isConfigured) return;
+/**
+ * Configura o SDK. Retorna true se configure() rodou (ou já estava ok).
+ * Em Release, chaves test_/vazias/errado-plataforma são rejeitadas — evita o
+ * crash intencional do RevenueCat na App Store Review.
+ */
+export async function initRevenueCat(): Promise<boolean> {
+  if (isConfigured) return true;
 
   const apiKey =
     Platform.OS === 'ios' ? ENV.REVENUECAT_IOS_API_KEY : ENV.REVENUECAT_ANDROID_API_KEY;
@@ -63,11 +78,12 @@ export async function initRevenueCat(): Promise<void> {
       Platform.OS === 'ios'
         ? 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY (appl_…)'
         : 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY (goog_…)';
+    const prefix = apiKey ? `${apiKey.slice(0, 5)}…` : '(vazia)';
     console.warn(
-      `[REVENUECAT] Chave SDK inválida ou ausente (${Platform.OS}). ` +
-        `Em Release/use loja, use ${hint}. configure() foi ignorado para evitar crash nativo com test_/vazia.`,
+      `[REVENUECAT] Chave SDK inválida ou ausente (${Platform.OS}, prefix=${prefix}). ` +
+        `Em Release/loja use ${hint}. configure() ignorado para evitar crash nativo com test_/vazia.`,
     );
-    return;
+    return false;
   }
 
   Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.INFO);
@@ -77,12 +93,16 @@ export async function initRevenueCat(): Promise<void> {
   });
 
   isConfigured = true;
+  return true;
 }
 
 export async function identifyUser(
   userId: string,
   attrs?: { email?: string; name?: string; phone?: string },
 ): Promise<CustomerInfo> {
+  if (!isConfigured) {
+    throw new Error('[REVENUECAT] identifyUser chamado antes de configure()');
+  }
   const { customerInfo } = await Purchases.logIn(userId);
 
   const setAttrs: Record<string, string> = {};
@@ -102,10 +122,14 @@ export async function identifyUser(
 }
 
 export async function logoutUser(): Promise<void> {
+  if (!isConfigured) return;
   await Purchases.logOut();
 }
 
 export async function getCustomerInfo(): Promise<CustomerInfo> {
+  if (!isConfigured) {
+    throw new Error('[REVENUECAT] getCustomerInfo chamado antes de configure()');
+  }
   return Purchases.getCustomerInfo();
 }
 

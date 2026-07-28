@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.system.OsConstants
 import android.util.Log
@@ -21,6 +23,7 @@ import com.bethunter.app.dns.DnsInterceptor
 import com.bethunter.app.domain.DomainMatcher
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
+import com.bethunter.app.work.SubscriptionEnforcementWorker
 import com.bethunter.app.work.VpnHealthWorker
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -118,6 +121,15 @@ class BetBlockerVpnService : VpnService() {
     }
     if (!repository.isBlockingEnabled()) {
       Log.i(TAG, "Blocking disabled, stopping VPN service")
+      stopSelf()
+      return Service.START_NOT_STICKY
+    }
+    // Premium é pré-condição do bloqueio, e este é o único ponto do sistema que
+    // consegue impor isso sozinho. `isBlockingEnabled` continua true durante a
+    // pausa (é a intenção do usuário, preservada de propósito), então sem esta
+    // checagem qualquer start cego — boot, alarme do watchdog, restart sticky —
+    // ressuscitava a VPN de quem não é mais assinante.
+    if (!isPremiumAllowed()) {
       stopSelf()
       return Service.START_NOT_STICKY
     }
@@ -313,9 +325,57 @@ class BetBlockerVpnService : VpnService() {
     stopSelf()
   }
 
+  /**
+   * O bloqueio é premium-only, e este serviço é o único ponto que consegue impor
+   * isso sem depender de aviso de ninguém.
+   *
+   * Quando a barreira é a LICENÇA (e não uma pausa já decidida por alguém), a
+   * queda não pode ser silenciosa: um assinante em dia que caiu num buraco de
+   * renovação precisa voltar em minutos, não na próxima janela periódica. Por
+   * isso dispara uma checagem imediata de assinatura e avisa o usuário.
+   */
+  private fun isPremiumAllowed(): Boolean {
+    if (repository.isPremiumPaused()) {
+      VpnEventLog.log(this, "start_blocked_premium_paused")
+      return false
+    }
+    if (!repository.isPremiumLeaseValid()) {
+      Log.w(TAG, "Premium lease expired — refusing to filter")
+      VpnEventLog.log(this, "premium_lease_expired")
+      SubscriptionEnforcementWorker.enqueueImmediateCheck(applicationContext)
+      BlockerNotifications.showReactivationNotification(
+        applicationContext,
+        "Bloqueio pausado",
+        "Não conseguimos confirmar sua assinatura. Abra o app para retomar a proteção."
+      )
+      return false
+    }
+    return true
+  }
+
   private fun runLoop(reader: PacketReader, writer: PacketWriter) {
     val buffer = ByteArray(32767)
+    var nextPremiumCheckAt = System.currentTimeMillis() + PREMIUM_CHECK_INTERVAL_MS
     while (running && !Thread.currentThread().isInterrupted) {
+      // Uma leitura de SQLite a cada 5 min, irrisória perto do tráfego DNS. É o
+      // que faz a VPN morrer sozinha quando a licença vence — sem depender de
+      // ninguém avisar. Cobre o caso do usuário deslogado (que desliga o worker
+      // de enforcement) e o do serviço recriado por START_STICKY.
+      if (System.currentTimeMillis() >= nextPremiumCheckAt) {
+        nextPremiumCheckAt = System.currentTimeMillis() + PREMIUM_CHECK_INTERVAL_MS
+        if (!isPremiumAllowed()) {
+          running = false
+          // Teardown na main thread: stopVpn() interrompe a workerThread, que é
+          // esta aqui — chamá-lo daqui seria a thread se auto-interrompendo no
+          // meio do próprio shutdown.
+          Handler(Looper.getMainLooper()).post {
+            stopVpn()
+            stopSelf()
+          }
+          break
+        }
+      }
+
       val length = try {
         reader.read(buffer)
       } catch (e: Exception) {
@@ -597,6 +657,8 @@ class BetBlockerVpnService : VpnService() {
     private const val FAKE_DNS_SERVER = "10.0.0.1"
     private const val NOTIF_CHANNEL_ID = "betblocker_vpn"
     private const val NOTIF_ID = 42
+    /** De quanto em quanto tempo o próprio túnel reconfere a licença de premium. */
+    private const val PREMIUM_CHECK_INTERVAL_MS = 5L * 60 * 1000
     const val ACTION_RELOAD = "com.bethunter.app.action.RELOAD_BLOCKED_DOMAINS"
     const val ACTION_STOP = "com.bethunter.app.action.STOP_VPN"
     const val ACTION_PAUSE = "com.bethunter.app.action.PAUSE_VPN"

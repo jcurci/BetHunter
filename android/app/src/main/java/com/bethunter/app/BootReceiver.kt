@@ -20,6 +20,23 @@ class BootReceiver : BroadcastReceiver() {
     val repo = BlockedDomainsRepository(context)
     if (repo.isBlockingEnabled()) {
       VpnEventLog.log(context, "boot_receiver:$action")
+
+      // Os workers são agendados mesmo sem premium: são eles que confirmam a
+      // assinatura e religam a proteção sozinhos quando ela volta.
+      BlocklistRefreshWorker.schedule(context)
+      VpnHealthWorker.schedule(context)
+      if (repo.getAuthToken() != null) {
+        SubscriptionEnforcementWorker.schedule(context)
+      }
+
+      // `isBlockingEnabled` continua true durante a pausa por assinatura, então
+      // sem esta checagem reiniciar o aparelho ressuscitava o bloqueio de quem
+      // não é mais assinante.
+      if (repo.isPremiumPaused() || !repo.isPremiumLeaseValid()) {
+        VpnEventLog.log(context, "boot_skipped_no_premium")
+        return
+      }
+
       try {
         ContextCompat.startForegroundService(
           context,
@@ -29,11 +46,6 @@ class BootReceiver : BroadcastReceiver() {
         // Nunca crashar um receiver; o health check periódico religa depois.
         Log.w("BootReceiver", "Could not start VPN service on boot: ${e.message}")
         VpnEventLog.log(context, "boot_start_failed:${e.javaClass.simpleName}")
-      }
-      BlocklistRefreshWorker.schedule(context)
-      VpnHealthWorker.schedule(context)
-      if (repo.getAuthToken() != null) {
-        SubscriptionEnforcementWorker.schedule(context)
       }
     }
   }

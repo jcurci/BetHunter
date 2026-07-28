@@ -17,8 +17,16 @@ public class AppDelegate: ExpoAppDelegate {
     Self.ensureBundleURLProvider()
 #endif
 
-    // Precisa ser registrado antes desse método retornar (exigência da Apple).
-    SubscriptionEnforcementTask.register()
+    // Precisam ser registradas antes desse método retornar (exigência da Apple).
+    if #available(iOS 16.0, *) {
+      SubscriptionEnforcementTask.register()
+      BlocklistRefreshTask.register()
+
+      // Remove o array legado de ~300 mil strings do UserDefaults do App Group.
+      // Instalações antigas têm essa chave, e o plist inteiro é re-serializado a
+      // cada acesso ao suite — inclusive dentro da extensão, com 15 MB de teto.
+      BlocklistStore.migrateLegacyStorage()
+    }
 
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
@@ -37,6 +45,17 @@ public class AppDelegate: ExpoAppDelegate {
 #endif
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// Reconcilia o estado real do túnel com a intenção do usuário sempre que o
+  /// app volta ao primeiro plano. Cobre o caso que o on-demand não cobre: o
+  /// usuário ter apagado o perfil de VPN em Ajustes.
+  public override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    if #available(iOS 16.0, *) {
+      TunnelHealthMonitor.shared.reconcile { _ in }
+      TunnelHealthMonitor.shared.checkDegradedState()
+    }
   }
 
   /// Garante que RCTBundleURLProvider tem um host configurado antes do RN arrancar.
