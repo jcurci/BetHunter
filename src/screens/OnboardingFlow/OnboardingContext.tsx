@@ -11,6 +11,10 @@ export type QuizAnswers = {
   objective: string | null;
   preferredTime: string | null;
   dailyDuration: string | null;
+  /** Onde o usuário conheceu o app — id em minúsculo, ex. 'instagram'. */
+  acquisitionSource: string | null;
+  /** Texto livre, só quando acquisitionSource === 'outro'. */
+  acquisitionSourceOther: string | null;
 };
 
 export type OnboardingState = {
@@ -24,6 +28,8 @@ export type OnboardingState = {
   streak: number;
   firstLessonCompleted: boolean;
   firstLessonQuestionIndex: number;
+  /** Se a origem já foi confirmada pelo servidor; se não, CelebrationScreen re-tenta. */
+  acquisitionSourceSynced: boolean;
 };
 
 const INITIAL_ANSWERS: QuizAnswers = {
@@ -34,6 +40,8 @@ const INITIAL_ANSWERS: QuizAnswers = {
   objective: null,
   preferredTime: null,
   dailyDuration: null,
+  acquisitionSource: null,
+  acquisitionSourceOther: null,
 };
 
 type OnboardingContextValue = {
@@ -59,6 +67,8 @@ type OnboardingContextValue = {
   firstLessonQuestionIndex: number;
   setFirstLessonQuestionIndex: (index: number) => void;
   completeFirstLesson: (betcoins: number, xp: number) => void;
+  acquisitionSourceSynced: boolean;
+  setAcquisitionSourceSynced: (value: boolean) => void;
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | undefined>(undefined);
@@ -91,12 +101,15 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const [streak, setStreakRaw] = useState(0);
   const [firstLessonCompleted, setFirstLessonRaw] = useState(false);
   const [firstLessonQuestionIndex, setFirstLessonQuestionIndexRaw] = useState(0);
+  const [acquisitionSourceSynced, setAcquisitionSourceSyncedRaw] = useState(false);
 
   useEffect(() => {
     loadState().then((saved) => {
       if (saved) {
         setPushEnabledRaw(saved.pushEnabled);
-        setAnswers(saved.answers);
+        // Merge, não substituição: um rascunho salvo por uma versão antiga do app
+        // não tem as chaves novas, e elas viriam como `undefined`.
+        setAnswers({ ...INITIAL_ANSWERS, ...(saved.answers ?? {}) });
         setProfileRaw(saved.profile);
         setSavedStep(saved.currentStep);
         setSobrietyRaw(saved.sobrietyStartDate ?? null);
@@ -105,6 +118,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
         setStreakRaw(saved.streak ?? 0);
         setFirstLessonRaw(saved.firstLessonCompleted ?? false);
         setFirstLessonQuestionIndexRaw(saved.firstLessonQuestionIndex ?? 0);
+        setAcquisitionSourceSyncedRaw(saved.acquisitionSourceSynced ?? false);
       }
       setHydrated(true);
     });
@@ -122,9 +136,10 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
       streak,
       firstLessonCompleted,
       firstLessonQuestionIndex,
+      acquisitionSourceSynced,
       ...overrides,
     }),
-    [pushEnabled, answers, profile, savedStep, sobrietyStartDate, betcoinsEarned, xpEarned, streak, firstLessonCompleted, firstLessonQuestionIndex],
+    [pushEnabled, answers, profile, savedStep, sobrietyStartDate, betcoinsEarned, xpEarned, streak, firstLessonCompleted, firstLessonQuestionIndex, acquisitionSourceSynced],
   );
 
   const setPushEnabled = useCallback((value: boolean | null) => {
@@ -186,6 +201,11 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     persistState(buildState({ firstLessonQuestionIndex: index }));
   }, [buildState]);
 
+  const setAcquisitionSourceSynced = useCallback((value: boolean) => {
+    setAcquisitionSourceSyncedRaw(value);
+    persistState(buildState({ acquisitionSourceSynced: value }));
+  }, [buildState]);
+
   const completeFirstLesson = useCallback((betcoins: number, xp: number) => {
     const newBetcoins = betcoinsEarned + betcoins;
     const newXp = xpEarned + xp;
@@ -220,6 +240,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
         firstLessonCompleted, setFirstLessonCompleted,
         firstLessonQuestionIndex, setFirstLessonQuestionIndex,
         completeFirstLesson,
+        acquisitionSourceSynced, setAcquisitionSourceSynced,
       }}
     >
       {children}

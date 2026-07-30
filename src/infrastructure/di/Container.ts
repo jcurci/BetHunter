@@ -60,6 +60,11 @@ import { SubmitBettingHouseReportUseCase } from "../../domain/usercases/SubmitBe
 import { BettingHouseReportApi } from "../services/BettingHouseReport.api";
 import { BettingHouseReportRepositoryImpl } from "../../domain/data/repositories/BettingHouseReportRepositoryImpl";
 
+// Acquisition source (onboarding) imports
+import { SubmitAcquisitionSourceUseCase } from "../../domain/usercases/SubmitAcquisitionSourceUseCase";
+import { AcquisitionSourceApi } from "../services/AcquisitionSource.api";
+import { AcquisitionSourceRepositoryImpl } from "../../domain/data/repositories/AcquisitionSourceRepositoryImpl";
+
 // Reward imports
 import { ClaimRewardUseCase } from "../../domain/usercases/ClaimRewardUseCase";
 import { RewardRepositoryImpl } from "../../domain/data/repositories/RewardRepositoryImpl";
@@ -111,6 +116,7 @@ export class Container {
   private confirmPasswordChangeUseCase: ConfirmPasswordChangeUseCase | null = null;
 
   private submitBettingHouseReportUseCase: SubmitBettingHouseReportUseCase | null = null;
+  private submitAcquisitionSourceUseCase: SubmitAcquisitionSourceUseCase | null = null;
   private claimRewardUseCase: ClaimRewardUseCase | null = null;
 
   // Budget (Modo Orçamento)
@@ -346,6 +352,19 @@ export class Container {
       );
     }
     return this.submitBettingHouseReportUseCase;
+  }
+
+  getSubmitAcquisitionSourceUseCase(): SubmitAcquisitionSourceUseCase {
+    if (!this.submitAcquisitionSourceUseCase) {
+      const acquisitionSourceApi = new AcquisitionSourceApi();
+      const acquisitionSourceRepository = new AcquisitionSourceRepositoryImpl(
+        acquisitionSourceApi,
+      );
+      this.submitAcquisitionSourceUseCase = new SubmitAcquisitionSourceUseCase(
+        acquisitionSourceRepository,
+      );
+    }
+    return this.submitAcquisitionSourceUseCase;
   }
 
   getClaimRewardUseCase(): ClaimRewardUseCase {
