@@ -50,6 +50,10 @@ import CursosIcon from "../../assets/home/cursos.svg";
 // Domain & Infrastructure
 
 import { Container } from "../../infrastructure/di/Container";
+import type {
+  AlwaysOnVpnStatus,
+  OpenAlwaysOnResult,
+} from "../../infrastructure/native/blockerModule";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
 import { useDashboardStore } from "../../storage/dashboardStore";
@@ -59,11 +63,45 @@ import { notifyStreakMilestone } from "../../services/notifications";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
+/** Só corre com o app em primeiro plano — ver armBlockingTimeout. */
+const VPN_REQUEST_TIMEOUT_MS = 20000;
+/** Atraso antes de reexibir os banners depois que a jornada fecha (evita flash). */
+const BANNER_REVEAL_DELAY_MS = 600;
 /** Chave por usuário — garante que cada conta veja o modal exatamente uma vez. */
 const blockerPromoSeenKey = (userId: string): string =>
   `@bethunter_blocker_promo_seen_${userId}`;
 
 type BlockFlowStep = "choices" | "report";
+
+// Passos da jornada guiada de proteção — um único modal do começo ao fim.
+// Cada passo dispara um diálogo de sistema isolado e explicado, em vez de
+// empilhá-los ou deixar o aviso vazar como banner depois. Passos já satisfeitos
+// (bateria já isenta / device admin já ativo / always-on confirmada) são pulados
+// automaticamente.
+//
+// "alwaysOn" é OBRIGATÓRIO e por isso fica por último: é o único passo sem
+// "Agora não", e é o mais trabalhoso (o usuário precisa ligar uma chave na tela
+// do sistema, não só aceitar um diálogo). A posição também é técnica: o toggle
+// "VPN sempre ativa" só existe para app que já tem consentimento de VPN, então
+// ele NÃO pode vir antes do passo "intro". Reordenar quebra o passo.
+type SetupStep = "intro" | "battery" | "deviceAdmin" | "alwaysOn" | "done";
+
+/**
+ * Desfecho da jornada, por dispositivo (as permissões são do aparelho, não da
+ * conta). Governa os banners de reforço da Home: eles são recuperação de um
+ * "Agora não" explícito, não um aviso genérico de permissão faltando.
+ * Chave ausente = usuário legado (instalou antes da jornada única) — nesse caso
+ * o comportamento antigo é preservado: banner aparece se a permissão faltar.
+ */
+const SETUP_OUTCOME_KEY = "@bethunter_protection_setup_v1";
+/**
+ * Não existe valor para "always-on pendente" de propósito: o passo é obrigatório,
+ * então não há "Agora não" para registrar. A pendência é derivada da verdade
+ * nativa (`alwaysOnStatus`), revalidada a cada foco, e vale inclusive para
+ * usuário `legacy`. Persistir isso aqui criaria o pior bug possível: o banner
+ * obrigatório escondido por um `setupOutcome !== "completed"`.
+ */
+type SetupOutcome = "legacy" | "completed" | "skipped_battery" | "skipped_admin";
 
 /** Saudação segundo o relógio local do dispositivo (pt-BR). */
 function periodGreetingLabel(): string {
@@ -75,11 +113,25 @@ function periodGreetingLabel(): string {
 
 const { BetBlocker, BetBlocking } = NativeModules;
 
+/**
+ * O bundle JS pode ser atualizado à frente do binário nativo. Sem os métodos de
+ * always-on na ponte, o passo 4 é INTANGÍVEL (não há como abrir a tela nem
+ * detectar o estado): nesse caso a jornada volta ao formato de 3 passos, em vez
+ * de travar num passo obrigatório que o usuário não consegue cumprir.
+ */
+const alwaysOnSupported =
+  Platform.OS === "android" && typeof BetBlocker?.getAlwaysOnVpnStatus === "function";
+
 // Module-level flag: persists for the entire app session, survives component remounts
 let sessionBooted = false;
 
 const CARD_GAP = 10;
 const SCROLL_HORIZONTAL_PADDING = 40; // 20px each side (scrollContent style)
+
+/** Número oficial de suporte (DDI 55 + DDD 11). Formato wa.me evita depender de scheme no iOS. */
+const SUPPORT_WHATSAPP_URL =
+  "https://wa.me/5511997274798?text=" +
+  encodeURIComponent("Olá, preciso de ajuda com o BetHunter.");
 
 const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -101,7 +153,7 @@ const Home: React.FC = () => {
     clearLoadError,
     updateAfterCheckIn
   } = useDashboardStore();
-  
+
   const [hasBooted, setHasBooted] = useState<boolean>(sessionBooted);
 
   // Blocker state
@@ -118,6 +170,43 @@ const Home: React.FC = () => {
   const [showBatteryHintModal, setShowBatteryHintModal] = useState<boolean>(false);
   const blockingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blockingTimedOutRef = useRef<boolean>(false);
+  // Desfecho persistido da jornada; "legacy" até a primeira leitura/gravação.
+  const [setupOutcome, setSetupOutcome] = useState<SetupOutcome>("legacy");
+  // true depois que o usuário voltou do diálogo de bateria sem ter concedido —
+  // permite o passo dar feedback em vez de ficar mudo.
+  const [batteryAttemptFailed, setBatteryAttemptFailed] = useState<boolean>(false);
+
+  // Estado da VPN sempre ativa (passo obrigatório). null = ainda não consultado;
+  // o passo e o banner só reagem depois da primeira leitura, para não piscar.
+  const [alwaysOnStatus, setAlwaysOnStatus] = useState<AlwaysOnVpnStatus | null>(null);
+  const [isCheckingAlwaysOn, setIsCheckingAlwaysOn] = useState<boolean>(false);
+  // true quando o sistema PROVOU que a opção continua desligada depois de o
+  // usuário ter dito "já ativei" — deixa o passo responder em vez de ficar mudo.
+  const [alwaysOnCheckFailed, setAlwaysOnCheckFailed] = useState<boolean>(false);
+  // Qual tela o sistema realmente abriu, para o guia ajustar as instruções.
+  const [alwaysOnGuideTarget, setAlwaysOnGuideTarget] =
+    useState<OpenAlwaysOnResult["target"] | null>(null);
+
+  /** Passo 4 cumprido (ou inaplicável, em iOS / binário nativo antigo). */
+  const alwaysOnSatisfied = !alwaysOnSupported || alwaysOnStatus?.state === "confirmed";
+  /** Pendência real: só depois da primeira leitura, para o banner não piscar. */
+  const alwaysOnPending =
+    alwaysOnSupported && alwaysOnStatus != null && alwaysOnStatus.state !== "confirmed";
+
+  const persistSetupOutcome = useCallback(async (outcome: SetupOutcome) => {
+    setSetupOutcome(outcome);
+    try {
+      await AsyncStorage.setItem(SETUP_OUTCOME_KEY, outcome);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SETUP_OUTCOME_KEY)
+      .then((v) => {
+        if (v) setSetupOutcome(v as SetupOutcome);
+      })
+      .catch(() => {});
+  }, []);
 
   const checkBatteryExemption = useCallback(async () => {
     try {
@@ -140,19 +229,53 @@ const Home: React.FC = () => {
     } catch {}
   }, []);
 
+  /**
+   * Atualiza SOMENTE o device admin. `vpnEnabled` aqui é a flag persistida, que
+   * não reflete queda do serviço — a fonte de verdade de `isBlockerEnabled` é o
+   * checkAndSyncBlockingStatus em checkBlockerStatus. Duas fontes para o mesmo
+   * booleano faziam o estado oscilar ao voltar de um diálogo de sistema.
+   */
   const checkProtectionStatus = useCallback(async () => {
     try {
       if (Platform.OS !== "android" || !BetBlocker?.getProtectionStatus) return;
       const status: { vpnEnabled?: boolean; deviceAdminActive?: boolean } =
         await BetBlocker.getProtectionStatus();
-      if (typeof status?.vpnEnabled === "boolean") {
-        setIsBlockerEnabled(status.vpnEnabled);
-      }
       if (typeof status?.deviceAdminActive === "boolean") {
         setIsDeviceAdminActive(status.deviceAdminActive);
       }
       return status;
     } catch {}
+  }, []);
+
+  /**
+   * Reconsulta o estado da VPN sempre ativa e devolve se está confirmado.
+   *
+   * FAIL-CLOSED: qualquer erro na ponte conta como NÃO confirmado, e o passo
+   * obrigatório é pedido. O contrário (assumir confirmado num catch vazio) já foi
+   * o bug que fazia a jornada inteira ser pulada em silêncio.
+   */
+  const refreshAlwaysOnStatus = useCallback(async (): Promise<boolean> => {
+    if (!alwaysOnSupported) return true;
+    try {
+      const status: AlwaysOnVpnStatus = await BetBlocker.getAlwaysOnVpnStatus();
+      setAlwaysOnStatus(status ?? null);
+      return status?.state === "confirmed";
+    } catch {
+      // Preserva uma leitura anterior boa, se houver; senão registra "unknown"
+      // para o passo/banner terem o que mostrar.
+      setAlwaysOnStatus((prev) =>
+        prev ?? {
+          state: "unknown",
+          detectedBySetting: false,
+          detectedBySystemStart: false,
+          userAttested: false,
+          lockdown: false,
+          lockdownKnown: false,
+          blockedByOtherApp: false,
+        },
+      );
+      return false;
+    }
   }, []);
 
   const checkBlockerStatus = useCallback(async () => {
@@ -173,6 +296,11 @@ const Home: React.FC = () => {
         }
         setIsBlockerEnabled(enabled);
 
+        // Ponto de integração ÚNICO da revalidação de always-on: pendurar aqui dá
+        // de graça a checagem no mount, no useFocusEffect e no AppState "active" —
+        // e é esse último que detecta a volta do usuário das configurações de VPN.
+        if (enabled) void refreshAlwaysOnStatus();
+
         // deviceAdminActive continua vindo de getProtectionStatus (quando disponível).
         if (BetBlocker.getProtectionStatus) {
           try {
@@ -190,7 +318,7 @@ const Home: React.FC = () => {
         setIsBlockerEnabled(enabled);
       }
     } catch {}
-  }, [checkBatteryExemption]);
+  }, [checkBatteryExemption, refreshAlwaysOnStatus]);
 
   useEffect(() => {
     checkBlockerStatus();
@@ -214,12 +342,27 @@ const Home: React.FC = () => {
     return () => subscription.remove();
   }, [checkBlockerStatus]);
 
+  /**
+   * Abre o pedido de isenção de bateria e reconcilia o resultado. Com o nativo
+   * usando startActivityForResult a promise já volta com o estado real; o
+   * re-check aqui cobre o fallback (telas de fabricante que não devolvem
+   * resultado) e builds antigos que resolviam só "abri a tela".
+   */
   const handleRequestBatteryExemption = useCallback(async () => {
+    if (!BetBlocker?.requestBatteryExemption) return false;
+    setBatteryAttemptFailed(false);
     try {
-      if (BetBlocker?.requestBatteryExemption) {
-        await BetBlocker.requestBatteryExemption();
+      await BetBlocker.requestBatteryExemption();
+      let exempt = false;
+      if (BetBlocker?.isBatteryOptimizationExempt) {
+        exempt = !!(await BetBlocker.isBatteryOptimizationExempt());
       }
-    } catch {}
+      setIsBatteryExempt(exempt);
+      setBatteryAttemptFailed(!exempt);
+      return exempt;
+    } catch {
+      return false;
+    }
   }, []);
 
   const handleBatteryBannerPress = useCallback(() => {
@@ -248,12 +391,69 @@ const Home: React.FC = () => {
     } catch {}
   }, []);
 
-  const handleOpenVpnSettings = useCallback(async () => {
+  /**
+   * Passo 4: abre a tela de VPN do sistema e guarda qual tela realmente abriu,
+   * para o guia complementar as instruções quando o aparelho não tem a tela de
+   * VPN direta. Não existe intent público para a página POR APP (a que tem o
+   * toggle) — ver o comentário de openAlwaysOnVpnSettings em BetBlockerModule.kt.
+   */
+  const handleOpenAlwaysOnVpnSettings = useCallback(async () => {
+    setAlwaysOnCheckFailed(false);
     try {
-      if (BetBlocker?.openVpnSettings) {
-        await BetBlocker.openVpnSettings();
+      const result: OpenAlwaysOnResult | undefined =
+        await BetBlocker?.openAlwaysOnVpnSettings?.();
+      setAlwaysOnGuideTarget(
+        result?.opened === false ? "none" : (result?.target ?? "vpn_settings"),
+      );
+    } catch {
+      setAlwaysOnGuideTarget("none");
+    }
+  }, []);
+
+  /**
+   * "Já ativei — verificar de novo": tenta DETECTAR primeiro e só aceita o
+   * autoatestado quando a detecção não consegue concluir (ROM que esconde a
+   * chave). Se o sistema provar que está desligada, o nativo recusa e o passo
+   * continua bloqueado com aviso honesto — em vez de dar por cumprido.
+   */
+  const handleRecheckAlwaysOn = useCallback(async () => {
+    if (isCheckingAlwaysOn) return;
+    setIsCheckingAlwaysOn(true);
+    setAlwaysOnCheckFailed(false);
+    try {
+      if (await refreshAlwaysOnStatus()) return; // o useEffect leva para "done"
+      const accepted: boolean = !!(await BetBlocker?.confirmAlwaysOnManually?.());
+      if (accepted) await refreshAlwaysOnStatus();
+      else setAlwaysOnCheckFailed(true);
+    } catch {
+      setAlwaysOnCheckFailed(true);
+    } finally {
+      setIsCheckingAlwaysOn(false);
+    }
+  }, [isCheckingAlwaysOn, refreshAlwaysOnStatus]);
+
+  /** Banner de pendência → reabre a jornada direto no passo obrigatório. */
+  const handleAlwaysOnBannerPress = useCallback(() => {
+    setAlwaysOnCheckFailed(false);
+    setAlwaysOnGuideTarget(null);
+    setSetupStep("alwaysOn");
+    setShowSetupModal(true);
+  }, []);
+
+  const handleSupport = useCallback(async () => {
+    try {
+      const supported = await Linking.canOpenURL(SUPPORT_WHATSAPP_URL);
+      if (!supported) {
+        Alert.alert(
+          "Indisponível",
+          "Não foi possível abrir o WhatsApp neste dispositivo."
+        );
+        return;
       }
-    } catch {}
+      await Linking.openURL(SUPPORT_WHATSAPP_URL);
+    } catch {
+      Alert.alert("Erro", "Não foi possível abrir o WhatsApp. Tente novamente.");
+    }
   }, []);
 
   const handleRequestDeviceAdmin = useCallback(async () => {
@@ -263,14 +463,87 @@ const Home: React.FC = () => {
       const accepted: boolean = await BetBlocker.requestDeviceAdmin();
       await checkProtectionStatus();
       if (accepted) {
-        setShowBlockSuccessModal(false);
+        // Dentro da jornada guiada, avança para o passo 4 (ou direto para "Tudo
+        // pronto" se a VPN sempre ativa já estiver confirmada). Fora dela (toque
+        // no banner da Home), o modal já está fechado — no-op.
+        setIsDeviceAdminActive(true);
+        // Usa o RETORNO do refresh, não o derivado alwaysOnSatisfied: este
+        // callback foi criado com um valor de closure que pode estar velho.
+        setSetupStep((await refreshAlwaysOnStatus()) ? "done" : "alwaysOn");
       }
     } catch {
       triggerError("Não foi possível ativar a proteção contra remoção. Tente novamente.");
     } finally {
       setIsRequestingDeviceAdmin(false);
     }
-  }, [checkProtectionStatus]);
+  }, [checkProtectionStatus, refreshAlwaysOnStatus]);
+
+  // Decide o próximo passo pendente depois que a VPN foi concedida. Consulta o
+  // estado real no nativo (bateria/device admin são por-app, valem pro device
+  // inteiro) e pula o que já estiver satisfeito. Com tudo concedido, cai direto
+  // em "done" e o modal só confirma o sucesso.
+  //
+  // Fail-closed: se a ponte nativa falhar, assume NÃO concedido e pede mesmo
+  // assim. O contrário (assumir concedido) fazia a jornada inteira ser pulada
+  // em silêncio por causa de um catch vazio.
+  const advanceToFirstPendingStep = useCallback(async () => {
+    if (Platform.OS !== "android") {
+      setSetupStep("done");
+      return;
+    }
+    let batteryExempt = false;
+    let adminActive = false;
+    try {
+      if (BetBlocker?.isBatteryOptimizationExempt) {
+        batteryExempt = !!(await BetBlocker.isBatteryOptimizationExempt());
+      }
+    } catch {}
+    try {
+      if (BetBlocker?.getProtectionStatus) {
+        const status = await BetBlocker.getProtectionStatus();
+        adminActive = !!status?.deviceAdminActive;
+      }
+    } catch {}
+    // Mesma filosofia fail-closed: refreshAlwaysOnStatus devolve false em erro.
+    const alwaysOnOk = await refreshAlwaysOnStatus();
+    setIsBatteryExempt(batteryExempt);
+    setIsDeviceAdminActive(adminActive);
+    setSetupStep(
+      !batteryExempt
+        ? "battery"
+        : !adminActive
+          ? "deviceAdmin"
+          : !alwaysOnOk
+            ? "alwaysOn"
+            : "done",
+    );
+  }, [refreshAlwaysOnStatus]);
+
+  // "Agora não" no passo de bateria: registra o skip (é ele que autoriza o
+  // banner de reforço depois) e segue para device admin, ou conclui.
+  const skipBatteryStep = useCallback(() => {
+    void persistSetupOutcome("skipped_battery");
+    setSetupStep(
+      !isDeviceAdminActive ? "deviceAdmin" : alwaysOnSatisfied ? "done" : "alwaysOn",
+    );
+  }, [isDeviceAdminActive, alwaysOnSatisfied, persistSetupOutcome]);
+
+  // "Agora não" no passo de device admin: registra o skip e segue para o passo
+  // obrigatório de VPN sempre ativa — não fecha mais o modal aqui, porque o
+  // device admin deixou de ser o último passo da jornada.
+  const skipDeviceAdminStep = useCallback(() => {
+    void persistSetupOutcome(
+      setupOutcome === "skipped_battery" ? "skipped_battery" : "skipped_admin",
+    );
+    setSetupStep(alwaysOnSatisfied ? "done" : "alwaysOn");
+  }, [alwaysOnSatisfied, persistSetupOutcome, setupOutcome]);
+
+  // Fechamento do passo final: jornada cumprida (o que não foi concedido já foi
+  // registrado como skip no passo correspondente).
+  const finishSetupJourney = useCallback(() => {
+    if (setupOutcome === "legacy") void persistSetupOutcome("completed");
+    setShowSetupModal(false);
+  }, [persistSetupOutcome, setupOutcome]);
 
   // Error modal
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
@@ -322,10 +595,47 @@ const Home: React.FC = () => {
     }
   }, [loadError, triggerError, loadDashboard, loadBetStreak]);
 
+  // ── Timeout de segurança do pedido de VPN ──────────────────────────────────
+  // O diálogo de consentimento do Android tira o app do primeiro plano. Contar
+  // o tempo enquanto o usuário lê esse diálogo transformava "usuário lento" em
+  // erro — e o erro abortava a jornada de proteção inteira. O relógio agora só
+  // corre com o app em foreground; ele protege contra travamento real, não
+  // contra leitura demorada.
+  const awaitingVpnRef = useRef<boolean>(false);
+
+  const clearBlockingTimeout = useCallback(() => {
+    if (blockingTimeoutRef.current) {
+      clearTimeout(blockingTimeoutRef.current);
+      blockingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const armBlockingTimeout = useCallback(() => {
+    clearBlockingTimeout();
+    blockingTimeoutRef.current = setTimeout(() => {
+      blockingTimedOutRef.current = true;
+      awaitingVpnRef.current = false;
+      setIsBlockerLoading(false);
+      setShowSetupModal(false);
+      triggerError(
+        'O sistema demorou para responder. Verifique as permissões de VPN nas configurações do Android e tente novamente.'
+      );
+    }, VPN_REQUEST_TIMEOUT_MS);
+  }, [clearBlockingTimeout, triggerError]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (!awaitingVpnRef.current) return;
+      if (nextState === "active") armBlockingTimeout();
+      else clearBlockingTimeout();
+    });
+    return () => subscription.remove();
+  }, [armBlockingTimeout, clearBlockingTimeout]);
+
   // Modal states
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
-  const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [showBlockFlowModal, setShowBlockFlowModal] = useState<boolean>(false);
   const [blockFlowStep, setBlockFlowStep] = useState<BlockFlowStep>("choices");
   const blockFlowFade = useRef(new Animated.Value(1)).current;
@@ -353,7 +663,47 @@ const Home: React.FC = () => {
     },
     [blockFlowFade]
   );
-  const [showBlockSuccessModal, setShowBlockSuccessModal] = useState<boolean>(false);
+  const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
+  const [setupStep, setSetupStep] = useState<SetupStep>("done");
+
+  // Avanço automático dos passos da jornada guiada: dispara na transição
+  // false→true da isenção de bateria (detectada por checkBatteryExemption no
+  // AppState "active", ao voltar do diálogo de sistema) e do device admin. Só
+  // age com o modal aberto, então voltar ao foreground por outro motivo não
+  // avança nada.
+  useEffect(() => {
+    if (!showSetupModal) return;
+    if (setupStep === "battery" && isBatteryExempt) {
+      setSetupStep(
+        !isDeviceAdminActive ? "deviceAdmin" : alwaysOnSatisfied ? "done" : "alwaysOn",
+      );
+    } else if (setupStep === "deviceAdmin" && isDeviceAdminActive) {
+      setSetupStep(alwaysOnSatisfied ? "done" : "alwaysOn");
+    } else if (setupStep === "alwaysOn" && alwaysOnSatisfied) {
+      // Detecção automática: o refresh no AppState "active" percebe a volta das
+      // configurações com a chave ligada, e o passo se conclui sozinho.
+      setSetupStep("done");
+    }
+  }, [showSetupModal, setupStep, isBatteryExempt, isDeviceAdminActive, alwaysOnSatisfied]);
+
+  // Anti-flash: os banners de reforço ficam retidos enquanto a jornada está
+  // aberta e por um instante depois. Antes eles surgiam no mesmo frame em que o
+  // modal fechava, o que dava a impressão de "o aviso vazou de novo".
+  const [bannersHeld, setBannersHeld] = useState<boolean>(false);
+  useEffect(() => {
+    if (showSetupModal) {
+      setBannersHeld(true);
+      return;
+    }
+    const timer = setTimeout(() => setBannersHeld(false), BANNER_REVEAL_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [showSetupModal]);
+
+  // Banner é recuperação de um "Agora não", não aviso genérico de permissão
+  // faltando. "legacy" (instalou antes da jornada única) mantém o comportamento
+  // antigo de propósito — senão a base instalada perderia o aviso em silêncio.
+  const canShowReinforcementBanners = !bannersHeld && setupOutcome !== "completed";
+
   const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
   const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
   const [isCheckInSubmitting, setIsCheckInSubmitting] = useState<boolean>(false);
@@ -477,9 +827,15 @@ const Home: React.FC = () => {
     }
   };
 
+  /**
+   * Passo "intro" da jornada: pede o consentimento de VPN ao Android e, ao ser
+   * concedido, avança para o próximo passo DENTRO DO MESMO MODAL. Não há mais
+   * fechar-um-e-abrir-outro no mesmo frame (o Modal do Android engolia o
+   * segundo), nem retorno à Home entre as permissões.
+   */
   const handleBlockContinue = async () => {
     if (Platform.OS !== "android") {
-      setShowBlockModal(false);
+      setShowSetupModal(false);
       Alert.alert(
         "Disponível no Android",
         "O bloqueio de apostas via VPN está disponível apenas no Android."
@@ -488,7 +844,7 @@ const Home: React.FC = () => {
     }
     if (!BetBlocker) {
       console.log("BetBlocker: módulo nativo não disponível");
-      setShowBlockModal(false);
+      setShowSetupModal(false);
       Alert.alert(
         "Indisponível",
         "O recurso de bloqueio não está disponível neste ambiente."
@@ -502,24 +858,8 @@ const Home: React.FC = () => {
     // Ativa loading imediatamente — antes de qualquer await
     setIsBlockerLoading(true);
     blockingTimedOutRef.current = false;
-
-    // Timeout de segurança: se o sistema travar ou o usuário minimizar o app
-    // e nunca voltar, reseta o estado após 20s para não ficar em loading infinito.
-    blockingTimeoutRef.current = setTimeout(() => {
-      blockingTimedOutRef.current = true;
-      setIsBlockerLoading(false);
-      setShowBlockModal(false);
-      triggerError(
-        'O sistema demorou para responder. Verifique as permissões de VPN nas configurações do Android e tente novamente.'
-      );
-    }, 20000);
-
-    const clearLoadingTimeout = () => {
-      if (blockingTimeoutRef.current) {
-        clearTimeout(blockingTimeoutRef.current);
-        blockingTimeoutRef.current = null;
-      }
-    };
+    awaitingVpnRef.current = true;
+    armBlockingTimeout();
 
     try {
       // Atualização da blocklist em background: fire-and-forget.
@@ -535,25 +875,25 @@ const Home: React.FC = () => {
       // usuário age no diálogo nativo (aprova ou rejeita).
       const granted: boolean = await BetBlocker.startBlocking();
 
-      clearLoadingTimeout();
-
-      // Se o timeout já disparou, o modal de erro está visível. Apenas atualiza
-      // o estado do bloqueador silenciosamente e sai sem abrir mais modais.
-      if (blockingTimedOutRef.current) {
-        if (granted) setIsBlockerEnabled(true);
-        return;
-      }
-
+      clearBlockingTimeout();
+      awaitingVpnRef.current = false;
       setIsBlockerLoading(false);
-      setShowBlockModal(false);
 
       if (granted) {
         setIsBlockerEnabled(true);
-        setShowBlockSuccessModal(true);
-        if (BetBlocker?.requestDeviceAdmin && !isDeviceAdminActive) {
-          handleRequestDeviceAdmin();
+        // Chegada tardia (o timeout já tinha desistido e mostrado o erro): a
+        // permissão VALE, então recolhe o erro e retoma a jornada em vez de
+        // abandonar o usuário com a VPN ligada e nenhum passo pedido — era
+        // exatamente assim que bateria e device admin ficavam para trás.
+        if (blockingTimedOutRef.current) {
+          blockingTimedOutRef.current = false;
+          setShowErrorModal(false);
+          setRetryCallback(null);
         }
-      } else {
+        await advanceToFirstPendingStep();
+        setShowSetupModal(true);
+      } else if (!blockingTimedOutRef.current) {
+        setShowSetupModal(false);
         Alert.alert(
           "Permissão necessária",
           "Para ativar o bloqueio, autorize a conexão VPN quando o Android solicitar. Você pode habilitá-la a qualquer momento nas Configurações.",
@@ -567,15 +907,21 @@ const Home: React.FC = () => {
         );
       }
     } catch (error: any) {
-      clearLoadingTimeout();
+      clearBlockingTimeout();
+      awaitingVpnRef.current = false;
       if (blockingTimedOutRef.current) return;
       setIsBlockerLoading(false);
       console.log("BetBlocker error", error);
-      setShowBlockModal(false);
+      setShowSetupModal(false);
       triggerError('Não foi possível ativar o bloqueio. Tente novamente.');
     }
   };
 
+  /**
+   * "Ativar bloqueio" no modal de escolhas: abre a jornada única no passo de
+   * introdução. O hop com atraso continua sendo necessário aqui porque são dois
+   * modais distintos (escolhas → jornada) — é o único do fluxo agora.
+   */
   const handleActivateBlockFlow = () => {
     setShowBlockFlowModal(false);
     InteractionManager.runAfterInteractions(() => {
@@ -588,7 +934,9 @@ const Home: React.FC = () => {
           }
           return;
         }
-        setShowBlockModal(true);
+        setBatteryAttemptFailed(false);
+        setSetupStep("intro");
+        setShowSetupModal(true);
       }, 400);
     });
   };
@@ -752,7 +1100,7 @@ const Home: React.FC = () => {
           accessibilityLabel="SOS: ferramentas de socorro imediato contra a fissura"
         >
           <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="shield-alert" size={26} color="#FF90A5" />
+            <MaterialCommunityIcons name="shield-alert" size={26} color="#A09CAB" />
           </View>
           <Text style={styles.actionText}>SOS</Text>
         </TouchableOpacity>
@@ -763,7 +1111,7 @@ const Home: React.FC = () => {
           activeOpacity={0.85}
         >
           <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="timer-sand" size={26} color="#D783D8" />
+            <MaterialCommunityIcons name="timer-sand" size={26} color="#A09CAB" />
           </View>
           <Text style={styles.actionText}>Resetar</Text>
         </TouchableOpacity>
@@ -778,9 +1126,20 @@ const Home: React.FC = () => {
           activeOpacity={0.85}
         >
           <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="cancel" size={26} color="#FF6A56" />
+            <MaterialCommunityIcons name="cancel" size={26} color="#A09CAB" />
           </View>
           <Text style={styles.actionText}>Bloquear</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleSupport}
+          activeOpacity={0.85}
+        >
+          <View style={styles.actionIconCircle}>
+            <MaterialCommunityIcons name="headset" size={26} color="#A09CAB" />
+          </View>
+          <Text style={styles.actionText}>Suporte</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -844,6 +1203,7 @@ const Home: React.FC = () => {
           {/* Reforço: proteção contra remoção (Device Admin) */}
           {Platform.OS === "android" &&
             isBlockerEnabled &&
+            canShowReinforcementBanners &&
             !isDeviceAdminActive && (
               <TouchableOpacity
                 style={styles.removalProtectionBanner}
@@ -868,6 +1228,51 @@ const Home: React.FC = () => {
               </TouchableOpacity>
             )}
 
+          {/* Pendência obrigatória: VPN sempre ativa.
+              NÃO passa por canShowReinforcementBanners de propósito — aquele gate
+              é recuperação de um "Agora não", e este passo não tem "Agora não".
+              Vale também para usuário legado, que nunca viu a jornada. */}
+          {Platform.OS === "android" &&
+            isBlockerEnabled &&
+            !bannersHeld &&
+            alwaysOnPending && (
+              <TouchableOpacity
+                style={styles.alwaysOnBanner}
+                onPress={handleAlwaysOnBannerPress}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons
+                  name="shield-sync-outline"
+                  size={22}
+                  color="#7AC7E8"
+                />
+                <View style={styles.batteryWarningTextBox}>
+                  <Text style={styles.alwaysOnBannerTitle}>
+                    Falta 1 passo: VPN sempre ativa
+                  </Text>
+                  <Text style={styles.batteryWarningDesc}>
+                    Sem ela, o Android pode desligar o bloqueio e não religar. Toque para
+                    concluir.
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={22} color="#7AC7E8" />
+              </TouchableOpacity>
+            )}
+
+          {/* Selo: VPN sempre ativa confirmada pelo SISTEMA. Autoatestado não
+              entra aqui — não pintamos de verde algo que só o usuário afirmou. */}
+          {Platform.OS === "android" &&
+            isBlockerEnabled &&
+            (alwaysOnStatus?.detectedBySetting ||
+              alwaysOnStatus?.detectedBySystemStart) && (
+              <View style={styles.removalProtectionActiveBadge}>
+                <MaterialCommunityIcons name="shield-sync" size={20} color="#7BE8A7" />
+                <Text style={styles.removalProtectionActiveText}>
+                  VPN sempre ativa
+                </Text>
+              </View>
+            )}
+
           {/* Selo: proteção contra remoção ativa */}
           {Platform.OS === "android" &&
             isBlockerEnabled &&
@@ -884,11 +1289,14 @@ const Home: React.FC = () => {
               </View>
             )}
 
-          {/* Aviso: otimização de bateria pode matar a VPN de bloqueio */}
+          {/* Aviso: otimização de bateria pode matar a VPN de bloqueio.
+              Só aparece para quem adiou o passo na jornada (ou é legado): lá a
+              permissão é pedida de forma explícita e explicada. */}
           {Platform.OS === "android" &&
             isBlockerEnabled &&
             !isBatteryExempt &&
-            !isBatteryWarningSuppressed && (
+            !isBatteryWarningSuppressed &&
+            canShowReinforcementBanners && (
               <>
                 <TouchableOpacity
                   style={styles.batteryWarningBanner}
@@ -1188,33 +1596,8 @@ const Home: React.FC = () => {
         <View style={styles.resetConfirmModalContent} />
       </Modal>
 
-      {/* Modal de Bloqueio - Permissões */}
-      <Modal
-        visible={showBlockModal}
-        onClose={() => {
-          // Impede fechar enquanto aguarda a permissão do sistema
-          if (isBlockerLoading) return;
-          setShowBlockModal(false);
-        }}
-        size="small"
-        title="Habilite as permissões!"
-        subtitle={
-          isBlockerLoading
-            ? "Aguardando autorização do Android…"
-            : "Para bloquear sites e apps de apostas, o BetHunter usa uma VPN local no seu dispositivo. Nenhum dado é enviado para fora do aparelho."
-        }
-      >
-        <View style={styles.blockModalContent}>
-          <GradientBorderButton
-            label={isBlockerLoading ? "Aguardando…" : "Continuar"}
-            onPress={handleBlockContinue}
-            loading={isBlockerLoading}
-            disabled={isBlockerLoading}
-          />
-        </View>
-      </Modal>
-
-      {/* Modal de Instrução - Isenção de bateria */}
+      {/* Modal de Instrução - Isenção de bateria (caminho do banner de reforço;
+          na jornada única o mesmo conteúdo é exibido no passo "battery"). */}
       <Modal
         visible={showBatteryHintModal}
         onClose={() => setShowBatteryHintModal(false)}
@@ -1239,7 +1622,7 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
           )}
           <TouchableOpacity
             style={styles.batteryWarningManualLink}
-            onPress={handleOpenVpnSettings}
+            onPress={handleOpenAlwaysOnVpnSettings}
             activeOpacity={0.7}
           >
             <Text style={styles.batteryWarningManualLinkText}>
@@ -1249,27 +1632,220 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
         </View>
       </Modal>
 
-      {/* Modal de Bloqueio Sucesso - Menor */}
+      {/* Jornada única de proteção: VPN → bateria → não desinstalar → pronto.
+          Um só modal do começo ao fim; os diálogos do sistema saem um de cada
+          vez, sempre a partir daqui, e o usuário nunca volta para a Home no
+          meio do caminho. */}
       <Modal
-        visible={showBlockSuccessModal}
-        onClose={() => setShowBlockSuccessModal(false)}
-        size="smaller"
-        title="Sucesso!"
-        subtitle="Bloqueamos apps e sites de aposta, para você usar seu dispositivo tranquilo."
+        visible={showSetupModal}
+        onClose={() => {
+          // Não deixa fechar enquanto um diálogo do sistema está pendente
+          if (isBlockerLoading || isRequestingDeviceAdmin || isCheckingAlwaysOn) return;
+          // Sair no passo obrigatório NÃO é um skip: a pendência é derivada do
+          // estado nativo e o banner fixo da Home retoma de onde parou. O modal
+          // continua fechável de propósito — prender a UI seria dark pattern e,
+          // pior, impediria o usuário de chegar às configurações do sistema.
+          if (setupStep === "alwaysOn" && setupOutcome === "legacy") {
+            void persistSetupOutcome("completed");
+          }
+          setShowSetupModal(false);
+        }}
+        size={
+          setupStep === "done" ? "smaller" : setupStep === "alwaysOn" ? "big" : "medium"
+        }
+        title={
+          setupStep === "intro"
+            ? "Ativar bloqueio"
+            : setupStep === "battery"
+              ? "Passo 2 de 4 — Manter ativo"
+              : setupStep === "deviceAdmin"
+                ? "Passo 3 de 4 — Evitar remoção"
+                : setupStep === "alwaysOn"
+                  ? "Passo 4 de 4 — VPN sempre ativa"
+                  : "Tudo pronto!"
+        }
+        subtitle={
+          setupStep === "intro"
+            ? (isBlockerLoading
+                ? "Aguardando autorização do Android…"
+                : "São 4 permissões rápidas, uma de cada vez. O BetHunter usa uma VPN local no seu dispositivo — nenhum dado é enviado para fora do aparelho.")
+            : setupStep === "battery"
+              ? "Na próxima tela, escolha 'Sem restrições' (pode aparecer como 'Nenhuma restrição' ou 'Permitir'). Sem isso, a economia de bateria do Android desliga o bloqueio em segundo plano."
+              : setupStep === "deviceAdmin"
+                ? "Ative a proteção contra remoção para impedir desinstalar o BetHunter enquanto o bloqueio estiver ativo."
+                : setupStep === "alwaysOn"
+                  ? "Com a VPN sempre ativa, quem religa o bloqueio depois de uma queda é o próprio Android — não o app. É o passo que fecha a porta dos fundos."
+                  : "Bloqueamos apps e sites de aposta, para você usar seu dispositivo tranquilo."
+        }
         showCloseButton={false}
       >
         <View style={styles.blockModalContent}>
-          {Platform.OS === "android" && !isDeviceAdminActive && (
-            <Text style={styles.blockSuccessHint}>
-              Ativando também a proteção contra remoção, para impedir desinstalar o
-              BetHunter enquanto o bloqueio estiver ativo.
-            </Text>
+          {setupStep === "intro" && (
+            <>
+              <View style={styles.setupStepsPreview}>
+                <Text style={styles.setupStepsPreviewItem}>1. Autorizar a VPN local</Text>
+                <Text style={styles.setupStepsPreviewItem}>2. Manter ativo em segundo plano</Text>
+                <Text style={styles.setupStepsPreviewItem}>3. Impedir a desinstalação</Text>
+                <Text style={styles.setupStepsPreviewItem}>4. Deixar a VPN sempre ativa</Text>
+              </View>
+              <GradientBorderButton
+                label={isBlockerLoading ? "Aguardando…" : "Começar"}
+                onPress={handleBlockContinue}
+                loading={isBlockerLoading}
+                disabled={isBlockerLoading}
+              />
+            </>
           )}
-          <GradientBorderButton
-            label="Fechar"
-            onPress={() => setShowBlockSuccessModal(false)}
-            disabled={isRequestingDeviceAdmin}
-          />
+
+          {setupStep === "battery" && (
+            <>
+              {batteryAttemptFailed && (
+                <Text style={styles.setupStepWarning}>
+                  Ainda não está liberado. Abra de novo e escolha 'Sem restrições'.
+                </Text>
+              )}
+              <GradientBorderButton
+                label={batteryAttemptFailed ? "Tentar novamente" : "Permitir"}
+                onPress={handleRequestBatteryExemption}
+              />
+              {isXiaomi && (
+                <TouchableOpacity
+                  style={styles.batteryWarningManualLink}
+                  onPress={handleOpenAutoStartSettings}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.batteryWarningManualLinkText}>
+                    Ativar Início automático (MIUI)
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {/* O link "VPN sempre ativa" saiu daqui: virou o passo 4, obrigatório.
+                  Mantê-lo permitia cumprir o passo 4 no meio do passo 2 e
+                  embaralhava a leitura da jornada. */}
+              <TouchableOpacity
+                style={styles.blockerPromoDismissButton}
+                onPress={skipBatteryStep}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.blockerPromoDismissText}>Agora não</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {setupStep === "deviceAdmin" && (
+            <>
+              <GradientBorderButton
+                label="Permitir"
+                onPress={handleRequestDeviceAdmin}
+                loading={isRequestingDeviceAdmin}
+                disabled={isRequestingDeviceAdmin}
+              />
+              <TouchableOpacity
+                style={styles.blockerPromoDismissButton}
+                onPress={skipDeviceAdminStep}
+                activeOpacity={0.7}
+                disabled={isRequestingDeviceAdmin}
+              >
+                <Text style={styles.blockerPromoDismissText}>Agora não</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Passo obrigatório: não tem "Agora não". O Android não permite que o
+              app ligue a VPN sempre ativa sozinho (só um Device Owner/MDM pode),
+              nem expõe API pública para ler o estado — por isso o passo libera por
+              detecção automática OU por autoatestado explícito, e a pendência
+              continua cobrada por banner fixo na Home. */}
+          {setupStep === "alwaysOn" && (
+            <>
+              <View style={styles.setupStepsPreview}>
+                <Text style={styles.setupStepsPreviewItem}>
+                  1. Toque em "Abrir configurações de VPN"
+                </Text>
+                <Text style={styles.setupStepsPreviewItem}>
+                  2. Toque no{" "}
+                  <MaterialCommunityIcons name="cog" size={13} color="#A7A3AE" />
+                  {" "}ao lado de "BetHunter"
+                </Text>
+                <Text style={styles.setupStepsPreviewItem}>
+                  3. Ligue "VPN sempre ativa"
+                </Text>
+                <Text style={styles.setupStepsPreviewItem}>
+                  4. Volte para o BetHunter
+                </Text>
+              </View>
+              <Text style={styles.setupStepHint}>
+                Os nomes mudam conforme o fabricante — pode aparecer como "VPN
+                permanente", "Sempre ativada" ou "Always-on VPN".
+              </Text>
+              {alwaysOnGuideTarget === "settings" && (
+                <Text style={styles.setupStepHint}>
+                  Seu aparelho não abriu a tela de VPN direto: nas Configurações, busque
+                  por "VPN".
+                </Text>
+              )}
+              {alwaysOnGuideTarget === "app_details" && (
+                <Text style={styles.setupStepHint}>
+                  Seu aparelho abriu os detalhes do app. Volte às Configurações e busque
+                  por "VPN".
+                </Text>
+              )}
+              {alwaysOnStatus?.blockedByOtherApp && (
+                <Text style={styles.setupStepWarning}>
+                  Outro app está definido como VPN sempre ativa — isso impede o bloqueio
+                  do BetHunter. Troque para o BetHunter nessa tela.
+                </Text>
+              )}
+              {alwaysOnCheckFailed && (
+                <Text style={styles.setupStepWarning}>
+                  O Android ainda mostra a VPN sempre ativa desligada. Abra de novo e
+                  ligue a chave.
+                </Text>
+              )}
+              <GradientBorderButton
+                label="Abrir configurações de VPN"
+                onPress={handleOpenAlwaysOnVpnSettings}
+              />
+              <TouchableOpacity
+                style={styles.batteryWarningManualLink}
+                onPress={handleRecheckAlwaysOn}
+                activeOpacity={0.7}
+                disabled={isCheckingAlwaysOn}
+              >
+                <Text style={styles.batteryWarningManualLinkText}>
+                  {isCheckingAlwaysOn ? "Verificando…" : "Já ativei — verificar de novo"}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Opcional de propósito: com o lockdown ligado, uma VPN que não
+                  sobe deixa o aparelho sem internet nenhuma. O ganho é real, o
+                  custo também — então é escolha informada do usuário. */}
+              <View style={styles.alwaysOnLockdownRow}>
+                <MaterialCommunityIcons
+                  name={alwaysOnStatus?.lockdown ? "lock-check" : "lock-outline"}
+                  size={18}
+                  color={alwaysOnStatus?.lockdown ? "#7BE8A7" : "#9E9AA8"}
+                />
+                <View style={styles.batteryWarningTextBox}>
+                  <Text style={styles.alwaysOnLockdownTitle}>
+                    Opcional — proteção máxima: "Bloquear conexões sem VPN"
+                  </Text>
+                  <Text style={styles.batteryWarningDesc}>
+                    Está na mesma tela. Fecha qualquer brecha, mas se a VPN cair o
+                    aparelho fica sem internet até ela voltar.
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {setupStep === "done" && (
+            <GradientBorderButton
+              label="Fechar"
+              onPress={finishSetupJourney}
+              disabled={isRequestingDeviceAdmin}
+            />
+          )}
         </View>
       </Modal>
 
@@ -1602,6 +2178,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 10,
   },
+  setupStepsPreview: {
+    width: "100%",
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingBottom: 18,
+  },
+  setupStepsPreviewItem: {
+    color: "#9E9AA8",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  setupStepWarning: {
+    color: "#E8B07A",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingBottom: 12,
+  },
+  setupStepHint: {
+    color: "#9E9AA8",
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
+    paddingBottom: 12,
+  },
+  alwaysOnLockdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2A3A44",
+    backgroundColor: "rgba(122, 199, 232, 0.06)",
+  },
+  alwaysOnLockdownTitle: {
+    color: "#9AC7DD",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+  },
   blockActionModalContent: {
     width: "100%",
     paddingTop: 4,
@@ -1648,6 +2266,24 @@ const styles = StyleSheet.create({
   },
   removalProtectionTitle: {
     color: "#C9A7E8",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  alwaysOnBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#2A3A44",
+    backgroundColor: "rgba(122, 199, 232, 0.08)",
+  },
+  alwaysOnBannerTitle: {
+    color: "#7AC7E8",
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 18,

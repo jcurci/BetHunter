@@ -2,7 +2,7 @@
   "expo": {
     "name": "BetHunter",
     "slug": "bethunter",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "orientation": "portrait",
     "icon": "./src/assets/logo-img/logo_full.png",
     "userInterfaceStyle": "dark",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bethunter.app.rick",
-      "buildNumber": "2"
+      "buildNumber": "4"
     },
     "android": {
       "adaptiveIcon": {
@@ -40,7 +40,27 @@
       "REVENUECAT_ANDROID_API_KEY": "goog_fNOKXdnJLtOuUGVwnDYUbyphqOH",
       "REVENUECAT_DEFAULT_OFFERING_IDENTIFIER": "default",
       "eas": {
-        "projectId": "c259097b-80d5-4522-8ee4-e2b621f2bb58"
+        "projectId": "c259097b-80d5-4522-8ee4-e2b621f2bb58",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "PacketTunnel",
+                  "bundleIdentifier": "com.bethunter.app.rick.PacketTunnel",
+                  "entitlements": {
+                    "com.apple.developer.networking.networkextension": [
+                      "packet-tunnel-provider"
+                    ],
+                    "com.apple.security.application-groups": [
+                      "group.com.bethunter.app.rick"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "owner": "rickqueiroz"

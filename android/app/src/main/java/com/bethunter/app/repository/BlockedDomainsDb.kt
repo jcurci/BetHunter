@@ -90,6 +90,28 @@ class BlockedDomainsDb(context: Context) : SQLiteOpenHelper(context, DB_NAME, nu
     )
   }
 
+  /**
+   * A coluna `v` já é INTEGER, que no SQLite guarda até 8 bytes — cabe epoch
+   * millis sem bumpar DB_VERSION. Usado pela licença de premium, que precisa de
+   * um timestamp e não de um booleano.
+   */
+  fun getLongOrNull(key: String): Long? {
+    val db = writableDatabase
+    ensureKvTable(db)
+    db.rawQuery("SELECT v FROM $KV_TABLE WHERE k = ?", arrayOf(key)).use { cursor ->
+      return if (cursor.moveToFirst()) cursor.getLong(0) else null
+    }
+  }
+
+  fun setLong(key: String, value: Long) {
+    val db = writableDatabase
+    ensureKvTable(db)
+    db.execSQL(
+      "INSERT OR REPLACE INTO $KV_TABLE (k, v) VALUES (?, ?)",
+      arrayOf<Any>(key, value)
+    )
+  }
+
   // --- IP blocklist (Camada B: bloqueio de acesso direto por IP) ---
   // Lista curada e pequena de IPs de destino conhecidos (ex.: servidores para onde
   // casas redirecionam). O VpnService (processo :vpn) lê isto no startVpn() para

@@ -17,7 +17,6 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RevenueCatUI from 'react-native-purchases-ui';
-import Purchases from 'react-native-purchases';
 import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
@@ -29,9 +28,10 @@ import {
   HORIZONTAL_GRADIENT_LOCATIONS,
 } from '../../../config/colors';
 import type { RootStackParamList } from '../../../types/navigation';
-import { useSubscriptionStore } from '../../../storage/subscriptionStore';
 import { useAuthStore } from '../../../storage/authStore';
 import { identifyUser, applyAndSyncCoupon, getPaywallOffering } from '../../../services/revenueCat';
+import { clearCouponArtifacts, waitForPremiumConfirmation } from '../../../services/purchaseSettlement';
+import { AppLoadingScreen } from '../../../components/AppLoadingScreen';
 import { setOnboardingFlowCompleted } from '../onboardingStorage';
 import { AffiliateApi } from '../../../infrastructure/services/Affiliate.api';
 import { Container } from '../../../infrastructure/di/Container';
@@ -235,7 +235,7 @@ export const CelebrationScreen: React.FC<Props> = ({
     }).catch(() => {});
   }, []);
   const [paywallOffering, setPaywallOffering] = useState<PurchasesOffering | null>(null);
-  const refresh = useSubscriptionStore((s) => s.refresh);
+  const [settling, setSettling] = useState(false);
   const { betcoinsEarned, xpEarned, streak } = useOnboarding();
   const isNavigatingRef = useRef(false);
 
@@ -330,34 +330,30 @@ export const CelebrationScreen: React.FC<Props> = ({
   const finishAsSubscriber = async (customerInfo?: CustomerInfo): Promise<void> => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
+    // Antes de qualquer await: cobre o paywall com o loading no mesmo frame em
+    // que a compra é concluída, e só sai dele na Home.
+    setSettling(true);
 
     try {
-      if (customerInfo) {
-        useSubscriptionStore.getState().setFromCustomerInfo(customerInfo);
-      } else {
-        await refresh();
-      }
-      const { isPremium: isNowPremium } = useSubscriptionStore.getState();
-      if (!isNowPremium) {
+      const confirmed = await waitForPremiumConfirmation(customerInfo);
+      if (!confirmed) {
         isNavigatingRef.current = false;
+        setSettling(false);
         Alert.alert(
           'Assinatura não encontrada',
           'Não encontramos uma assinatura ativa nesta conta. Verifique se está usando a conta correta na loja e tente novamente.',
         );
         return;
       }
-      try {
-        await Purchases.setAttributes({ cupom_ativo: 'false' });
-      } catch {}
-      try {
-        await AsyncStorage.removeItem(AFFILIATE_COUPON_KEY);
-      } catch {}
+
+      await clearCouponArtifacts();
       await setOnboardingFlowCompleted();
       await persistOnboardingCompletedRemote();
       setShowingPaywall(false);
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch {
       isNavigatingRef.current = false;
+      setSettling(false);
       Alert.alert(
         'Erro ao verificar assinatura',
         'Não foi possível confirmar sua assinatura. Verifique sua conexão e tente novamente.',
@@ -529,6 +525,12 @@ export const CelebrationScreen: React.FC<Props> = ({
         </View>
       </KeyboardAvoidingView>
     );
+  }
+
+  // Compra concluída: loading de tela cheia por cima do paywall inline, até o
+  // reset para a Home — que segue com o mesmo AppLoadingScreen enquanto carrega.
+  if (settling) {
+    return <AppLoadingScreen />;
   }
 
   if (showingPaywall) {

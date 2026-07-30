@@ -45,6 +45,14 @@ class VpnHealthWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
       return Result.success()
     }
 
+    if (!repo.isPremiumLeaseValid()) {
+      // Licença vencida: o serviço se recusaria a subir de qualquer forma.
+      // Pede uma confirmação de assinatura em vez de insistir na VPN.
+      VpnEventLog.log(context, "health_check_premium_lease_expired")
+      SubscriptionEnforcementWorker.enqueueImmediateCheck(context)
+      return Result.success()
+    }
+
     if (repo.isRevoked() || VpnService.prepare(context) != null) {
       // Sem consentimento não há o que religar; garante que o usuário está avisado.
       VpnEventLog.log(context, "health_check_needs_consent")

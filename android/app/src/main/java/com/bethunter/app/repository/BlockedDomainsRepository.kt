@@ -72,6 +72,59 @@ class BlockedDomainsRepository(private val context: Context) {
 
   fun isPremiumPaused(): Boolean = readFlag(KEY_PREMIUM_PAUSED)
 
+  /**
+   * Licença que o PRÓPRIO serviço de VPN confere para continuar filtrando.
+   *
+   * `premiumPaused` só chega até a VPN se alguém mandar (JS ou worker); se o
+   * aviso se perde — reboot, restart sticky, app desinstalado do foreground,
+   * logout que desliga o enforcement — a VPN seguia bloqueando para sempre.
+   * A licença inverte isso: o serviço só filtra enquanto tem prazo válido, e
+   * quem confirma o premium é que renova.
+   *
+   * `untilMs` é absoluto e calculado por quem confirmou, a partir do vencimento
+   * REAL da assinatura (ver blockerPremiumGate.ts e o worker de enforcement) —
+   * não é um cronômetro cego, senão um assinante mensal perderia a proteção
+   * antes da renovação.
+   */
+  fun setPremiumLeaseUntil(untilMs: Long) {
+    domainsDb.setLong(KEY_PREMIUM_LEASE_UNTIL, untilMs)
+  }
+
+  fun renewPremiumLease(expiresAtMs: Long?) {
+    setPremiumLeaseUntil(leaseUntilFor(expiresAtMs))
+  }
+
+  fun revokePremiumLease() {
+    setPremiumLeaseUntil(0L)
+  }
+
+  /**
+   * FAIL-OPEN por construção — as três regras abaixo não são detalhe, são o que
+   * impede esta licença de virar um jeito novo de derrubar a proteção de quem
+   * está pagando (foi exatamente isso que aconteceu em 18/07 por outro caminho):
+   *
+   * 1. Chave ausente = válida. Instalação que já existia e nunca gravou o campo
+   *    é tratada como em dia; a primeira confirmação preenche. Sem isto, TODO
+   *    assinante atual perderia a VPN no primeiro update do app.
+   * 2. Erro de leitura = válida. O DB é multi-processo (busy_timeout=3000);
+   *    SQLite ocupado ou valor corrompido nunca podem desarmar o bloqueio.
+   * 3. Só derruba com valor lido com sucesso e comprovadamente vencido.
+   */
+  fun isPremiumLeaseValid(): Boolean {
+    return try {
+      val until = domainsDb.getLongOrNull(KEY_PREMIUM_LEASE_UNTIL) ?: return true
+      until > System.currentTimeMillis()
+    } catch (e: Exception) {
+      Log.w("BlockedDomainsRepository", "Falha ao ler licença de premium — mantendo bloqueio", e)
+      true
+    }
+  }
+
+  private fun leaseUntilFor(expiresAtMs: Long?): Long {
+    val base = expiresAtMs ?: return System.currentTimeMillis() + LIFETIME_LEASE_MS
+    return base + LEASE_GRACE_MS
+  }
+
   /** true assim que o usuário tocou no fluxo de pedido de isenção pelo menos uma vez. */
   fun setBatteryExemptionRequested(requested: Boolean) {
     prefs.edit().putBoolean(KEY_BATTERY_EXEMPTION_REQUESTED, requested).apply()
@@ -89,6 +142,49 @@ class BlockedDomainsRepository(private val context: Context) {
   }
 
   fun getBatteryWarningConfirmedAt(): Long = prefs.getLong(KEY_BATTERY_WARNING_CONFIRMED_AT, 0L)
+
+  /**
+   * Sinais de "VPN sempre ativa" (always-on). Vão para o KV do SQLite e NÃO para
+   * o prefs porque o sinal do sistema é gravado pelo processo :vpn e lido pelo
+   * processo principal — SharedPreferences não é confiável entre processos (é
+   * exatamente disso que o VpnEventLog sofre).
+   *
+   * Ao contrário de isPremiumLeaseValid(), aqui o default é FAIL-CLOSED: erro de
+   * leitura devolve 0 (= não detectado) e o passo é pedido de novo. O risco é
+   * repetir um pedido já cumprido, não desarmar a proteção de quem paga.
+   */
+  fun setAlwaysOnSystemStartAt(timestamp: Long) {
+    domainsDb.setLong(KEY_ALWAYS_ON_SYSTEM_START_AT, timestamp)
+  }
+
+  fun getAlwaysOnSystemStartAt(): Long = try {
+    domainsDb.getLongOrNull(KEY_ALWAYS_ON_SYSTEM_START_AT) ?: 0L
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler sinal de always-on do sistema", e)
+    0L
+  }
+
+  /** Timestamp do autoatestado do usuário ("Já ativei"). 0L = nunca atestado. */
+  fun setAlwaysOnAttestedAt(timestamp: Long) {
+    domainsDb.setLong(KEY_ALWAYS_ON_ATTESTED_AT, timestamp)
+  }
+
+  fun getAlwaysOnAttestedAt(): Long = try {
+    domainsDb.getLongOrNull(KEY_ALWAYS_ON_ATTESTED_AT) ?: 0L
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler autoatestado de always-on", e)
+    0L
+  }
+
+  /**
+   * Negativa definitiva do sistema: derruba o latch do sinal do sistema e o
+   * autoatestado juntos. Sem isso, os dois mentiriam para sempre depois que o
+   * usuário desligasse a opção nas configurações.
+   */
+  fun clearAlwaysOnSignals() {
+    setAlwaysOnSystemStartAt(0L)
+    setAlwaysOnAttestedAt(0L)
+  }
 
   fun setBlockedDomains(domains: List<String>) {
     val cleaned = domains
@@ -156,8 +252,20 @@ class BlockedDomainsRepository(private val context: Context) {
     private const val KEY_ENABLED = "enabled"
     private const val KEY_REVOKED = "vpn_revoked_pending_reactivation"
     private const val KEY_PREMIUM_PAUSED = "premium_paused"
+    private const val KEY_PREMIUM_LEASE_UNTIL = "premium_lease_until"
+
+    /** Folga em cima do vencimento real, para a janela em que a renovação ainda não foi confirmada. */
+    private const val LEASE_GRACE_MS = 7L * 24 * 60 * 60 * 1000
+
+    /** Entitlement sem data de vencimento (vitalício): renovado a cada confirmação. */
+    private const val LIFETIME_LEASE_MS = 365L * 24 * 60 * 60 * 1000
     private const val KEY_BATTERY_EXEMPTION_REQUESTED = "battery_exemption_requested"
     private const val KEY_BATTERY_WARNING_CONFIRMED_AT = "battery_warning_confirmed_at"
+
+    // KV do SQLite (cross-process) — ver setAlwaysOnSystemStartAt.
+    private const val KEY_ALWAYS_ON_SYSTEM_START_AT = "always_on_system_start_at"
+    private const val KEY_ALWAYS_ON_ATTESTED_AT = "always_on_attested_at"
+
     private const val KEY_LAST_FETCH = "last_fetch_timestamp"
     private const val KEY_LOG_ENABLED = "debug_logs_enabled"
     private const val KEY_ETAG = "blocked_domains_etag"

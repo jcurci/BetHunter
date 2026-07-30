@@ -1,6 +1,23 @@
 # Bloqueio de Apostas — iOS
 
-Documentação completa da feature de bloqueio de apps e sites de apostas no iOS, implementada com **FamilyControls**, **ManagedSettings**, **NEDNSProxyProvider** e lista dinâmica via **GitHub Gist**.
+> ## ⚠️ DOCUMENTO OBSOLETO
+>
+> Descreve a arquitetura com **`NEDNSProxyProvider`**, que **nunca funcionou em
+> nenhum iPhone de consumidor**: a Apple restringe configurações de DNS Proxy a
+> aparelhos supervisionados/MDM, e `saveToPreferences` falha com
+> `NEConfigurationErrorDomain` código 10 em qualquer aparelho pessoal.
+>
+> Substituída por um **`NEPacketTunnelProvider`** (túnel local só de DNS) em
+> `ios/PacketTunnel/`. Ver `docs/APP_REVIEW_NOTES.md` e o código.
+>
+> Além disso, dois valores aqui **já estavam errados** e vão desencaminhar quem
+> depurar:
+> - App Group: o correto é `group.com.bethunter.app.rick`, não `group.com.bethunterapp.ios`.
+> - Blocklist: vem de `raw.githubusercontent.com/hidekiiwasa/blacklist-cassino`, não de um Gist.
+>
+> Mantido apenas como registro histórico.
+
+Documentação da feature de bloqueio de apps e sites de apostas no iOS, implementada com **FamilyControls**, **ManagedSettings**, **NEDNSProxyProvider** e lista dinâmica via **GitHub Gist**.
 
 ---
 

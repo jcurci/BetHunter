@@ -12,27 +12,33 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import Purchases from 'react-native-purchases';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import Icon from 'react-native-vector-icons/Feather';
 import { useSubscriptionStore } from '../../storage/subscriptionStore';
 import { useAuthStore } from '../../storage/authStore';
 import type { RootStackParamList } from '../../types/navigation';
 import { getPaywallOffering } from '../../services/revenueCat';
+import { clearCouponArtifacts, waitForPremiumConfirmation } from '../../services/purchaseSettlement';
+import { AppLoadingScreen } from '../../components/AppLoadingScreen';
+
+/** De onde veio a tentativa de confirmação — muda só a mensagem de espera. */
+type SettleSource = 'purchase' | 'restore';
 
 const Paywall: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const refresh = useSubscriptionStore((s) => s.refresh);
   const isPremium = useSubscriptionStore((s) => s.isPremium);
-  const setFromCustomerInfo = useSubscriptionStore((s) => s.setFromCustomerInfo);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [confirmPending, setConfirmPending] = useState<SettleSource | null>(null);
   const isNavigatingRef = React.useRef(false);
 
-  const finishAsSubscriber = useCallback(async (customerInfo?: CustomerInfo): Promise<void> => {
+  const finishAsSubscriber = useCallback(async (
+    customerInfo?: CustomerInfo,
+    source: SettleSource = 'purchase',
+  ): Promise<void> => {
     if (__DEV__) console.log('[PAYWALL] finishAsSubscriber chamado — customerInfo recebido:', !!customerInfo);
 
     if (isNavigatingRef.current) {
@@ -40,52 +46,38 @@ const Paywall: React.FC = () => {
       return;
     }
     isNavigatingRef.current = true;
+    // Antes de qualquer await: cobre o paywall com o loading no mesmo frame em
+    // que a compra é concluída, e só sai dele na Home.
+    setSettling(true);
+    setConfirmPending(null);
 
     try {
-      if (customerInfo) {
-        if (__DEV__) {
-          console.log('[PAYWALL] entitlements.active keys:', Object.keys(customerInfo.entitlements?.active ?? {}));
-          console.log('[PAYWALL] entitlements.all keys:', Object.keys(customerInfo.entitlements?.all ?? {}));
-          console.log('[PAYWALL] originalAppUserId:', customerInfo.originalAppUserId);
-        }
-        setFromCustomerInfo(customerInfo);
-      } else {
-        if (__DEV__) console.log('[PAYWALL] sem customerInfo — chamando refresh()');
-        await refresh();
-        if (__DEV__) {
-          const freshInfo = useSubscriptionStore.getState().customerInfo;
-          console.log('[PAYWALL] pós-refresh — entitlements.active keys:', Object.keys(freshInfo?.entitlements?.active ?? {}));
-          console.log('[PAYWALL] pós-refresh — originalAppUserId:', freshInfo?.originalAppUserId);
-        }
+      if (__DEV__ && customerInfo) {
+        console.log('[PAYWALL] entitlements.active keys:', Object.keys(customerInfo.entitlements?.active ?? {}));
+        console.log('[PAYWALL] originalAppUserId:', customerInfo.originalAppUserId);
       }
 
-      const { isPremium: isNowPremium } = useSubscriptionStore.getState();
-      if (__DEV__) console.log('[PAYWALL] isPremium após atualização:', isNowPremium);
-
-      if (!isNowPremium) {
+      // Restore de quem nunca comprou não tem o que sincronizar — não faz
+      // sentido segurar o loading os 12 s do fluxo de compra.
+      const confirmed = await waitForPremiumConfirmation(customerInfo, {
+        totalBudgetMs: source === 'restore' ? 4000 : undefined,
+      });
+      if (!confirmed) {
         isNavigatingRef.current = false;
-        Alert.alert(
-          'Assinatura não encontrada',
-          'Não encontramos uma assinatura ativa nesta conta. Verifique se está usando a conta correta na loja e tente novamente.',
-        );
+        setSettling(false);
+        setConfirmPending(source);
         return;
       }
-      try {
-        await Purchases.setAttributes({ cupom_ativo: 'false' });
-      } catch {}
-      try {
-        await AsyncStorage.removeItem('@bethunter_affiliate_coupon');
-      } catch {}
+
+      await clearCouponArtifacts();
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (err) {
       if (__DEV__) console.warn('[PAYWALL] erro em finishAsSubscriber:', err);
       isNavigatingRef.current = false;
-      Alert.alert(
-        'Erro ao verificar assinatura',
-        'Não foi possível confirmar sua assinatura. Verifique sua conexão e tente novamente.',
-      );
+      setSettling(false);
+      setConfirmPending(source);
     }
-  }, [navigation, refresh, setFromCustomerInfo]);
+  }, [navigation]);
 
   const handleLogout = useCallback(async () => {
     await useAuthStore.getState().logout();
@@ -118,7 +110,10 @@ const Paywall: React.FC = () => {
         if (__DEV__) console.log('[PAYWALL-ANDROID] presentPaywall result:', result);
         if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
           setCancelled(false);
-          await finishAsSubscriber();
+          await finishAsSubscriber(
+            undefined,
+            result === PAYWALL_RESULT.RESTORED ? 'restore' : 'purchase',
+          );
         } else if (result === PAYWALL_RESULT.ERROR) {
           setCancelled(false);
           setError('Ocorreu um erro ao processar. Tente novamente.');
@@ -145,9 +140,40 @@ const Paywall: React.FC = () => {
     void loadOffering();
   }, [loadOffering]);
 
+  // Compra concluída: loading de tela cheia até o reset para a Home — a Home
+  // continua com o mesmo AppLoadingScreen enquanto carrega, sem piscar.
+  if (settling) {
+    return <AppLoadingScreen />;
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {loading ? (
+      {confirmPending !== null ? (
+        <View style={styles.centered}>
+          <Icon name="clock" size={40} color="#D783D8" style={{ marginBottom: 16 }} />
+          <Text style={styles.blockerTitle}>
+            {confirmPending === 'purchase' ? 'Confirmando sua assinatura' : 'Assinatura não encontrada'}
+          </Text>
+          <Text style={styles.blockerSubtitle}>
+            {confirmPending === 'purchase'
+              ? 'Recebemos seu pagamento, mas a loja ainda está sincronizando a assinatura. Isso costuma levar alguns instantes.'
+              : 'Não encontramos uma assinatura ativa nesta conta. Verifique se está usando a conta correta na loja e tente novamente.'}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => {
+              const source = confirmPending;
+              setConfirmPending(null);
+              void finishAsSubscriber(undefined, source);
+            }}
+          >
+            <Text style={styles.retryBtnText}>Verificar novamente</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutLink} onPress={() => void handleLogout()}>
+            <Text style={styles.logoutLinkText}>Sair da conta</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#D783D8" />
         </View>
@@ -184,7 +210,7 @@ const Paywall: React.FC = () => {
           }}
           onRestoreCompleted={async ({ customerInfo }) => {
             if (__DEV__) console.log('[PAYWALL] onRestoreCompleted disparado');
-            await finishAsSubscriber(customerInfo);
+            await finishAsSubscriber(customerInfo, 'restore');
           }}
           onRestoreStarted={() => {
             if (__DEV__) console.log('[PAYWALL] onRestoreStarted — restore iniciado pelo SDK');

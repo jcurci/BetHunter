@@ -79,7 +79,8 @@ function resolvePublicSdkKey(
   if (IS_STORE_LIKE) {
     throw new Error(
       `[app.config.ts] ${label} ausente ou inválida para ${APP_ENV}. ` +
-        `Defina EXPO_PUBLIC_… com prefixo ${expectedPrefix} (não use test_…).`,
+        `Defina EXPO_PUBLIC_… com prefixo ${expectedPrefix} (não use test_…). ` +
+        `Nunca embuta test_ em staging/production — o SDK RevenueCat faz fatalError em Release.`,
     );
   }
 
@@ -147,6 +148,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     extraString(existingExtra, 'REVENUECAT_DEFAULT_OFFERING_IDENTIFIER') ||
     'default';
 
+  if (IS_STORE_LIKE) {
+    console.log(
+      `[app.config.ts] ${APP_ENV}: RevenueCat iOS key prefix=${revenueCatIosApiKey.slice(0, 5)}… ` +
+        `(must be appl_)`,
+    );
+  }
+
   const iosUrlScheme = iosUrlSchemeFromClientId(googleIosClientId);
 
   const existingPlugins = (config.plugins ?? []).filter(
@@ -166,6 +174,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       ...(config.ios ?? {}),
       bundleIdentifier: IOS_BUNDLE_IDENTIFIER,
+      infoPlist: {
+        ...(config.ios?.infoPlist ?? {}),
+        // Sem esta chave o iOS 14+ não exibe o prompt de "Rede local" e nega o
+        // acesso a 192.168.x.x — o que impede o app em device físico de alcançar
+        // o Metro. Duplicada em ios/BetHunter/Info.plist, que é o arquivo que
+        // vale hoje (ios/ é commitado, prebuild não roda); esta cópia existe
+        // para o caso de um prebuild regenerar o projeto nativo.
+        NSLocalNetworkUsageDescription:
+          'O BetHunter usa a rede local para se conectar ao servidor de desenvolvimento durante os testes do app.',
+      },
     },
     android: {
       ...(config.android ?? {}),

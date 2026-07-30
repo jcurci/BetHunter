@@ -1,9 +1,5 @@
-import { NativeModules, Platform } from 'react-native';
 import { ENV } from '../../config/env';
-
-function nativeBlockerModule() {
-  return Platform.OS === 'android' ? NativeModules.BetBlocker : NativeModules.BetBlocking;
-}
+import { blockerModule as nativeBlockerModule } from './blockerModule';
 
 /**
  * Sincroniza o token de auth com o lado nativo (Android/iOS), pra que o worker

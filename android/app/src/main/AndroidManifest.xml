@@ -27,6 +27,11 @@
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
     <service android:name=".vpn.BetBlockerVpnService" android:process=":vpn" android:exported="true" android:permission="android.permission.BIND_VPN_SERVICE" android:foregroundServiceType="systemExempted|specialUse">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Local DNS-filtering VpnService that blocks gambling domains; must run continuously while user-enabled protection is active."/>
+      <!-- Habilita o toggle "VPN sempre ativa" na tela do sistema. O default já é
+           true; declarado explicitamente como documentação e blindagem contra
+           merge de manifesto de terceiros. ATENÇÃO: mudar para "false" REMOVE
+           silenciosamente o toggle e quebra o passo 4 da jornada de ativação. -->
+      <meta-data android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON" android:value="true"/>
       <intent-filter>
         <action android:name="android.net.VpnService"/>
       </intent-filter>
