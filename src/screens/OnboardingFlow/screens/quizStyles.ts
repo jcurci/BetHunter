@@ -123,4 +123,61 @@ export const quizStyles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 12,
   },
+  // --- Grade de chips com ícone (passo de origem) ---
+  chipContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  chipCompact: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  chipTextSelectedCompact: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    lineHeight: 28,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#A09BAE',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  otherInput: {
+    marginTop: 14,
+    backgroundColor: '#1E1B2A',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#D783D8',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  bottomBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  skipLink: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  skipLinkText: {
+    color: '#A09BAE',
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });

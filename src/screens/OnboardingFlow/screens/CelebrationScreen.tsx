@@ -21,7 +21,7 @@ import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useOnboarding } from '../OnboardingContext';
+import { useOnboarding, type QuizAnswers } from '../OnboardingContext';
 import { OnboardingLayout } from './OnboardingLayout';
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -64,6 +64,29 @@ async function persistOnboardingCompletedRemote(): Promise<void> {
     }
   } catch (error) {
     console.warn('[ONBOARDING] Falha ao marcar onboarding concluído no servidor', error);
+  }
+}
+
+/**
+ * Reenvia a origem ("Onde você nos conheceu?") se o POST do passo do quiz falhou
+ * — tipicamente porque o usuário estava sem rede naquele instante. A resposta
+ * sobrevive no rascunho do AsyncStorage, então aqui é a última chance de gravá-la.
+ * Igual ao envio original: silencioso, nunca bloqueia a saída do onboarding.
+ */
+async function retryAcquisitionSourceIfPending(
+  answers: QuizAnswers,
+  synced: boolean,
+  markSynced: () => void,
+): Promise<void> {
+  if (synced || !answers.acquisitionSource) return;
+  try {
+    await Container.getInstance().getSubmitAcquisitionSourceUseCase().execute({
+      source: answers.acquisitionSource,
+      sourceOther: answers.acquisitionSourceOther,
+    });
+    markSynced();
+  } catch (error) {
+    console.warn('[ONBOARDING] Retry de origem falhou', error);
   }
 }
 
@@ -236,7 +259,14 @@ export const CelebrationScreen: React.FC<Props> = ({
   }, []);
   const [paywallOffering, setPaywallOffering] = useState<PurchasesOffering | null>(null);
   const [settling, setSettling] = useState(false);
-  const { betcoinsEarned, xpEarned, streak } = useOnboarding();
+  const {
+    betcoinsEarned,
+    xpEarned,
+    streak,
+    answers,
+    acquisitionSourceSynced,
+    setAcquisitionSourceSynced,
+  } = useOnboarding();
   const isNavigatingRef = useRef(false);
 
   // Hero animations
@@ -349,6 +379,11 @@ export const CelebrationScreen: React.FC<Props> = ({
       await clearCouponArtifacts();
       await setOnboardingFlowCompleted();
       await persistOnboardingCompletedRemote();
+      await retryAcquisitionSourceIfPending(
+        answers,
+        acquisitionSourceSynced,
+        () => setAcquisitionSourceSynced(true),
+      );
       setShowingPaywall(false);
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch {
@@ -364,6 +399,11 @@ export const CelebrationScreen: React.FC<Props> = ({
   const handleGoToLogin = async () => {
     await setOnboardingFlowCompleted();
     await persistOnboardingCompletedRemote();
+    await retryAcquisitionSourceIfPending(
+      answers,
+      acquisitionSourceSynced,
+      () => setAcquisitionSourceSynced(true),
+    );
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 

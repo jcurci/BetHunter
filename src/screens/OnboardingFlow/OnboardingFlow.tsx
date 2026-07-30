@@ -7,6 +7,7 @@ import type { RootStackParamList } from '../../types/navigation';
 import { OnboardingProvider, useOnboarding } from './OnboardingContext';
 import { setOnboardingFlowCompleted } from './onboardingStorage';
 import { NotificationsPermissionScreen } from './screens/NotificationsPermissionScreen';
+import { QuizAcquisitionSourceScreen } from './screens/QuizAcquisitionSourceScreen';
 import { QuizFrequencyScreen } from './screens/QuizFrequencyScreen';
 import { QuizFinancialImpactScreen } from './screens/QuizFinancialImpactScreen';
 import { QuizMotivationScreen } from './screens/QuizMotivationScreen';
@@ -22,6 +23,7 @@ import { CelebrationScreen } from './screens/CelebrationScreen';
 
 type StepId =
   | 'notifications'
+  | 'quizAcquisitionSource'
   | 'quizFrequency'
   | 'quizFinancialImpact'
   | 'quizMotivation'
@@ -37,6 +39,7 @@ type StepId =
 
 const STEP_ORDER: StepId[] = [
   'notifications',
+  'quizAcquisitionSource',
   'quizFrequency',
   'quizFinancialImpact',
   'quizMotivation',
@@ -52,7 +55,22 @@ const STEP_ORDER: StepId[] = [
 ];
 
 const TOTAL_STEPS = STEP_ORDER.length;
-const QUIZ_TOTAL = 6;
+
+/**
+ * Telas que exibem o badge "N de M" do quiz, na ordem. Derivar daqui em vez de
+ * espalhar literais evita renumerar tudo a cada passo inserido.
+ */
+const QUIZ_STEPS: StepId[] = [
+  'quizAcquisitionSource',
+  'quizFrequency',
+  'quizFinancialImpact',
+  'quizMotivation',
+  'quizFinancialSituation',
+  'quizObjective',
+  'quizLearningPrefs',
+];
+const QUIZ_TOTAL = QUIZ_STEPS.length;
+const quizStepOf = (id: StepId) => QUIZ_STEPS.indexOf(id) + 1;
 
 const OnboardingInner: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -94,75 +112,36 @@ const OnboardingInner: React.FC = () => {
   }
 
   const shared = { currentStep: currentIndex, totalSteps: TOTAL_STEPS };
+  const quizProps = {
+    ...shared,
+    quizStep: quizStepOf(step),
+    quizTotal: QUIZ_TOTAL,
+    onNext: goNext,
+    onBack: goBack,
+  };
 
   switch (step) {
     case 'notifications':
       return (
         <NotificationsPermissionScreen
           {...shared}
-          onNext={() => goTo('quizFrequency')}
+          onNext={() => goTo('quizAcquisitionSource')}
         />
       );
+    case 'quizAcquisitionSource':
+      return <QuizAcquisitionSourceScreen {...quizProps} />;
     case 'quizFrequency':
-      return (
-        <QuizFrequencyScreen
-          {...shared}
-          quizStep={1}
-          quizTotal={QUIZ_TOTAL}
-          onNext={goNext}
-          onBack={goBack}
-        />
-      );
+      return <QuizFrequencyScreen {...quizProps} />;
     case 'quizFinancialImpact':
-      return (
-        <QuizFinancialImpactScreen
-          {...shared}
-          quizStep={2}
-          quizTotal={QUIZ_TOTAL}
-          onNext={goNext}
-          onBack={goBack}
-        />
-      );
+      return <QuizFinancialImpactScreen {...quizProps} />;
     case 'quizMotivation':
-      return (
-        <QuizMotivationScreen
-          {...shared}
-          quizStep={3}
-          quizTotal={QUIZ_TOTAL}
-          onNext={goNext}
-          onBack={goBack}
-        />
-      );
+      return <QuizMotivationScreen {...quizProps} />;
     case 'quizFinancialSituation':
-      return (
-        <QuizFinancialSituationScreen
-          {...shared}
-          quizStep={4}
-          quizTotal={QUIZ_TOTAL}
-          onNext={goNext}
-          onBack={goBack}
-        />
-      );
+      return <QuizFinancialSituationScreen {...quizProps} />;
     case 'quizObjective':
-      return (
-        <QuizObjectiveScreen
-          {...shared}
-          quizStep={5}
-          quizTotal={QUIZ_TOTAL}
-          onNext={goNext}
-          onBack={goBack}
-        />
-      );
+      return <QuizObjectiveScreen {...quizProps} />;
     case 'quizLearningPrefs':
-      return (
-        <QuizLearningPreferencesScreen
-          {...shared}
-          quizStep={6}
-          quizTotal={QUIZ_TOTAL}
-          onNext={goNext}
-          onBack={goBack}
-        />
-      );
+      return <QuizLearningPreferencesScreen {...quizProps} />;
     case 'diagnostic':
       return (
         <DiagnosticScreen
