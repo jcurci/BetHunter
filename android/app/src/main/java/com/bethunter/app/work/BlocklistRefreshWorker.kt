@@ -21,18 +21,26 @@ class BlocklistRefreshWorker(ctx: Context, params: WorkerParameters) : Worker(ct
     return try {
       val repo = BlockedDomainsRepository(applicationContext)
       val manager = BlocklistManager(repo, applicationContext)
-      val updated = manager.forceRefresh()
-      if (updated) {
+      val outcome = manager.forceRefresh()
+      if (outcome.anythingChanged) {
+        // IP mudou → a tun precisa ser reerguida (rota só entra no establish);
+        // o restart já leva o reload dos domínios junto. Só domínio → reload,
+        // que é barato e não abre janela de desproteção.
+        val vpnAction = if (outcome.ipsChanged) {
+          BetBlockerVpnService.ACTION_RESTART_TUNNEL
+        } else {
+          BetBlockerVpnService.ACTION_RELOAD
+        }
         val intent = Intent(applicationContext, BetBlockerVpnService::class.java).apply {
-          action = BetBlockerVpnService.ACTION_RELOAD
+          action = vpnAction
         }
         try {
           applicationContext.startService(intent)
         } catch (e: Exception) {
-          Log.w(TAG, "Could not send RELOAD to VPN service: ${e.message}")
+          Log.w(TAG, "Could not send $vpnAction to VPN service: ${e.message}")
         }
       }
-      Log.i(TAG, "Periodic refresh completed (updated=$updated)")
+      Log.i(TAG, "Periodic refresh completed ($outcome)")
       Result.success()
     } catch (e: Exception) {
       Log.w(TAG, "Periodic refresh failed", e)

@@ -196,14 +196,24 @@ class BlockedDomainsRepository(private val context: Context) {
   fun getBlockedDomains(): Set<String> = domainsDb.getAll()
 
   /**
+   * Só os IPs vindos da lista remota, sem os defaults do app e sem o filtro da
+   * allowlist. É o que o BlocklistManager compara para saber se o refresh
+   * realmente mexeu na Camada B — e mexer nela exige reiniciar o túnel.
+   */
+  fun getListBlockedIps(): Set<String> = domainsDb.getAllIps()
+
+  /**
    * IPs bloqueados (Camada B). Sempre inclui os defaults (ofensores conhecidos) em
    * união com os curados no DB, para os defaults nunca sumirem. Lida pelo :vpn no
    * startVpn() para criar as rotas /32.
    */
-  fun getBlockedIps(): Set<String> = DEFAULT_BLOCKED_IPS + domainsDb.getAllIps()
+  fun getBlockedIps(): Set<String> =
+    (DEFAULT_BLOCKED_IPS + domainsDb.getAllIps()) - IP_ALLOWLIST
 
   fun setBlockedIps(ips: Collection<String>) {
-    domainsDb.replaceAllIps(ips.toSet())
+    // Sanitiza na escrita também: nenhum chamador consegue plantar no DB algo que
+    // viraria rota /32 inválida (ou pior, rota para dentro da rede local).
+    domainsDb.replaceAllIps(ips.mapNotNull { blockableIpv4OrNull(it) }.toSet())
   }
 
   fun getBlockedDomainsCount(): Int = domainsDb.count()
@@ -218,6 +228,26 @@ class BlockedDomainsRepository(private val context: Context) {
 
   fun setLogEnabled(enabled: Boolean) {
     prefs.edit().putBoolean(KEY_LOG_ENABLED, enabled).apply()
+  }
+
+  /**
+   * Versão do PARSER que interpretou a lista já baixada (não a versão da lista).
+   *
+   * Existe porque o cache é validado por ETag: quando só a forma de ler o
+   * arquivo muda, o conteúdo remoto continua idêntico, o servidor responde 304 e
+   * a lista local permanece interpretada pela regra antiga — para sempre, até
+   * alguém publicar algo novo upstream. Vive no KV do SQLite (e não no prefs,
+   * onde está o ETag) porque é lido e escrito pelos dois processos.
+   */
+  fun getIngestVersion(): Long = try {
+    domainsDb.getLongOrNull(KEY_INGEST_VERSION) ?: 0L
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler ingest version", e)
+    0L
+  }
+
+  fun setIngestVersion(version: Long) {
+    domainsDb.setLong(KEY_INGEST_VERSION, version)
   }
 
   fun getETag(): String? = prefs.getString(KEY_ETAG, null)
@@ -266,6 +296,8 @@ class BlockedDomainsRepository(private val context: Context) {
     private const val KEY_ALWAYS_ON_SYSTEM_START_AT = "always_on_system_start_at"
     private const val KEY_ALWAYS_ON_ATTESTED_AT = "always_on_attested_at"
 
+    private const val KEY_INGEST_VERSION = "blocklist_ingest_version"
+
     private const val KEY_LAST_FETCH = "last_fetch_timestamp"
     private const val KEY_LOG_ENABLED = "debug_logs_enabled"
     private const val KEY_ETAG = "blocked_domains_etag"
@@ -286,9 +318,78 @@ class BlockedDomainsRepository(private val context: Context) {
     // IPs de destino conhecidos (Camada B) — ex.: servidor para onde a 23bet
     // redireciona. Curado manualmente a partir de IPs observados. NÃO derivado da
     // lista de domínios (resolver domínio dá IP de CDN → over-block).
+    //
+    // Piso embutido no app: a lista remota também alimenta a Camada B (ver
+    // BlocklistManager), mas estes ficam garantidos mesmo sem rede/refresh.
     val DEFAULT_BLOCKED_IPS = setOf(
-      "211.43.149.99"
+      "211.43.149.99",
+      // betweb — acessada por IP cru em porta alta (:36249) e também em :443.
+      // O segundo endereço veio do CN do certificado servido pelo primeiro; os
+      // dois são EC2 em sa-east-1 servindo /betweb.com/ com resposta idêntica,
+      // então bloquear só um deixa a casa acessível.
+      "15.229.221.132",
+      "18.228.51.151"
     )
+
+    /**
+     * IPs que NUNCA viram rota, mesmo vindo da lista remota.
+     *
+     * A lista upstream mistura curadoria de terceiros com o que o nosso
+     * `betting-link` publica, e nem tudo que está lá é casa de aposta. Filtrado
+     * na leitura (getBlockedIps) e não na ingestão, para valer também sobre
+     * bases já gravadas e sobrescrever qualquer re-adição upstream.
+     */
+    val IP_ALLOWLIST = setOf(
+      // Electronic Arts. Provavelmente incluído upstream por loot box de
+      // FIFA/Ultimate Team; bloquear derrubaria jogos legítimos dos assinantes.
+      "159.153.253.16"
+    )
+
+    /**
+     * Reconhece um IPv4 que pode virar rota /32 na Camada B, ou null.
+     *
+     * Existe porque `normalizeDomain` aceita "15.229.221.132" como domínio
+     * válido (o DOMAIN_REGEX casa dígitos e pontos, e há ponto separando
+     * labels) — o IP ia parar na trie de DNS, onde nunca seria consultado:
+     * navegador não resolve nome nenhum quando o host da URL já é um IP.
+     * Por isso a classificação de IP tem que rodar ANTES da de domínio.
+     *
+     * As faixas rejeitadas não são preciosismo: uma linha malformada de arquivo
+     * `hosts` na lista remota viraria rota para dentro da rede local do usuário,
+     * e o runLoop descarta tudo que não é DNS — ou seja, blackhole no roteador
+     * doméstico dele.
+     */
+    fun blockableIpv4OrNull(input: String?): String? {
+      if (input == null) return null
+      val candidate = input.trim().removeSuffix("^")
+      val parts = candidate.split('.')
+      if (parts.size != 4) return null
+
+      val octets = IntArray(4)
+      for (i in 0 until 4) {
+        val part = parts[i]
+        if (part.isEmpty() || part.length > 3) return null
+        // Zero à esquerda é ambíguo (há parser que lê como octal) — recusa.
+        if (part.length > 1 && part[0] == '0') return null
+        if (!part.all { it in '0'..'9' }) return null
+        val value = part.toIntOrNull() ?: return null
+        if (value !in 0..255) return null
+        octets[i] = value
+      }
+
+      val a = octets[0]
+      val b = octets[1]
+      if (a == 0) return null                    // "this network"
+      if (a == 10) return null                   // privado
+      if (a == 127) return null                  // loopback
+      if (a == 100 && b in 64..127) return null  // CGNAT (operadoras)
+      if (a == 169 && b == 254) return null      // link-local
+      if (a == 172 && b in 16..31) return null   // privado
+      if (a == 192 && b == 168) return null      // privado
+      if (a >= 224) return null                  // multicast, reservado, broadcast
+
+      return candidate
+    }
 
     fun normalizeDomain(input: String?): String? {
       if (input == null) return null

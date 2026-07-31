@@ -696,18 +696,25 @@ class BetBlockerModule(
     thread(name = "BetBlockerRefresh") {
       try {
         val manager = BlocklistManager(repository, reactContext)
-        val updated = manager.forceRefresh()
-        if (updated) {
+        val outcome = manager.forceRefresh()
+        if (outcome.anythingChanged) {
+          // IP novo só vira rota num establish() — daí o restart da tun. O
+          // restart já dispara o reload da trie no processo :vpn.
+          val vpnAction = if (outcome.ipsChanged) {
+            BetBlockerVpnService.ACTION_RESTART_TUNNEL
+          } else {
+            BetBlockerVpnService.ACTION_RELOAD
+          }
           val reloadIntent = Intent(reactContext, BetBlockerVpnService::class.java).apply {
-            action = BetBlockerVpnService.ACTION_RELOAD
+            action = vpnAction
           }
           try {
             ContextCompat.startForegroundService(reactContext, reloadIntent)
           } catch (e: Exception) {
-            Log.w(TAG, "Failed to reload VPN service after refresh: ${e.message}")
+            Log.w(TAG, "Failed to send $vpnAction after refresh: ${e.message}")
           }
         }
-        promise.resolve(updated)
+        promise.resolve(outcome.anythingChanged)
       } catch (e: Exception) {
         promise.reject("REFRESH_FAILED", e)
       }

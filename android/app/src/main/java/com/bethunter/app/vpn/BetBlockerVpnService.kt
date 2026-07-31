@@ -23,6 +23,7 @@ import com.bethunter.app.dns.DnsInterceptor
 import com.bethunter.app.domain.DomainMatcher
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
+import com.bethunter.app.repository.RefreshOutcome
 import com.bethunter.app.work.SubscriptionEnforcementWorker
 import com.bethunter.app.work.VpnHealthWorker
 import java.io.FileInputStream
@@ -138,6 +139,23 @@ class BetBlockerVpnService : VpnService() {
       scheduleReload()
       return Service.START_STICKY
     }
+
+    // Mudou a lista de IPs bloqueados: rota só entra no establish(), então não
+    // basta recarregar a trie — a tun precisa ser reerguida.
+    //
+    // O reload dos domínios é feito já; o restart em si fica para DEPOIS das
+    // guardas de licença e consentimento, para reerguer o túnel passar pelo
+    // mesmo crivo de qualquer outro start. Tratado aqui em cima, um refresh de
+    // blocklist ressuscitaria a VPN de quem deixou de ser assinante.
+    val restartRequested = intent?.action == ACTION_RESTART_TUNNEL
+    if (restartRequested) {
+      // Quem manda esta action é o processo principal, depois de gravar a lista
+      // nova no SQLite. Os domínios não vêm de carona no restart — startVpn()
+      // não toca na trie, e a DomainMatcher deste processo continua com a cópia
+      // antiga em memória. Por isso o reload vai junto, sempre.
+      scheduleReload()
+    }
+
     if (!repository.isBlockingEnabled()) {
       Log.i(TAG, "Blocking disabled, stopping VPN service")
       stopSelf()
@@ -159,6 +177,13 @@ class BetBlockerVpnService : VpnService() {
       VpnEventLog.log(this, "start_blocked_needs_consent")
       handleRevoked()
       return Service.START_NOT_STICKY
+    }
+    // Licença e consentimento já conferidos acima: só agora vale reerguer a tun
+    // para aplicar as rotas novas. Se o túnel já estava caído, o start normal
+    // logo abaixo lê a lista nova de qualquer forma.
+    if (restartRequested && running) {
+      restartTunnel()
+      return Service.START_STICKY
     }
     if (running) return Service.START_STICKY
     startVpn()
@@ -231,7 +256,23 @@ class BetBlockerVpnService : VpnService() {
     stopSelf()
   }
 
-  private fun startVpn() {
+  /**
+   * Reergue a tun para aplicar mudanças na lista de IPs bloqueados.
+   *
+   * `getBlockedIps()` só é lido dentro do `establish()` — rota de tun já
+   * estabelecida é imutável. Sem este caminho, um IP novo vindo do refresh
+   * ficaria parado no banco até o túnel cair por outro motivo (reboot, kill do
+   * sistema, health worker de 15 min): bloqueio que funciona "às vezes, horas
+   * depois", que é pior do que não funcionar porque parece estar funcionando.
+   */
+  private fun restartTunnel() {
+    Log.i(TAG, "Restarting tunnel to apply blocked IP routes")
+    VpnEventLog.log(this, "tunnel_restart_for_ips")
+    teardownTunnel()
+    startVpn(isRestart = true)
+  }
+
+  private fun startVpn(isRestart: Boolean = false) {
     running = true
     val builder = Builder()
       .setSession(SESSION_NAME)
@@ -280,6 +321,14 @@ class BetBlockerVpnService : VpnService() {
       Log.e(TAG, "establish() failed: ${e.message}")
       VpnEventLog.log(this, "establish_failed:${e.javaClass.simpleName}")
       running = false
+      // Num restart por lista de IPs, só SecurityException significa perda de
+      // consentimento. Falha transitória aqui NÃO pode marcar revoked: isso
+      // exigiria reativação manual pela Activity e daria a um refresh de
+      // blocklist o poder de desarmar a proteção de quem está pagando.
+      if (isRestart && e !is SecurityException) {
+        VpnHealthWorker.enqueueExpeditedCheck(applicationContext)
+        return
+      }
       handleRevoked()
       return
     }
@@ -287,6 +336,10 @@ class BetBlockerVpnService : VpnService() {
       Log.e(TAG, "Failed to establish VPN interface")
       VpnEventLog.log(this, "establish_returned_null")
       running = false
+      // Num restart não há ninguém mais para tentar de novo: o túnel já foi
+      // derrubado e o caminho normal de recuperação (onDestroy) não roda porque
+      // o serviço segue vivo. Sem isto, a proteção ficaria caída em silêncio.
+      if (isRestart) VpnHealthWorker.enqueueExpeditedCheck(applicationContext)
       return
     }
 
@@ -306,11 +359,20 @@ class BetBlockerVpnService : VpnService() {
     startRefreshLoop()
   }
 
-  private fun stopVpn() {
+  /**
+   * Derruba o túnel mas NÃO mexe no estado de foreground do serviço.
+   *
+   * Separado de [stopVpn] por causa do restart: a lista de rotas só pode ser
+   * declarada antes do `establish()`, então aplicar um IP novo exige reerguer a
+   * tun. Se esse caminho chamasse `stopForeground`, o serviço perderia o status
+   * de FGS no meio do processo e, em API 31+, esbarraria na restrição de start
+   * em background para voltar — a proteção simplesmente não voltaria.
+   */
+  private fun teardownTunnel() {
     stopRefreshLoop()
     running = false
-    
-    // 1. Fechar o TUN Interface PRIMEIRO. Isso força o `reader.read()` a lançar 
+
+    // 1. Fechar o TUN Interface PRIMEIRO. Isso força o `reader.read()` a lançar
     // uma exceção e destravar a thread bloqueada em I/O.
     try {
       tunInterface?.close()
@@ -322,11 +384,15 @@ class BetBlockerVpnService : VpnService() {
       workerThread?.interrupt()
     } catch (_: Exception) {}
     workerThread = null
-    
+
     try {
       refreshThread?.interrupt()
     } catch (_: Exception) {}
     refreshThread = null
+  }
+
+  private fun stopVpn() {
+    teardownTunnel()
 
     try {
       if (Build.VERSION.SDK_INT >= 24) {
@@ -462,13 +528,40 @@ class BetBlockerVpnService : VpnService() {
     }
   }
 
+  /**
+   * Leva o resultado de um refresh até o túnel, cada tipo pelo seu caminho:
+   * domínio por reload da trie, IP por reerguer a tun.
+   *
+   * O restart é postado na main thread de propósito. Este método roda em thread
+   * de refresh, e `teardownTunnel()` interrompe justamente a refreshThread —
+   * chamado direto, seria a thread se auto-interrompendo no meio do próprio
+   * trabalho.
+   */
+  private fun applyRefreshOutcome(outcome: RefreshOutcome) {
+    if (outcome.domainsChanged) {
+      try {
+        domainMatcher.reload()
+        Log.i(TAG, "Blocklist refreshed from remote source")
+      } catch (e: Exception) {
+        Log.w(TAG, "Reload after refresh failed: ${e.message}")
+      }
+    }
+    if (outcome.ipsChanged) {
+      Handler(Looper.getMainLooper()).post {
+        // Mesmo crivo do caminho por Intent: reerguer a tun é um start, e start
+        // sem licença válida não pode acontecer nem vindo daqui.
+        if (running && isPremiumAllowed()) restartTunnel()
+      }
+    }
+  }
+
   private fun refreshBlocklistIfNeeded() {
     thread(name = "BetBlockerRefreshCheck") {
       try {
-        if (blocklistManager.forceRefresh()) {
-          domainMatcher.reload()
-          Log.i(TAG, "Blocklist refreshed from remote source")
-        }
+        // Roda em paralelo ao establish() do onStartCommand, então pode terminar
+        // depois dele — por isso o caminho de IP passa por restartTunnel() e não
+        // confia em o start ainda não ter acontecido.
+        applyRefreshOutcome(blocklistManager.forceRefresh())
       } catch (e: Exception) {
         Log.w(TAG, "Blocklist refresh failed", e)
       }
@@ -485,10 +578,8 @@ class BetBlockerVpnService : VpnService() {
         }
         if (!running) break
         try {
-          if (blocklistManager.forceRefresh()) {
-            domainMatcher.reload()
-            Log.i(TAG, "Periodic blocklist refresh completed")
-          }
+          applyRefreshOutcome(blocklistManager.forceRefresh())
+          Log.i(TAG, "Periodic blocklist refresh completed")
         } catch (e: Exception) {
           Log.w(TAG, "Periodic blocklist refresh failed", e)
         }
@@ -679,6 +770,7 @@ class BetBlockerVpnService : VpnService() {
     /** De quanto em quanto tempo o próprio túnel reconfere a licença de premium. */
     private const val PREMIUM_CHECK_INTERVAL_MS = 5L * 60 * 1000
     const val ACTION_RELOAD = "com.bethunter.app.action.RELOAD_BLOCKED_DOMAINS"
+    const val ACTION_RESTART_TUNNEL = "com.bethunter.app.action.RESTART_TUNNEL"
     const val ACTION_STOP = "com.bethunter.app.action.STOP_VPN"
     const val ACTION_PAUSE = "com.bethunter.app.action.PAUSE_VPN"
   }
