@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat
 import com.bethunter.app.diagnostics.VpnEventLog
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.vpn.BetBlockerVpnService
+import com.bethunter.app.vpn.BlockerNotifications
 import com.bethunter.app.work.BlocklistRefreshWorker
 import com.bethunter.app.work.SubscriptionEnforcementWorker
 import com.bethunter.app.work.VpnHealthWorker
@@ -32,7 +33,10 @@ class BootReceiver : BroadcastReceiver() {
       // `isBlockingEnabled` continua true durante a pausa por assinatura, então
       // sem esta checagem reiniciar o aparelho ressuscitava o bloqueio de quem
       // não é mais assinante.
-      if (repo.isPremiumPaused() || !repo.isPremiumLeaseValid()) {
+      // Licença vencida só barra o boot quando a cortesia também acabou — senão
+      // um assinante que ficou sem contato conosco perderia a proteção justamente
+      // ao reiniciar o aparelho (ver consumeLeaseGrace).
+      if (repo.isPremiumPaused() || (!repo.isPremiumLeaseValid() && !repo.hasLeaseGraceAvailable())) {
         VpnEventLog.log(context, "boot_skipped_no_premium")
         return
       }
@@ -43,9 +47,19 @@ class BootReceiver : BroadcastReceiver() {
           Intent(context, BetBlockerVpnService::class.java)
         )
       } catch (e: Exception) {
-        // Nunca crashar um receiver; o health check periódico religa depois.
+        // Nunca crashar um receiver. Antes isto só logava e a proteção ficava
+        // caída até a próxima janela periódica (15 min) ou até o usuário abrir o
+        // app — o caso clássico é a atualização do app, em que o start pode ser
+        // recusado na janela do MY_PACKAGE_REPLACED. Enfileira a recuperação
+        // rápida e avisa, em vez de esperar em silêncio.
         Log.w("BootReceiver", "Could not start VPN service on boot: ${e.message}")
         VpnEventLog.log(context, "boot_start_failed:${e.javaClass.simpleName}")
+        VpnHealthWorker.enqueueExpeditedCheck(context)
+        BlockerNotifications.showReactivationNotification(
+          context,
+          "Proteção interrompida",
+          "Não foi possível retomar o bloqueio automaticamente. Toque para restaurar."
+        )
       }
     }
   }

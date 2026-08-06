@@ -21,6 +21,7 @@ import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
 import com.bethunter.app.vpn.BetBlockerVpnService
 import com.bethunter.app.vpn.BlockerNotifications
+import com.bethunter.app.vpn.VpnConsent
 import com.bethunter.app.vpn.VpnStatus
 import com.bethunter.app.work.BlocklistRefreshWorker
 import com.bethunter.app.work.SubscriptionEnforcementWorker
@@ -215,6 +216,25 @@ class BetBlockerModule(
     }
   }
 
+  /**
+   * O usuário tocou na notificação de reativação? Consome o pedido: responde uma
+   * única vez, para a jornada não reabrir sozinha em toda volta ao app.
+   *
+   * O pedido é registrado pela MainActivity e não emitido por evento porque a
+   * notificação costuma abrir o app do zero — um evento disparado antes de o JS
+   * estar de pé se perderia, e o toque não faria nada (que é o bug que isto
+   * corrige).
+   */
+  @ReactMethod
+  fun consumePendingReactivation(promise: Promise) {
+    val requested = repository.isReactivationRequested()
+    if (requested) {
+      repository.setReactivationRequested(false)
+      VpnEventLog.log(reactContext.applicationContext, "reactivation_request_consumed")
+    }
+    promise.resolve(requested)
+  }
+
   @ReactMethod
   fun isBlockingEnabled(promise: Promise) {
     promise.resolve(repository.isBlockingEnabled())
@@ -267,7 +287,13 @@ class BetBlockerModule(
     result.putBoolean("deviceAdminActive", isDeviceAdminActiveInternal())
     // Sem isto a Home mostra "desligado" para quem está só pausado por
     // assinatura — a interface TS já declarava `paused`, o Android é que nunca mandava.
-    result.putBoolean("paused", repository.isPremiumPaused() || !repository.isPremiumLeaseValid())
+    // Licença vencida COM cortesia disponível não é pausa: a proteção segue de pé,
+    // e mostrar "pausado" faria a Home mentir para quem ainda está protegido.
+    result.putBoolean(
+      "paused",
+      repository.isPremiumPaused() ||
+        (!repository.isPremiumLeaseValid() && !repository.hasLeaseGraceAvailable()),
+    )
     promise.resolve(result)
   }
 
@@ -292,7 +318,7 @@ class BetBlockerModule(
       // Licença vencida: o serviço se recusaria a subir de qualquer forma, e o
       // startVpnService() abaixo NÃO lançaria (o startForegroundService dá certo,
       // quem para é o serviço logo depois) — resolveríamos `true` com a VPN morta.
-      if (!repository.isPremiumLeaseValid()) {
+      if (!repository.isPremiumLeaseValid() && !repository.hasLeaseGraceAvailable()) {
         VpnEventLog.log(reactContext.applicationContext, "sync_premium_lease_expired")
         SubscriptionEnforcementWorker.enqueueImmediateCheck(reactContext.applicationContext)
         promise.resolve(false)
@@ -302,7 +328,7 @@ class BetBlockerModule(
       // blind-start falharia no establish(). A intenção (enabled) é preservada;
       // resolve false para a UI mostrar desligado e oferecer a reativação, que
       // passa pelo fluxo do prepare() em startBlocking().
-      if (repository.isRevoked() || VpnService.prepare(reactContext) != null) {
+      if (!VpnConsent.hasConsent(reactContext, repository)) {
         Log.w(TAG, "VPN consent missing during sync — user must reactivate")
         VpnEventLog.log(reactContext.applicationContext, "sync_needs_consent")
         promise.resolve(false)
@@ -313,10 +339,18 @@ class BetBlockerModule(
         startVpnService()
         promise.resolve(true)
       } catch (e: Exception) {
-        Log.e(TAG, "VPN restart failed during sync, rolling back flag", e)
-        repository.setBlockingEnabled(false)
-        BlocklistRefreshWorker.cancel(reactContext.applicationContext)
-        VpnHealthWorker.cancel(reactContext.applicationContext)
+        // NÃO desliga o bloqueio aqui. A falha típica é transitória — o
+        // `startForegroundService` é recusado quando o app perde o foreground na
+        // corrida entre o AppState "active" e esta chamada. Apagar `enabled` (e
+        // ainda cancelar o watchdog) transformava esse tropeço em desligamento
+        // permanente e silencioso: nada mais religava, porque o próprio caminho de
+        // recuperação tinha sido cancelado junto.
+        Log.e(TAG, "VPN restart failed during sync, scheduling recovery", e)
+        VpnEventLog.log(
+          reactContext.applicationContext,
+          "sync_restart_failed:${e.javaClass.simpleName}",
+        )
+        VpnHealthWorker.enqueueExpeditedCheck(reactContext.applicationContext)
         promise.resolve(false)
       }
     } else {

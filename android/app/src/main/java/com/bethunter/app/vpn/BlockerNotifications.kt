@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.bethunter.app.MainActivity
 import com.bethunter.app.R
+import com.bethunter.app.repository.BlockedDomainsRepository
 
 /**
  * Notificações de alerta do bloqueador (fora da notificação persistente do FGS).
@@ -20,7 +21,27 @@ object BlockerNotifications {
   private const val REACTIVATION_NOTIF_ID = 43
   const val EXTRA_REACTIVATE_VPN = "bethunter_reactivate_vpn"
 
-  fun showReactivationNotification(context: Context, title: String, text: String) {
+  /**
+   * @param throttleMs quando > 0, não re-posta se o último alerta saiu há menos que
+   * isso. Existe para os caminhos que podem repetir sozinhos (start recusado por
+   * licença, health check periódico): sem o freio, um ciclo de start/stop
+   * transformava o alerta num aviso piscando de segundo em segundo. Caminhos
+   * disparados por ação do usuário passam 0 e continuam imediatos.
+   */
+  fun showReactivationNotification(
+    context: Context,
+    title: String,
+    text: String,
+    throttleMs: Long = 0L,
+  ) {
+    if (throttleMs > 0L) {
+      val repository = BlockedDomainsRepository(context.applicationContext)
+      val last = repository.getLastReactivationNoticeAt()
+      val now = System.currentTimeMillis()
+      // `last > now` = relógio do aparelho andou para trás; trata como vencido.
+      if (last in 1..now && now - last < throttleMs) return
+      repository.setLastReactivationNoticeAt(now)
+    }
     try {
       val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

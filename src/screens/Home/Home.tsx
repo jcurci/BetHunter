@@ -125,6 +125,20 @@ const alwaysOnSupported =
 // Module-level flag: persists for the entire app session, survives component remounts
 let sessionBooted = false;
 
+/**
+ * Último refresh da blocklist pedido por esta tela. Nível de módulo (e não `useRef`)
+ * de propósito: precisa sobreviver a remontagens da Home, que são justamente o
+ * gatilho do problema.
+ *
+ * `checkBlockerStatus` roda no mount, em todo `useFocusEffect` e a cada volta ao
+ * foreground — e disparava um download da lista (5 MB, ~311k linhas) em cada um
+ * deles, com reescrita da tabela inteira no SQLite competindo com a thread de DNS.
+ * A lista já é atualizada de hora em hora pelos workers; aqui basta uma rede de
+ * segurança esparsa.
+ */
+let lastBlocklistRefreshAt = 0;
+const BLOCKLIST_REFRESH_THROTTLE_MS = 6 * 60 * 60 * 1000;
+
 const CARD_GAP = 10;
 const SCROLL_HORIZONTAL_PADDING = 40; // 20px each side (scrollContent style)
 
@@ -309,9 +323,35 @@ const Home: React.FC = () => {
           } catch {}
         }
 
-        if (enabled && BetBlocker?.refreshBlockedDomains) {
+        if (
+          enabled &&
+          BetBlocker?.refreshBlockedDomains &&
+          Date.now() - lastBlocklistRefreshAt >= BLOCKLIST_REFRESH_THROTTLE_MS
+        ) {
+          lastBlocklistRefreshAt = Date.now();
           BetBlocker.refreshBlockedDomains().catch(() => {});
         }
+
+        // Chegou aqui pela notificação "toque para reativar"? Abre a jornada no
+        // passo de introdução, que é o único caminho até o `prepare()` do Android.
+        // Antes o toque só trazia o usuário para esta tela e o deixava parado: a
+        // notificação prometia reativar e não reativava nada.
+        //
+        // O pedido é consumido mesmo com a proteção já de pé (outro caminho pode
+        // tê-la restaurado antes), senão a flag ficaria pendurada e abriria a
+        // jornada numa abertura futura, sem contexto nenhum para o usuário.
+        if (BetBlocker?.consumePendingReactivation) {
+          try {
+            const reactivationRequested: boolean =
+              await BetBlocker.consumePendingReactivation();
+            if (reactivationRequested && !enabled) {
+              setBatteryAttemptFailed(false);
+              setSetupStep("intro");
+              setShowSetupModal(true);
+            }
+          } catch {}
+        }
+
         checkBatteryExemption();
       } else if (Platform.OS === "ios" && BetBlocking?.isBlockingEnabled) {
         const enabled: boolean = await BetBlocking.isBlockingEnabled();

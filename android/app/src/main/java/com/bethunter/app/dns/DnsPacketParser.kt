@@ -55,6 +55,55 @@ object DnsPacketParser {
     )
   }
 
+  /**
+   * Menor TTL (em segundos) entre os registros de resposta, ou null quando não dá
+   * para determinar com segurança.
+   *
+   * Usado pelo cache de respostas: guardar por tempo fixo ignoraria zonas de TTL
+   * curto (failover, balanceamento) e serviria endereço velho para o usuário. Todo
+   * caminho de dúvida devolve null, e o chamador aplica o padrão conservador — é
+   * melhor cachear de menos do que servir resposta vencida.
+   */
+  fun minAnswerTtlSeconds(payload: ByteArray, length: Int = payload.size): Int? {
+    if (length < 12) return null
+    return try {
+      val buf = ByteBuffer.wrap(payload, 0, length).order(ByteOrder.BIG_ENDIAN)
+      buf.short // id
+      buf.short // flags
+      val qdCount = buf.short.toInt() and 0xFFFF
+      val anCount = buf.short.toInt() and 0xFFFF
+      buf.short // nscount
+      buf.short // arcount
+      if (anCount <= 0) return null
+
+      repeat(qdCount) {
+        readName(payload, buf, depth = 0) ?: return null
+        if (buf.remaining() < 4) return null
+        buf.short // qtype
+        buf.short // qclass
+      }
+
+      var min = Int.MAX_VALUE
+      repeat(anCount) {
+        readName(payload, buf, depth = 0) ?: return null
+        if (buf.remaining() < 10) return null
+        buf.short // type
+        buf.short // class
+        val ttl = buf.int
+        val rdLength = buf.short.toInt() and 0xFFFF
+        if (buf.remaining() < rdLength) return null
+        buf.position(buf.position() + rdLength)
+        // TTL é unsigned de 32 bits; valor com o bit alto ligado chega negativo em
+        // Kotlin e não é confiável — descarta a resposta inteira do cache.
+        if (ttl < 0) return null
+        if (ttl < min) min = ttl
+      }
+      if (min == Int.MAX_VALUE) null else min
+    } catch (e: Exception) {
+      null
+    }
+  }
+
   private fun readName(packet: ByteArray, buf: ByteBuffer, depth: Int): String? {
     if (depth > 10) return null
     val labels = ArrayList<String>(4)

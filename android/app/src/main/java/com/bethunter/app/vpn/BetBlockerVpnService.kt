@@ -20,6 +20,7 @@ import com.bethunter.app.MainActivity
 import com.bethunter.app.R
 import com.bethunter.app.diagnostics.VpnEventLog
 import com.bethunter.app.dns.DnsInterceptor
+import com.bethunter.app.dns.UpstreamDnsProvider
 import com.bethunter.app.domain.DomainMatcher
 import com.bethunter.app.repository.BlockedDomainsRepository
 import com.bethunter.app.repository.BlocklistManager
@@ -29,18 +30,31 @@ import com.bethunter.app.work.VpnHealthWorker
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramSocket
-import java.net.InetAddress
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import android.content.pm.ServiceInfo
-import java.net.DatagramPacket
 import com.bethunter.app.BuildConfig
 
 class BetBlockerVpnService : VpnService() {
   @Volatile private var running = false
+
+  /**
+   * Alguém pediu a derrubada do túnel (stop, pause, restart por rota).
+   *
+   * Distingue "o laço terminou porque mandamos" de "o laço morreu sozinho" — o
+   * segundo caso precisa de recuperação, o primeiro não. Checar `tunInterface`
+   * no lugar disso teria corrida: o `close()` acorda o laço com exceção antes de
+   * a referência ser zerada.
+   */
+  @Volatile private var teardownRequested = false
+
+  /** Quedas seguidas do laço logo após subir — ver onLoopExited. */
+  @Volatile private var consecutiveFastLoopFailures = 0
   private var tunInterface: ParcelFileDescriptor? = null
   private var workerThread: Thread? = null
   private var refreshThread: Thread? = null
@@ -49,34 +63,52 @@ class BetBlockerVpnService : VpnService() {
   private lateinit var blocklistManager: BlocklistManager
   private lateinit var domainMatcher: DomainMatcher
   private lateinit var dnsInterceptor: DnsInterceptor
+  private lateinit var upstreamDnsProvider: UpstreamDnsProvider
 
-  // Executor serial dedicado a trabalho pesado de DB/trie (reload da blocklist,
-  // seed inicial). NUNCA rodar isso na main thread: a trie é reconstruída a partir
-  // de uma varredura de ~300k linhas do SQLite e travava o app (ANR) quando vários
-  // reloads chegavam em rajada. `reloadDirty` coalesce rajadas em 1–2 rebuilds.
-  private val reloadExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-  @Volatile private var reloadDirty = false
+  // Executor serial para trabalho de DB que não pode rodar na main thread (hoje só
+  // o seed inicial). O rebuild da trie — motivo original deste executor e de um
+  // ANR em produção — deixou de existir: a blocklist agora é consultada no SQLite.
+  private val dbExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+  /**
+   * Pool que resolve as queries DNS. Criado junto com o túnel e derrubado com ele.
+   *
+   * Fila LIMITADA de propósito: sem teto, um upstream fora do ar acumularia
+   * milhares de pacotes na memória do processo `:vpn` — justamente o processo cuja
+   * pegada de memória este release está reduzindo.
+   */
+  @Volatile private var dnsExecutor: ThreadPoolExecutor? = null
 
   override fun onCreate() {
     super.onCreate()
     repository = BlockedDomainsRepository(applicationContext)
     blocklistManager = BlocklistManager(repository, applicationContext)
     domainMatcher = DomainMatcher(repository)
-    // Seed inicial da blocklist (query count() + possível insert de defaults) fora da
-    // main thread. domainMatcher só lê o DB no primeiro pacote/reload, e o executor é
-    // serial, então este seed roda antes de qualquer reload subsequente.
-    reloadExecutor.execute {
+    // Seed inicial da blocklist (query count() + possível insert de defaults) fora
+    // da main thread.
+    dbExecutor.execute {
       try {
         blocklistManager.ensureBlocklistPresent()
       } catch (e: Exception) {
         Log.w(TAG, "ensureBlocklistPresent failed: ${e.message}")
       }
     }
+    upstreamDnsProvider = UpstreamDnsProvider(
+      applicationContext,
+      // Trocou de rede: o que estava cacheado foi respondido por outro resolver e
+      // pode não valer aqui (nome interno de rede corporativa, IP de CDN distante).
+      onServersChanged = {
+        if (::dnsInterceptor.isInitialized) dnsInterceptor.invalidateCache()
+      },
+    )
     dnsInterceptor = DnsInterceptor(
       domainMatcher = domainMatcher,
-      protect = { socket: DatagramSocket -> protect(socket) }
+      protect = { socket: DatagramSocket -> protect(socket) },
+      // O resolver da própria rede na frente dos públicos: é o que faz a proteção
+      // funcionar em Wi-Fi corporativo, portal cativo e operadora que bloqueia
+      // DNS público — onde antes o aparelho simplesmente ficava sem internet.
+      upstreams = { upstreamDnsProvider.servers() },
     )
-    refreshBlocklistIfNeeded()
     startAsForeground()
     VpnEventLog.log(this, "service_create")
     // Self-heal: garante que o health check periódico existe mesmo que
@@ -136,24 +168,23 @@ class BetBlockerVpnService : VpnService() {
 
     if (intent?.action == ACTION_RELOAD) {
       Log.i(TAG, "Reload requested")
-      scheduleReload()
+      invalidateMatcher()
       return Service.START_STICKY
     }
 
-    // Mudou a lista de IPs bloqueados: rota só entra no establish(), então não
-    // basta recarregar a trie — a tun precisa ser reerguida.
+    // Mudou a lista de IPs bloqueados: rota só entra no establish(), então a tun
+    // precisa ser reerguida.
     //
-    // O reload dos domínios é feito já; o restart em si fica para DEPOIS das
-    // guardas de licença e consentimento, para reerguer o túnel passar pelo
-    // mesmo crivo de qualquer outro start. Tratado aqui em cima, um refresh de
+    // A invalidação do cache de domínios é feita já; o restart em si fica para
+    // DEPOIS das guardas de licença e consentimento, para reerguer o túnel passar
+    // pelo mesmo crivo de qualquer outro start. Tratado aqui em cima, um refresh de
     // blocklist ressuscitaria a VPN de quem deixou de ser assinante.
     val restartRequested = intent?.action == ACTION_RESTART_TUNNEL
     if (restartRequested) {
       // Quem manda esta action é o processo principal, depois de gravar a lista
-      // nova no SQLite. Os domínios não vêm de carona no restart — startVpn()
-      // não toca na trie, e a DomainMatcher deste processo continua com a cópia
-      // antiga em memória. Por isso o reload vai junto, sempre.
-      scheduleReload()
+      // nova no SQLite. As decisões em cache neste processo podem ter sido tomadas
+      // com a lista antiga, então são descartadas junto.
+      invalidateMatcher()
     }
 
     if (!repository.isBlockingEnabled()) {
@@ -172,10 +203,10 @@ class BetBlockerVpnService : VpnService() {
     }
     // Restart vindo de alarme/boot/worker: se o consentimento foi revogado,
     // establish() falharia — só a Activity pode re-pedir via prepare().
-    if (repository.isRevoked() || VpnService.prepare(this) != null) {
-      Log.w(TAG, "VPN consent missing, cannot start — prompting reactivation")
+    if (!VpnConsent.hasConsent(this, repository)) {
+      Log.w(TAG, "VPN consent missing, cannot start — scheduling re-check")
       VpnEventLog.log(this, "start_blocked_needs_consent")
-      handleRevoked()
+      handleConsentMissing()
       return Service.START_NOT_STICKY
     }
     // Licença e consentimento já conferidos acima: só agora vale reerguer a tun
@@ -191,37 +222,28 @@ class BetBlockerVpnService : VpnService() {
   }
 
   /**
-   * Agenda um reload da trie de domínios no executor serial de background.
-   * Coalesce rajadas: cada chamada marca `reloadDirty` e enfileira uma tarefa; a
-   * tarefa só reconstrói se ainda houver trabalho pendente, então N reloads
-   * quase-simultâneos resultam em 1–2 rebuilds em vez de N na main thread.
+   * A lista mudou: descarta as decisões em cache.
+   *
+   * Era um rebuild de trie a partir de ~300k linhas (que precisava de executor
+   * próprio e de coalescência de rajadas para não causar ANR); hoje é uma limpeza
+   * de mapa, barata o bastante para rodar direto.
    */
-  private fun scheduleReload() {
-    reloadDirty = true
+  private fun invalidateMatcher() {
     try {
-      reloadExecutor.execute {
-        if (!reloadDirty) return@execute
-        reloadDirty = false
-        try {
-          domainMatcher.reload()
-        } catch (e: Exception) {
-          Log.w(TAG, "Reload failed: ${e.message}")
-        }
-      }
+      domainMatcher.invalidate()
     } catch (e: Exception) {
-      // Executor já encerrado (serviço parando) — ignora.
-      Log.w(TAG, "scheduleReload skipped: ${e.message}")
+      Log.w(TAG, "Cache invalidation failed: ${e.message}")
     }
   }
 
   override fun onDestroy() {
     stopVpn()
     try {
-      reloadExecutor.shutdownNow()
+      dbExecutor.shutdownNow()
     } catch (_: Exception) {}
     super.onDestroy()
 
-    if (repository.isBlockingEnabled() && !repository.isRevoked()) {
+    if (canRestartAfterDestroy()) {
       Log.i(TAG, "VPN killed unexpectedly, restarting")
       VpnEventLog.log(this, "service_destroy_unexpected")
       scheduleRestart()
@@ -229,6 +251,27 @@ class BetBlockerVpnService : VpnService() {
       Log.i(TAG, "VPN stopped intentionally")
       VpnEventLog.log(this, "service_destroy_intentional")
     }
+  }
+
+  /**
+   * O watchdog só pode agendar restart quando o serviço TEM como subir.
+   *
+   * A condição antiga (`enabled && !revoked`) ignorava a licença, mas o
+   * `onStartCommand` recusa o start por premium logo em seguida — e `enabled`
+   * continua true durante a pausa, de propósito, porque é a intenção do usuário.
+   * O resultado era um ciclo fechado: alarme → onCreate → stopSelf → onDestroy →
+   * alarme, a cada 2 segundos, para sempre. Cada volta postava notificação,
+   * agendava worker, baixava a blocklist e escrevia no event log — que, com ring
+   * buffer de 100 entradas, se apagava por completo em menos de um minuto e levava
+   * junto o histórico necessário para diagnosticar qualquer outra coisa.
+   */
+  private fun canRestartAfterDestroy(): Boolean {
+    if (!repository.isBlockingEnabled()) return false
+    if (repository.isPremiumPaused()) return false
+    if (!repository.isPremiumLeaseValid() && !repository.hasLeaseGraceAvailable()) return false
+    // `hasConsent` (e não a flag `revoked`) porque um consentimento recuperado
+    // deve voltar a permitir o restart automático — ver VpnConsent.
+    return VpnConsent.hasConsent(this, repository)
   }
 
   override fun onRevoke() {
@@ -257,6 +300,27 @@ class BetBlockerVpnService : VpnService() {
   }
 
   /**
+   * Start cego (boot, alarme, worker, atualização do app) esbarrou em
+   * `prepare() != null`.
+   *
+   * Deliberadamente NÃO persiste `revoked`, ao contrário de [handleRevoked]: aqui
+   * não há prova de que o sistema retirou o consentimento. A janela de atualização
+   * do app mata o processo `:vpn` e o serviço é resubido pelo MY_PACKAGE_REPLACED
+   * bem nesse intervalo, quando o `prepare()` pode responder não-nulo por um
+   * instante. Gravar a flag nesse caminho era o que desativava o bloqueador a cada
+   * update: ela travava toda a recuperação automática e só um toque do usuário
+   * religava (ver [VpnConsent]).
+   *
+   * Quem decide se é queda de verdade é o health check, que reconsulta o sistema
+   * e só então avisa o usuário — assim um blip transitório não vira notificação.
+   */
+  private fun handleConsentMissing() {
+    VpnHealthWorker.enqueueExpeditedCheck(applicationContext)
+    stopVpn()
+    stopSelf()
+  }
+
+  /**
    * Reergue a tun para aplicar mudanças na lista de IPs bloqueados.
    *
    * `getBlockedIps()` só é lido dentro do `establish()` — rota de tun já
@@ -273,7 +337,12 @@ class BetBlockerVpnService : VpnService() {
   }
 
   private fun startVpn(isRestart: Boolean = false) {
+    // Tun anterior ainda aberta (caso típico: o laço morreu com a interface de pé
+    // e o health worker mandou reerguer). Sobrescrever `tunInterface` vazaria o fd
+    // antigo e deixaria dois estabelecimentos concorrendo pelo mesmo túnel.
+    if (tunInterface != null) teardownTunnel()
     running = true
+    teardownRequested = false
     val builder = Builder()
       .setSession(SESSION_NAME)
       .setBlocking(true)
@@ -343,8 +412,11 @@ class BetBlockerVpnService : VpnService() {
       return
     }
 
-    // VPN de pé: qualquer alerta de reativação pendente deixou de valer.
+    // VPN de pé: qualquer alerta de reativação pendente deixou de valer, e a
+    // sequência de quedas terminou — o backoff volta ao primeiro degrau para que
+    // a próxima queda isolada seja recuperada em 2 s, como antes.
     BlockerNotifications.cancelReactivationNotification(this)
+    repository.setRestartAttempts(0)
     VpnEventLog.log(this, "vpn_established")
 
     val fd = tunInterface!!.fileDescriptor
@@ -353,10 +425,22 @@ class BetBlockerVpnService : VpnService() {
     val reader = PacketReader(input)
     val writer = PacketWriter(output)
 
+    dnsExecutor = ThreadPoolExecutor(
+      DNS_POOL_SIZE,
+      DNS_POOL_SIZE,
+      0L,
+      TimeUnit.MILLISECONDS,
+      ArrayBlockingQueue(DNS_QUEUE_CAPACITY),
+    ) { r -> Thread(r, "BetBlockerDnsWorker").apply { isDaemon = true } }
+
     workerThread = thread(name = "BetBlockerVpnThread") {
       runLoop(reader, writer)
     }
     startRefreshLoop()
+    // Depois do establish, e só aqui: ficava no onCreate, disparando um
+    // forceRefresh de 5 MB em TODO start do serviço — inclusive nos que eram
+    // recusados logo em seguida pelas guardas.
+    refreshBlocklistIfNeeded()
   }
 
   /**
@@ -369,6 +453,7 @@ class BetBlockerVpnService : VpnService() {
    * em background para voltar — a proteção simplesmente não voltaria.
    */
   private fun teardownTunnel() {
+    teardownRequested = true
     stopRefreshLoop()
     running = false
 
@@ -384,6 +469,14 @@ class BetBlockerVpnService : VpnService() {
       workerThread?.interrupt()
     } catch (_: Exception) {}
     workerThread = null
+
+    // Pool de DNS morre com o túnel: suas tarefas escrevem num fd que acabou de ser
+    // fechado. `shutdownNow` sem `awaitTermination` — não vale bloquear o teardown
+    // esperando um upstream que já está em timeout.
+    try {
+      dnsExecutor?.shutdownNow()
+    } catch (_: Exception) {}
+    dnsExecutor = null
 
     try {
       refreshThread?.interrupt()
@@ -425,14 +518,28 @@ class BetBlockerVpnService : VpnService() {
       return false
     }
     if (!repository.isPremiumLeaseValid()) {
-      Log.w(TAG, "Premium lease expired — refusing to filter")
-      VpnEventLog.log(this, "premium_lease_expired")
+      // Licença vencida NÃO é prova de que a assinatura acabou — só de que ficamos
+      // sem contato. Quem tem prova (`premiumPaused`) já saiu no `if` acima; aqui
+      // sobram os casos em que ninguém conseguiu confirmar nada: sessão expirada
+      // (o JWT dura 30 dias e o 401 a descarta), aparelho que estrangula o
+      // WorkManager, usuário que não abre o app. Tratar isso como não-assinatura
+      // desligava a proteção de quem estava pagando, em silêncio.
       SubscriptionEnforcementWorker.enqueueImmediateCheck(applicationContext)
       BlockerNotifications.showReactivationNotification(
         applicationContext,
-        "Bloqueio pausado",
-        "Não conseguimos confirmar sua assinatura. Abra o app para retomar a proteção."
+        "Confirme sua assinatura",
+        "Abra o app para mantermos o bloqueio de sites de apostas ativo.",
+        throttleMs = REACTIVATION_NOTICE_THROTTLE_MS,
       )
+
+      if (repository.consumeLeaseGrace()) {
+        Log.w(TAG, "Premium lease expired — granting grace extension")
+        VpnEventLog.log(this, "premium_lease_grace_granted:used=${repository.getLeaseGraceUsed()}")
+        return true
+      }
+
+      Log.w(TAG, "Premium lease expired and grace exhausted — refusing to filter")
+      VpnEventLog.log(this, "premium_lease_expired")
       return false
     }
     return true
@@ -441,59 +548,198 @@ class BetBlockerVpnService : VpnService() {
   private fun runLoop(reader: PacketReader, writer: PacketWriter) {
     val buffer = ByteArray(32767)
     var nextPremiumCheckAt = System.currentTimeMillis() + PREMIUM_CHECK_INTERVAL_MS
-    while (running && !Thread.currentThread().isInterrupted) {
-      // Uma leitura de SQLite a cada 5 min, irrisória perto do tráfego DNS. É o
-      // que faz a VPN morrer sozinha quando a licença vence — sem depender de
-      // ninguém avisar. Cobre o caso do usuário deslogado (que desliga o worker
-      // de enforcement) e o do serviço recriado por START_STICKY.
-      if (System.currentTimeMillis() >= nextPremiumCheckAt) {
-        nextPremiumCheckAt = System.currentTimeMillis() + PREMIUM_CHECK_INTERVAL_MS
-        if (!isPremiumAllowed()) {
-          running = false
-          // Teardown na main thread: stopVpn() interrompe a workerThread, que é
-          // esta aqui — chamá-lo daqui seria a thread se auto-interrompendo no
-          // meio do próprio shutdown.
-          Handler(Looper.getMainLooper()).post {
-            stopVpn()
-            stopSelf()
+    var emptyReads = 0
+    var consecutiveFailures = 0
+    var stoppedByPremium = false
+    val startedAt = System.currentTimeMillis()
+
+    // Publicado no KV (cross-process) porque `VpnStatus.isVpnActive()` só prova que
+    // a INTERFACE existe. Se este laço morre com a tun de pé, todo o DNS do aparelho
+    // cai no vácuo enquanto o sistema, o health worker e a Home continuam dizendo
+    // "protegido" — o estado mais perigoso possível, porque não parece falha.
+    repository.setLoopRunning(true)
+    try {
+      while (running && !Thread.currentThread().isInterrupted) {
+        // Uma leitura de SQLite a cada 5 min, irrisória perto do tráfego DNS. É o
+        // que faz a VPN morrer sozinha quando a licença vence — sem depender de
+        // ninguém avisar. Cobre o caso do usuário deslogado (que desliga o worker
+        // de enforcement) e o do serviço recriado por START_STICKY.
+        if (System.currentTimeMillis() >= nextPremiumCheckAt) {
+          nextPremiumCheckAt = System.currentTimeMillis() + PREMIUM_CHECK_INTERVAL_MS
+          // Falha ao LER o banco (multi-processo, pode dar busy) não é prova de
+          // licença vencida — e, sem este catch, derrubava a thread inteira.
+          val allowed = try {
+            isPremiumAllowed()
+          } catch (e: Exception) {
+            Log.w(TAG, "Premium re-check failed, keeping tunnel up: ${e.message}")
+            true
           }
+          if (!allowed) {
+            stoppedByPremium = true
+            running = false
+            // Teardown na main thread: stopVpn() interrompe a workerThread, que é
+            // esta aqui — chamá-lo daqui seria a thread se auto-interrompendo no
+            // meio do próprio shutdown.
+            Handler(Looper.getMainLooper()).post {
+              stopVpn()
+              stopSelf()
+            }
+            break
+          }
+        }
+
+        val length = try {
+          reader.read(buffer)
+        } catch (e: Exception) {
+          Log.w(TAG, "VPN read crash", e)
+          VpnEventLog.log(this, "loop_read_failed:${e.javaClass.simpleName}")
           break
         }
+        if (length <= 0) {
+          // `continue` puro aqui era busy-spin: um read que devolve 0 em sequência
+          // consome 100% de um núcleo, esquenta o aparelho e convida o gerenciador
+          // de energia do fabricante a matar justamente este processo.
+          if (++emptyReads >= EMPTY_READ_BACKOFF_THRESHOLD) {
+            try {
+              Thread.sleep(EMPTY_READ_BACKOFF_MS)
+            } catch (_: InterruptedException) {
+              break
+            }
+          }
+          continue
+        }
+        emptyReads = 0
+
+        // Uma query malformada (ou um bug de parsing) não pode derrubar o DNS do
+        // aparelho inteiro: sem este catch, a exceção subia da thread e o handler
+        // padrão do Android matava o processo :vpn.
+        try {
+          handlePacket(buffer, length, writer)
+          consecutiveFailures = 0
+        } catch (e: Exception) {
+          consecutiveFailures++
+          Log.w(TAG, "Packet handling failed ($consecutiveFailures)", e)
+          if (consecutiveFailures >= MAX_CONSECUTIVE_PACKET_FAILURES) {
+            // Falha em TODO pacote é problema estrutural (banco inacessível, tun
+            // em estado ruim). Sai para a recuperação em vez de girar em falso.
+            VpnEventLog.log(this, "loop_failing_repeatedly:${e.javaClass.simpleName}")
+            break
+          }
+        }
       }
+    } finally {
+      running = false
+      repository.setLoopRunning(false)
+      if (!stoppedByPremium) onLoopExited(System.currentTimeMillis() - startedAt)
+    }
+  }
 
-      val length = try {
-        reader.read(buffer)
-      } catch (e: Exception) {
-        Log.w(TAG, "VPN read crash", e)
-        break
-      }
-      if (length <= 0) continue
+  /**
+   * Classifica o pacote e ENTREGA a resolução ao pool.
+   *
+   * O laço de leitura não pode mais esperar pelo upstream: era uma fila de uma
+   * thread só, e uma query lenta segurava o DNS de TODOS os apps do aparelho por
+   * segundos (head-of-line blocking). `Ipv4UdpPacket.parse` já copia o payload,
+   * então o pacote pode cruzar de thread com segurança enquanto o buffer de leitura
+   * é reaproveitado na próxima volta.
+   */
+  private fun handlePacket(buffer: ByteArray, length: Int, writer: PacketWriter) {
+    val packet = Ipv4UdpPacket.parse(buffer, length) ?: return
+    if (BuildConfig.DEBUG) Log.d(TAG, "Packet port: ${packet.dstPort}")
+    // Only intercept UDP/53 (DNS) destined to our fake DNS IP.
+    if (packet.protocol != OsConstants.IPPROTO_UDP) return
+    if (packet.dstPort != 53) return
 
-      val packet = Ipv4UdpPacket.parse(buffer, length) ?: continue
-      if (BuildConfig.DEBUG) Log.d(TAG, "Packet port: ${packet.dstPort}")
-      // Only intercept UDP/53 (DNS) destined to our fake DNS IP.
-      if (packet.protocol != OsConstants.IPPROTO_UDP) continue
-      if (packet.dstPort != 53) continue
+    val executor = dnsExecutor
+    if (executor == null) {
+      resolveAndWrite(packet, writer)
+      return
+    }
+    try {
+      executor.execute { resolveAndWrite(packet, writer) }
+    } catch (e: RejectedExecutionException) {
+      // Fila cheia (rajada anormal ou upstream inteiro fora do ar): descartar é o
+      // comportamento certo — o cliente de DNS reenvia, e segurar a fila só
+      // atrasaria todo mundo. Registrado de forma esparsa pelo próprio coalescing
+      // do event log.
+      VpnEventLog.log(this, "dns_query_dropped_queue_full")
+    }
+  }
 
-      val responsePayload = dnsInterceptor.handleDnsQuery(packet.payload, packet.payloadLength) ?: continue
+  private fun resolveAndWrite(packet: Ipv4UdpPacket, writer: PacketWriter) {
+    try {
+      val responsePayload =
+        dnsInterceptor.handleDnsQuery(packet.payload, packet.payloadLength) ?: return
       val responsePacket = Ipv4UdpPacket.buildResponse(
         request = packet,
         responsePayload = responsePayload
-      ) ?: continue
+      ) ?: return
+      writer.write(responsePacket, responsePacket.size)
+    } catch (e: Exception) {
+      // Uma resolução que falha não pode derrubar o worker do pool.
+      Log.w(TAG, "DNS resolution failed: ${e.message}")
+    }
+  }
 
-      try {
-        writer.write(responsePacket, responsePacket.size)
-      } catch (e: Exception) {
-        Log.w(TAG, "Write failed: ${e.message}")
+  /**
+   * O laço de leitura saiu sem ninguém ter pedido.
+   *
+   * Antes isto simplesmente não existia: o `break` deixava a tun estabelecida e
+   * sem leitor, ou seja, o aparelho inteiro sem DNS — e como a interface continuava
+   * de pé, nem o `VpnHealthWorker` nem a Home percebiam. A proteção "estava ligada"
+   * e a internet não funcionava, até algo reiniciar o serviço por outro motivo.
+   */
+  private fun onLoopExited(lifetimeMs: Long) {
+    if (teardownRequested) return // parada intencional (stop, pause, restart de rotas)
+
+    // Laço que morre logo depois de subir indica causa persistente (tun em estado
+    // ruim, banco inacessível). Reerguer na hora, sem contar as repetições, apenas
+    // trocaria o antigo "cai e fica caído" por um laço de restart rápido — que é
+    // justamente o que este release está removendo em outro lugar.
+    if (lifetimeMs < FAST_LOOP_FAILURE_WINDOW_MS) {
+      consecutiveFastLoopFailures++
+    } else {
+      consecutiveFastLoopFailures = 0
+    }
+
+    Log.w(TAG, "Packet loop exited unexpectedly after ${lifetimeMs}ms")
+    VpnEventLog.log(this, "loop_exited_unexpectedly:fast=$consecutiveFastLoopFailures")
+
+    if (consecutiveFastLoopFailures >= MAX_FAST_LOOP_FAILURES) {
+      // Entrega o caso ao watchdog externo (alarme com backoff + health check de
+      // 15 min) em vez de insistir aqui. Empurrar o contador para o teto evita que
+      // o `setRestartAttempts(0)` do establish bem-sucedido zere o backoff a cada
+      // volta e recrie o ciclo rápido por outro caminho.
+      Log.w(TAG, "Packet loop failing repeatedly — handing over to watchdog")
+      VpnEventLog.log(this, "loop_recovery_gave_up")
+      repository.setRestartAttempts(BACKOFF_CAP_ATTEMPT)
+      Handler(Looper.getMainLooper()).post {
+        stopVpn()
+        stopSelf()
+      }
+      return
+    }
+
+    Handler(Looper.getMainLooper()).post {
+      if (!repository.isBlockingEnabled()) return@post
+      // Mesmo crivo de qualquer outro start: recuperar não pode ressuscitar a VPN
+      // de quem não é mais assinante.
+      if (isPremiumAllowed()) {
+        restartTunnel()
+      } else {
+        stopVpn()
+        stopSelf()
       }
     }
-    running = false
   }
 
   private fun scheduleRestart() {
     // Corpo inteiro em try/catch: roda dentro de onDestroy e NUNCA pode crashar
     // o processo (era o que acontecia com setExactAndAllowWhileIdle sem
     // SCHEDULE_EXACT_ALARM em API 31+, matando o watchdog silenciosamente).
+    val attempt = repository.getRestartAttempts()
+    repository.setRestartAttempts(attempt + 1)
+    val delayMs = RestartBackoff.delayFor(attempt)
     try {
       val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
       val intent = Intent(this, BetBlockerVpnService::class.java)
@@ -505,7 +751,7 @@ class BetBlockerVpnService : VpnService() {
       } else {
         PendingIntent.getService(this, 1, intent, piFlags)
       }
-      val triggerAt = System.currentTimeMillis() + 2000
+      val triggerAt = System.currentTimeMillis() + delayMs
       val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
       if (canExact) {
         am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
@@ -514,8 +760,8 @@ class BetBlockerVpnService : VpnService() {
         // while-idle não exige permissão; o VpnHealthWorker cobre o resto.
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
       }
-      Log.i(TAG, "Scheduled VPN restart (exact=$canExact)")
-      VpnEventLog.log(this, "restart_alarm_scheduled:exact=$canExact")
+      Log.i(TAG, "Scheduled VPN restart in ${delayMs}ms (exact=$canExact, attempt=${attempt + 1})")
+      VpnEventLog.log(this, "restart_alarm_scheduled:exact=$canExact,delayMs=$delayMs")
     } catch (e: Exception) {
       Log.w(TAG, "Failed to schedule restart alarm: ${e.message}")
       VpnEventLog.log(this, "restart_alarm_failed:${e.javaClass.simpleName}")
@@ -539,12 +785,8 @@ class BetBlockerVpnService : VpnService() {
    */
   private fun applyRefreshOutcome(outcome: RefreshOutcome) {
     if (outcome.domainsChanged) {
-      try {
-        domainMatcher.reload()
-        Log.i(TAG, "Blocklist refreshed from remote source")
-      } catch (e: Exception) {
-        Log.w(TAG, "Reload after refresh failed: ${e.message}")
-      }
+      invalidateMatcher()
+      Log.i(TAG, "Blocklist refreshed from remote source")
     }
     if (outcome.ipsChanged) {
       Handler(Looper.getMainLooper()).post {
@@ -555,13 +797,19 @@ class BetBlockerVpnService : VpnService() {
     }
   }
 
+  /**
+   * `refreshIfStale`, não `forceRefresh`: a lista já é atualizada de hora em hora
+   * pelo laço de refresh e pelo BlocklistRefreshWorker. Baixar 5 MB a cada start do
+   * serviço (boot, alarme, worker, RELOAD) era gasto de bateria e dados do usuário
+   * sem nada em troca — e, num ciclo de start/stop, virava um download por segundo.
+   */
   private fun refreshBlocklistIfNeeded() {
     thread(name = "BetBlockerRefreshCheck") {
       try {
         // Roda em paralelo ao establish() do onStartCommand, então pode terminar
         // depois dele — por isso o caminho de IP passa por restartTunnel() e não
         // confia em o start ainda não ter acontecido.
-        applyRefreshOutcome(blocklistManager.forceRefresh())
+        applyRefreshOutcome(blocklistManager.refreshIfStale())
       } catch (e: Exception) {
         Log.w(TAG, "Blocklist refresh failed", e)
       }
@@ -592,114 +840,6 @@ class BetBlockerVpnService : VpnService() {
       refreshThread?.interrupt()
     } catch (_: Exception) {}
     refreshThread = null
-  }
-
-  fun handleDnsQuery(payload: ByteArray, length: Int): ByteArray? {
-    val domain = parseDomain(payload)
-
-    if (domainMatcher.isBlocked(domain)) {
-        Log.d("BetBlocker", "Blocked domain: $domain")
-        return buildBlockedResponse(payload)
-    }
-
-    // forward para DNS real
-    return forwardDns(payload)
-  }
-
-  private fun forwardDns(query: ByteArray): ByteArray {
-    return try {
-        val socket = DatagramSocket()
-        protect(socket)
-        
-        socket.soTimeout = 5000
-
-        val address = InetAddress.getByName("8.8.8.8")
-
-        val request = DatagramPacket(
-            query,
-            query.size,
-            address,
-            53
-        )
-
-        socket.send(request)
-
-        val buffer = ByteArray(1024)
-
-        val response = DatagramPacket(buffer, buffer.size)
-
-        socket.receive(response)
-
-        socket.close()
-
-        buffer.copyOf(response.length)
-
-    } catch (e: Exception) {
-        Log.e("BetBlocker", "DNS forward error: ${e.message}")
-        ByteArray(0)
-    }
-  }
-
-  private fun parseDomain(query: ByteArray): String {
-    return try {
-        var pos = 12
-        val domain = StringBuilder()
-
-        while (pos < query.size) {
-            val len = query[pos].toInt() and 0xFF
-            if (len == 0) break
-
-            // Tratamento de pointer de compressão DNS (0xC0)
-            if ((len and 0xC0) == 0xC0) {
-                // Ao encontrar um ponteiro na query, podemos abortar a leitura sequencial 
-                // para simplificar, pois a pergunta principal completa já deve ter sido lida
-                break
-            }
-
-            pos++
-
-            if (domain.isNotEmpty()) {
-                domain.append(".")
-            }
-
-            for (i in 0 until len) {
-                if (pos + i < query.size) {
-                    domain.append(query[pos + i].toInt().toChar())
-                }
-            }
-
-            pos += len
-        }
-
-        domain.toString()
-    } catch (e: Exception) {
-        ""
-    }
-  }
-
-  private fun buildBlockedResponse(query: ByteArray): ByteArray {
-    // Para funcionar bem no Android, o ideal é retornar falha na resolução (NXDOMAIN) em vez de 0.0.0.0
-    val response = query.copyOf()
-
-    // Flag QR = 1 (Response), Opcode = 0 (Query), AA = 0, TC = 0, RD = * (copiado do request)
-    response[2] = (response[2].toInt() or 0x80).toByte() 
-    
-    // Flag RA = 1, e RCODE = 3 (Name Error / NXDOMAIN)
-    response[3] = (response[3].toInt() or 0x80).toByte() 
-    response[3] = (response[3].toInt() or 0x03).toByte()
-
-    // O header de queries continuam 1. Zera todas as contagens de Answers (pois não encontrou nada)
-    // ANCOUNT = 0
-    response[6] = 0x00
-    response[7] = 0x00
-    // NSCOUNT = 0
-    response[8] = 0x00
-    response[9] = 0x00
-    // ARCOUNT = 0
-    response[10] = 0x00
-    response[11] = 0x00
-
-    return response
   }
 
   private fun startAsForeground() {
@@ -769,6 +909,30 @@ class BetBlockerVpnService : VpnService() {
     private const val NOTIF_ID = 42
     /** De quanto em quanto tempo o próprio túnel reconfere a licença de premium. */
     private const val PREMIUM_CHECK_INTERVAL_MS = 5L * 60 * 1000
+
+    /** Intervalo mínimo entre alertas de reativação repetidos por causa técnica. */
+    private const val REACTIVATION_NOTICE_THROTTLE_MS = 6L * 60 * 60 * 1000
+
+    /** Leituras vazias seguidas antes de começar a ceder CPU — ver runLoop. */
+    private const val EMPTY_READ_BACKOFF_THRESHOLD = 10
+    private const val EMPTY_READ_BACKOFF_MS = 20L
+
+    /** Falhas seguidas de processamento antes de desistir e recuperar o túnel. */
+    private const val MAX_CONSECUTIVE_PACKET_FAILURES = 50
+
+    /**
+     * Workers de DNS. Poucos e fixos: o gargalo é espera de rede, não CPU, e cada
+     * thread a mais é memória num processo que precisa ficar pequeno.
+     */
+    private const val DNS_POOL_SIZE = 6
+    private const val DNS_QUEUE_CAPACITY = 256
+
+    /** Abaixo disto, a queda do laço conta como falha rápida (causa persistente). */
+    private const val FAST_LOOP_FAILURE_WINDOW_MS = 10_000L
+    private const val MAX_FAST_LOOP_FAILURES = 5
+
+    /** Tentativa que já satura o backoff — ver RestartBackoff.delayFor. */
+    private const val BACKOFF_CAP_ATTEMPT = 8
     const val ACTION_RELOAD = "com.bethunter.app.action.RELOAD_BLOCKED_DOMAINS"
     const val ACTION_RESTART_TUNNEL = "com.bethunter.app.action.RESTART_TUNNEL"
     const val ACTION_STOP = "com.bethunter.app.action.STOP_VPN"

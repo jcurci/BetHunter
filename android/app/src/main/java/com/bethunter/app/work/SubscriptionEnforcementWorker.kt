@@ -45,42 +45,64 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
     val token = repo.getAuthToken() ?: return Result.success()
     val baseUrl = repo.getApiBaseUrl() ?: return Result.success()
 
-    val status = fetchStatus(baseUrl, token)
-    return when (status?.isPremium) {
-      true -> {
-        // Renova a licença SEMPRE, não só quando estávamos pausados: é o
-        // caminho que mantém a proteção viva para quem nunca abre o app.
-        repo.renewPremiumLease(status.expiresAtMs)
-        // Premium confirmado: se estávamos pausados por engano (ou a assinatura
-        // foi renovada), religa sem exigir nada do usuário.
-        if (repo.isPremiumPaused()) {
-          Log.i(TAG, "Subscription active again — resuming blocker")
-          VpnEventLog.log(applicationContext, "subscription_enforcement_resumed")
-          resumeBlocking(applicationContext, repo)
+    return when (val result = fetchStatus(baseUrl, token)) {
+      is StatusResult.Confirmed -> when (result.status.isPremium) {
+        true -> {
+          // Renova a licença SEMPRE, não só quando estávamos pausados: é o
+          // caminho que mantém a proteção viva para quem nunca abre o app.
+          repo.renewPremiumLease(result.status.expiresAtMs)
+          // Premium confirmado: se estávamos pausados por engano (ou a assinatura
+          // foi renovada), religa sem exigir nada do usuário.
+          if (repo.isPremiumPaused()) {
+            Log.i(TAG, "Subscription active again — resuming blocker")
+            VpnEventLog.log(applicationContext, "subscription_enforcement_resumed")
+            resumeBlocking(applicationContext, repo)
+          }
+          Result.success()
         }
+        false -> {
+          Log.i(TAG, "Subscription expired (verified) — pausing blocker")
+          VpnEventLog.log(applicationContext, "subscription_enforcement_paused")
+          pauseBlocking(applicationContext, repo)
+          Result.success()
+        }
+      }
+
+      // Sessão do nosso backend morreu (JWT de 30 dias, sem refresh). Repetir não
+      // ressuscita o token: o `retry` eterno só garantia que a licença NUNCA mais
+      // seria renovada por aqui, até vencer e desligar a proteção de quem paga.
+      // Descarta a sessão inútil e sai limpo — quem renova agora é o RevenueCat,
+      // no boot do app (ver App.tsx, "boot-unauthed").
+      StatusResult.SessionExpired -> {
+        repo.clearAuthSession()
         Result.success()
       }
-      false -> {
-        Log.i(TAG, "Subscription expired (verified) — pausing blocker")
-        VpnEventLog.log(applicationContext, "subscription_enforcement_paused")
-        pauseBlocking(applicationContext, repo)
-        Result.success()
-      }
-      // Erro de rede/401/resposta ambígua/status NÃO verificado pelo backend:
+
+      // Erro de rede/resposta ambígua/status NÃO verificado pelo backend:
       // ausência de informação nunca é prova de não-assinatura. Tenta de novo.
-      null -> Result.retry()
+      StatusResult.Unknown -> Result.retry()
     }
   }
 
   private data class SubscriptionStatus(val isPremium: Boolean, val expiresAtMs: Long?)
 
+  private sealed class StatusResult {
+    data class Confirmed(val status: SubscriptionStatus) : StatusResult()
+
+    /** 401/403: o token guardado não vale mais e não vai voltar a valer. */
+    object SessionExpired : StatusResult()
+
+    /** Rede, 5xx, corpo estranho ou `verified:false` — não sabemos. */
+    object Unknown : StatusResult()
+  }
+
   /**
-   * Não-null só quando o backend CONFIRMOU com o RevenueCat (verified=true).
+   * `Confirmed` só quando o backend CONFIRMOU com o RevenueCat (verified=true).
    * Um `isPremium:false` derivado do cache do banco (verified=false) volta como
-   * null — foi exatamente esse caso que desligava o bloqueador de assinantes
+   * `Unknown` — foi exatamente esse caso que desligava o bloqueador de assinantes
    * legítimos quando o webhook falhava em gravar o rc_customer_id.
    */
-  private fun fetchStatus(baseUrl: String, token: String): SubscriptionStatus? {
+  private fun fetchStatus(baseUrl: String, token: String): StatusResult {
     var connection: HttpURLConnection? = null
     return try {
       val url = URL("$baseUrl/users/subscription-status")
@@ -90,9 +112,15 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
       connection.readTimeout = 8000
       connection.setRequestProperty("Authorization", "Bearer $token")
 
-      if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-        Log.w(TAG, "subscription-status returned ${connection.responseCode}")
-        return null
+      val code = connection.responseCode
+      if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN) {
+        Log.w(TAG, "subscription-status returned $code — sessão expirada")
+        VpnEventLog.log(applicationContext, "subscription_status_unauthorized")
+        return StatusResult.SessionExpired
+      }
+      if (code != HttpURLConnection.HTTP_OK) {
+        Log.w(TAG, "subscription-status returned $code")
+        return StatusResult.Unknown
       }
 
       val body = connection.inputStream.bufferedReader().use { it.readText() }
@@ -104,18 +132,20 @@ class SubscriptionEnforcementWorker(ctx: Context, params: WorkerParameters) : Wo
       if (!json.optBoolean("verified", false)) {
         Log.w(TAG, "subscription-status não verificado pelo backend — ignorando")
         VpnEventLog.log(applicationContext, "subscription_status_unverified")
-        return null
+        return StatusResult.Unknown
       }
 
-      SubscriptionStatus(
-        isPremium = json.getBoolean("isPremium"),
-        // Ausente ou null = vitalício/sem vencimento conhecido; a licença cai no
-        // prazo padrão em vez de expirar imediatamente.
-        expiresAtMs = parseExpiresAt(json.optString("expiresAt", "")),
+      StatusResult.Confirmed(
+        SubscriptionStatus(
+          isPremium = json.getBoolean("isPremium"),
+          // Ausente ou null = vitalício/sem vencimento conhecido; a licença cai no
+          // prazo padrão em vez de expirar imediatamente.
+          expiresAtMs = parseExpiresAt(json.optString("expiresAt", "")),
+        )
       )
     } catch (e: Exception) {
       Log.w(TAG, "Failed to check subscription status", e)
-      null
+      StatusResult.Unknown
     } finally {
       connection?.disconnect()
     }

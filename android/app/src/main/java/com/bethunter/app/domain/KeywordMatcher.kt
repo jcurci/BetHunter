@@ -5,7 +5,7 @@ package com.bethunter.app.domain
  * na blocklist exata (ex.: `23bet36.com` e a família `23bet*`, criados/rotacionados
  * mais rápido do que a lista remota consegue mapear).
  *
- * Complementa a DomainTrie (match exato/sufixo). Roda por query DNS (hot path), então
+ * Complementa a consulta à blocklist (match exato/sufixo). Roda por query DNS, então
  * as regex são compiladas uma única vez aqui.
  *
  * Filosofia (app de proteção/autoexclusão): tolera algum over-block, mas evita os

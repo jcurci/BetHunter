@@ -36,18 +36,29 @@ class BlockedDomainsRepository(private val context: Context) {
   // módulo RN no processo principal — ambos precisam enxergar a MESMA verdade.
   // SharedPreferences não é confiável entre processos. readFlag migra o valor legado
   // do prefs na primeira leitura (instalações anteriores à mudança de processo).
-  private fun readFlag(key: String): Boolean {
-    domainsDb.getFlagOrNull(key)?.let { return it }
-    val legacy = prefs.getBoolean(key, false)
-    domainsDb.setFlag(key, legacy)
-    return legacy
+  //
+  // `onError` é por chave, não um default único: o valor que MANTÉM a proteção é
+  // `true` para `enabled` e `false` para `revoked`/`premiumPaused`. O DB é
+  // multi-processo e pode dar busy no meio de um refresh de 300k linhas — sem este
+  // catch, a exceção subia até a thread de pacotes da VPN e matava o processo.
+  private fun readFlag(key: String, onError: Boolean = false): Boolean {
+    return try {
+      domainsDb.getFlagOrNull(key)?.let { return it }
+      val legacy = prefs.getBoolean(key, false)
+      domainsDb.setFlag(key, legacy)
+      legacy
+    } catch (e: Exception) {
+      Log.w("BlockedDomainsRepository", "Falha ao ler flag '$key' — assumindo $onError", e)
+      onError
+    }
   }
 
   fun setBlockingEnabled(enabled: Boolean) {
     domainsDb.setFlag(KEY_ENABLED, enabled)
   }
 
-  fun isBlockingEnabled(): Boolean = readFlag(KEY_ENABLED)
+  /** Erro de leitura devolve `true`: na dúvida, mantém a proteção (mesma regra de [isPremiumLeaseValid]). */
+  fun isBlockingEnabled(): Boolean = readFlag(KEY_ENABLED, onError = true)
 
   /**
    * Revogação pelo sistema (outra VPN assumiu ou consentimento retirado).
@@ -58,7 +69,8 @@ class BlockedDomainsRepository(private val context: Context) {
     domainsDb.setFlag(KEY_REVOKED, revoked)
   }
 
-  fun isRevoked(): Boolean = readFlag(KEY_REVOKED)
+  /** Erro de leitura devolve `false`: quem decide de verdade é o `prepare()` do sistema (ver VpnConsent). */
+  fun isRevoked(): Boolean = readFlag(KEY_REVOKED, onError = false)
 
   /**
    * Bloqueio pausado por assinatura expirada (confirmada pelo backend). Diferente
@@ -70,7 +82,8 @@ class BlockedDomainsRepository(private val context: Context) {
     domainsDb.setFlag(KEY_PREMIUM_PAUSED, paused)
   }
 
-  fun isPremiumPaused(): Boolean = readFlag(KEY_PREMIUM_PAUSED)
+  /** Erro de leitura devolve `false`: não pausa sem prova; a licença segue como rede de segurança. */
+  fun isPremiumPaused(): Boolean = readFlag(KEY_PREMIUM_PAUSED, onError = false)
 
   /**
    * Licença que o PRÓPRIO serviço de VPN confere para continuar filtrando.
@@ -92,6 +105,64 @@ class BlockedDomainsRepository(private val context: Context) {
 
   fun renewPremiumLease(expiresAtMs: Long?) {
     setPremiumLeaseUntil(leaseUntilFor(expiresAtMs))
+    // Confirmação de verdade recomeça a contagem de cortesias: as extensões são
+    // para atravessar um período SEM contato, não um saldo que se esgota na vida
+    // do assinante.
+    setLeaseGraceUsed(0)
+  }
+
+  /**
+   * Ainda há cortesia a conceder se a licença estiver vencida.
+   *
+   * Existe para os pontos que decidem ANTES do serviço (health worker, boot,
+   * watchdog, sync da Home): sem consultar isto, eles barrariam um start que o
+   * `isPremiumAllowed()` concederia, e a proteção ficaria caída esperando um start
+   * que ninguém faria.
+   */
+  fun hasLeaseGraceAvailable(): Boolean = getLeaseGraceUsed() < MAX_LEASE_GRACE_EXTENSIONS
+
+  /**
+   * Extensões de cortesia já concedidas à licença — ver [consumeLeaseGrace].
+   */
+  fun getLeaseGraceUsed(): Int = try {
+    (domainsDb.getLongOrNull(KEY_PREMIUM_LEASE_GRACE_USED) ?: 0L).toInt()
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler cortesias de licença", e)
+    // Erro de leitura vira "nenhuma usada": o teto existe para conter abuso, e
+    // errar para o lado de manter a proteção é a regra desta classe inteira.
+    0
+  }
+
+  private fun setLeaseGraceUsed(value: Int) {
+    try {
+      domainsDb.setLong(KEY_PREMIUM_LEASE_GRACE_USED, value.toLong())
+    } catch (e: Exception) {
+      Log.w("BlockedDomainsRepository", "Falha ao gravar cortesias de licença", e)
+    }
+  }
+
+  /**
+   * Estende a licença por conta própria quando ela venceu sem que NINGUÉM tenha
+   * confirmado o fim da assinatura, e devolve se a cortesia foi concedida.
+   *
+   * Existe porque "licença vencida" era tratada como prova de não-assinatura, e não
+   * é: o JWT dura 30 dias sem refresh, e quando ele expira o worker de enforcement
+   * fica inerte por falta de token. Um assinante em dia que simplesmente não abre o
+   * app perdia a proteção em silêncio, sem nada capaz de trazê-la de volta.
+   *
+   * Assimetria deliberada: cada cortesia é uma janela a mais de bloqueio para quem
+   * talvez já não pague — e o bloqueador não libera nenhum conteúdo pago, então o
+   * custo disso é próximo de zero. Já o erro oposto, tirar a proteção de quem está
+   * pagando, é o dano que o produto existe para evitar. O teto é o que impede a
+   * cortesia de virar acesso vitalício; quem tem `premiumPaused` (negativa
+   * confirmada) nunca chega aqui.
+   */
+  fun consumeLeaseGrace(): Boolean {
+    val used = getLeaseGraceUsed()
+    if (used >= MAX_LEASE_GRACE_EXTENSIONS) return false
+    setLeaseGraceUsed(used + 1)
+    setPremiumLeaseUntil(System.currentTimeMillis() + LEASE_GRACE_EXTENSION_MS)
+    return true
   }
 
   fun revokePremiumLease() {
@@ -124,6 +195,94 @@ class BlockedDomainsRepository(private val context: Context) {
     val base = expiresAtMs ?: return System.currentTimeMillis() + LIFETIME_LEASE_MS
     return base + LEASE_GRACE_MS
   }
+
+  /**
+   * Tentativas consecutivas do watchdog de restart, para o backoff exponencial.
+   * Zerada em todo `establish()` bem-sucedido.
+   *
+   * Vive no KV do SQLite porque quem incrementa é o processo `:vpn` (no onDestroy)
+   * e o alarme pode reerguer o serviço num processo novo — um contador em memória
+   * seria zerado justamente a cada volta do ciclo que ele existe para conter.
+   */
+  fun getRestartAttempts(): Int = try {
+    (domainsDb.getLongOrNull(KEY_RESTART_ATTEMPTS) ?: 0L).toInt()
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler contador de restart", e)
+    0
+  }
+
+  fun setRestartAttempts(attempts: Int) {
+    try {
+      domainsDb.setLong(KEY_RESTART_ATTEMPTS, attempts.toLong())
+    } catch (e: Exception) {
+      // Perder o contador só piora o backoff, nunca a proteção — nunca propagar.
+      Log.w("BlockedDomainsRepository", "Falha ao gravar contador de restart", e)
+    }
+  }
+
+  /**
+   * Quando a notificação de reativação foi mostrada pela última vez. Usada para
+   * não re-postar o mesmo alerta a cada volta de um ciclo de start/stop.
+   */
+  fun getLastReactivationNoticeAt(): Long = try {
+    domainsDb.getLongOrNull(KEY_LAST_REACTIVATION_NOTICE_AT) ?: 0L
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler timestamp da notificação", e)
+    0L
+  }
+
+  fun setLastReactivationNoticeAt(timestamp: Long) {
+    try {
+      domainsDb.setLong(KEY_LAST_REACTIVATION_NOTICE_AT, timestamp)
+    } catch (e: Exception) {
+      Log.w("BlockedDomainsRepository", "Falha ao gravar timestamp da notificação", e)
+    }
+  }
+
+  /**
+   * O laço de leitura da tun está vivo (1) ou saiu (0).
+   *
+   * `VpnStatus.isVpnActive()` só prova que a interface EXISTE. Se o laço morre com
+   * a tun de pé — exceção de I/O, processo em estado ruim — todo o DNS do aparelho
+   * cai no vácuo enquanto o sistema, o health worker e a Home continuam reportando
+   * "protegido". Este par (tun viva + laço morto) é o que torna esse estado
+   * detectável de fora do processo `:vpn`.
+   */
+  fun setLoopRunning(running: Boolean) {
+    try {
+      domainsDb.setFlag(KEY_LOOP_RUNNING, running)
+    } catch (e: Exception) {
+      Log.w("BlockedDomainsRepository", "Falha ao gravar estado do laço", e)
+    }
+  }
+
+  /** false só quando o laço PROVADAMENTE saiu; erro de leitura devolve true (não acusa queda). */
+  fun isLoopRunning(): Boolean = try {
+    domainsDb.getFlagOrNull(KEY_LOOP_RUNNING) ?: true
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao ler estado do laço", e)
+    true
+  }
+
+  /**
+   * O usuário tocou na notificação de reativação e ainda não foi atendido.
+   *
+   * A notificação promete "toque para reativar", mas reativar exige
+   * `VpnService.prepare()` a partir de uma Activity — ou seja, passar pela jornada
+   * do JS. Uma flag persistida (e não um evento no bridge) porque a notificação
+   * costuma abrir o app do zero: um `DeviceEventEmitter` disparado antes de o JS
+   * subir se perderia, e o toque não faria nada. Vive no KV do SQLite porque quem
+   * grava é a Activity e quem lê é o módulo RN.
+   */
+  fun setReactivationRequested(requested: Boolean) {
+    try {
+      domainsDb.setFlag(KEY_REACTIVATION_REQUESTED, requested)
+    } catch (e: Exception) {
+      Log.w("BlockedDomainsRepository", "Falha ao gravar pedido de reativação", e)
+    }
+  }
+
+  fun isReactivationRequested(): Boolean = readFlag(KEY_REACTIVATION_REQUESTED, onError = false)
 
   /** true assim que o usuário tocou no fluxo de pedido de isenção pelo menos uma vez. */
   fun setBatteryExemptionRequested(requested: Boolean) {
@@ -193,7 +352,26 @@ class BlockedDomainsRepository(private val context: Context) {
     domainsDb.replaceAll(cleaned)
   }
 
-  fun getBlockedDomains(): Set<String> = domainsDb.getAll()
+  // Não existe mais um "leia a lista inteira": materializar as ~311 mil strings era
+  // o pico de memória que derrubava o processo :vpn, e a única razão para isso
+  // existir (reconstruir a trie) acabou. Consulta pontual, ver isAnyDomainBlocked.
+
+  /**
+   * true se algum dos sufixos candidatos está na blocklist. Caminho quente do
+   * bloqueio — ver [BlockedDomainsDb.isAnyBlocked].
+   *
+   * Falha de leitura devolve `false`, ou seja, NÃO bloqueia. É a única decisão do
+   * projeto que falha para o lado de não proteger, e de propósito: o contrário
+   * seria responder NXDOMAIN para tudo enquanto o banco estivesse indisponível —
+   * o aparelho inteiro sem internet, que é um estrago maior e mais difícil de
+   * atribuir do que um domínio que passou.
+   */
+  fun isAnyDomainBlocked(candidates: Collection<String>): Boolean = try {
+    domainsDb.isAnyBlocked(candidates)
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao consultar blocklist — deixando passar", e)
+    false
+  }
 
   /**
    * Só os IPs vindos da lista remota, sem os defaults do app e sem o filtro da
@@ -217,6 +395,31 @@ class BlockedDomainsRepository(private val context: Context) {
   }
 
   fun getBlockedDomainsCount(): Int = domainsDb.count()
+
+  /**
+   * Tenta virar o único refresh de blocklist em andamento — ver
+   * [BlockedDomainsDb.tryAcquireLock].
+   *
+   * Erro de banco devolve `true` (segue com o refresh): o lock existe para evitar
+   * trabalho duplicado, não para autorizar a atualização da lista. Falhar aqui não
+   * pode ser motivo para a blocklist parar de ser atualizada.
+   */
+  fun tryAcquireRefreshLock(ttlMs: Long): Boolean = try {
+    domainsDb.tryAcquireLock(KEY_REFRESH_LOCK_UNTIL, System.currentTimeMillis(), ttlMs)
+  } catch (e: Exception) {
+    Log.w("BlockedDomainsRepository", "Falha ao adquirir lock de refresh", e)
+    true
+  }
+
+  fun releaseRefreshLock() {
+    try {
+      domainsDb.releaseLock(KEY_REFRESH_LOCK_UNTIL)
+    } catch (e: Exception) {
+      // O TTL do lock cobre este caso: no pior cenário, o próximo refresh espera
+      // a janela vencer em vez de começar na hora.
+      Log.w("BlockedDomainsRepository", "Falha ao liberar lock de refresh", e)
+    }
+  }
 
   fun getLastFetchTimestamp(): Long = prefs.getLong(KEY_LAST_FETCH, 0L)
 
@@ -283,12 +486,27 @@ class BlockedDomainsRepository(private val context: Context) {
     private const val KEY_REVOKED = "vpn_revoked_pending_reactivation"
     private const val KEY_PREMIUM_PAUSED = "premium_paused"
     private const val KEY_PREMIUM_LEASE_UNTIL = "premium_lease_until"
+    private const val KEY_RESTART_ATTEMPTS = "vpn_restart_attempts"
+    private const val KEY_LAST_REACTIVATION_NOTICE_AT = "last_reactivation_notice_at"
+    private const val KEY_LOOP_RUNNING = "vpn_loop_running"
+    private const val KEY_REFRESH_LOCK_UNTIL = "blocklist_refresh_lock_until"
+    private const val KEY_REACTIVATION_REQUESTED = "reactivation_requested"
 
     /** Folga em cima do vencimento real, para a janela em que a renovação ainda não foi confirmada. */
     private const val LEASE_GRACE_MS = 7L * 24 * 60 * 60 * 1000
 
     /** Entitlement sem data de vencimento (vitalício): renovado a cada confirmação. */
     private const val LIFETIME_LEASE_MS = 365L * 24 * 60 * 60 * 1000
+
+    private const val KEY_PREMIUM_LEASE_GRACE_USED = "premium_lease_grace_used"
+
+    /**
+     * Teto de extensões automáticas — ver [consumeLeaseGrace]. Três de 30 dias dão
+     * ~90 dias para o usuário abrir o app ao menos uma vez antes de a proteção
+     * realmente parar. Calibrar aqui.
+     */
+    private const val MAX_LEASE_GRACE_EXTENSIONS = 3
+    private const val LEASE_GRACE_EXTENSION_MS = 30L * 24 * 60 * 60 * 1000
     private const val KEY_BATTERY_EXEMPTION_REQUESTED = "battery_exemption_requested"
     private const val KEY_BATTERY_WARNING_CONFIRMED_AT = "battery_warning_confirmed_at"
 
@@ -312,7 +530,13 @@ class BlockedDomainsRepository(private val context: Context) {
       "blaze.com",
       "pokerstars.com",
       "1xbet.com",
-      "23bet36.com"
+      "23bet36.com",
+      // Par do domínio com os IPs da betweb logo abaixo, igual 23bet36.com está
+      // para 211.43.149.99: sozinho, `betweb` não casa nem na trie nem no
+      // KeywordMatcher (BET_REGEX exige `bet` isolado por `.`/`-`/borda, e
+      // "betweb" não isola), então sem esta entrada o domínio só bloqueia
+      // enquanto a lista remota estiver baixada.
+      "betweb.com"
     )
 
     // IPs de destino conhecidos (Camada B) — ex.: servidor para onde a 23bet

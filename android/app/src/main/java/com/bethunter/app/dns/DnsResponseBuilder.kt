@@ -28,6 +28,28 @@ object DnsResponseBuilder {
     return buf.array()
   }
 
+  /**
+   * SERVFAIL (RCODE=2) para quando NENHUM upstream respondeu.
+   *
+   * Antes, nesse caso, o pacote era simplesmente descartado — e o app que
+   * perguntou ficava esperando o próprio timeout (segundos, às vezes por
+   * tentativa), o que o usuário lê como "a internet travou depois que liguei a
+   * proteção". Uma resposta de erro deixa o cliente falhar rápido e tentar outro
+   * caminho.
+   */
+  fun buildServFail(query: DnsMessage): ByteArray {
+    val flags = buildResponseFlags(query.flags, rcode = 2)
+    val buf = ByteBuffer.allocate(12 + query.rawQuestionSection.size).order(ByteOrder.BIG_ENDIAN)
+    buf.putShort(query.id.toShort())
+    buf.putShort(flags.toShort())
+    buf.putShort(query.questions.size.toShort())
+    buf.putShort(0) // ancount
+    buf.putShort(0) // nscount
+    buf.putShort(0) // arcount
+    buf.put(query.rawQuestionSection)
+    return buf.array()
+  }
+
   private fun buildResponseFlags(queryFlags: Int, rcode: Int): Int {
     val opcode = (queryFlags ushr 11) and 0xF
     val rd = (queryFlags ushr 8) and 0x1

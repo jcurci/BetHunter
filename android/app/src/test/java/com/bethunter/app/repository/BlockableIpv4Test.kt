@@ -118,6 +118,9 @@ class BlockableIpv4Test {
     // o mesmo conteúdo, então bloquear só um deixa a casa acessível.
     assertTrue(BlockedDomainsRepository.DEFAULT_BLOCKED_IPS.contains("15.229.221.132"))
     assertTrue(BlockedDomainsRepository.DEFAULT_BLOCKED_IPS.contains("18.228.51.151"))
+    // O domínio anda junto dos IPs, igual 23bet36.com anda com 211.43.149.99:
+    // o piso embutido tem que cobrir a casa inteira, não meia casa.
+    assertTrue(BlockedDomainsRepository.DEFAULT_BLOCKED_DOMAINS.contains("betweb.com"))
     // Todo default precisa sobreviver à própria validação, senão vira rota inválida.
     for (ip in BlockedDomainsRepository.DEFAULT_BLOCKED_IPS) {
       assertEquals("default inválido: $ip", ip, classify(ip))

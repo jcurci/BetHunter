@@ -41,6 +41,13 @@ class BlocklistManager(
     private const val MIN_SANE_PREVIOUS_SIZE = 1000
 
     /**
+     * Janela do lock de refresh. Generosa porque o pior caso legítimo (baixar 5 MB
+     * numa rede ruim e reescrever 311 mil linhas) é lento; o TTL existe só para um
+     * processo morto no meio não travar os refreshes seguintes para sempre.
+     */
+    private val REFRESH_LOCK_TTL_MS = TimeUnit.MINUTES.toMillis(2)
+
+    /**
      * Bump SEMPRE que a forma de interpretar a lista mudar (nova classificação,
      * novo tipo de entrada, mudança em normalizeDomain/blockableIpv4OrNull).
      * NÃO mexer quando só o conteúdo da lista muda — para isso o ETag já serve.
@@ -99,6 +106,22 @@ class BlocklistManager(
   }
 
   fun forceRefresh(): RefreshOutcome {
+    // Um refresh por vez em TODO o app, nos dois processos. Sem isto, dois
+    // downloads simultâneos viravam duas reescritas de ~311 mil linhas disputando
+    // o mesmo arquivo SQLite — e o `busy_timeout` de 3 s de quem só queria ler uma
+    // flag (a thread de DNS, inclusive) estourava.
+    if (!repository.tryAcquireRefreshLock(REFRESH_LOCK_TTL_MS)) {
+      Log.i(TAG, "Another blocklist refresh is in progress — skipping")
+      return RefreshOutcome.NONE
+    }
+    return try {
+      refreshLocked()
+    } finally {
+      repository.releaseRefreshLock()
+    }
+  }
+
+  private fun refreshLocked(): RefreshOutcome {
     ensureIngestVersionFresh()
     repeat(MAX_ATTEMPTS) { attempt ->
       when (val result = fetchFromGist()) {

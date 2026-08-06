@@ -149,7 +149,44 @@ política que declara coleta a mais que o app faz é inconsistência que gera
 rejeição. Se algum dia passarmos a coletar telemetria de verdade, a seção volta
 — junto com a atualização do questionário no App Store Connect.
 
-## 5. Correções menores
+## 5. Política — corrigir a seção 3 (onde os dados ficam armazenados)
+
+**Onde:** seção "3. Compartilhamento de Informações". Texto atual:
+`Provedores de Infraestrutura: Ferramentas essenciais para o funcionamento do app (como Supabase para banco de dados ou processadores de pagamento das lojas oficiais).`
+
+**Trocar por:** `Provedores de Infraestrutura: hospedagem da nossa API e banco de dados PostgreSQL (Railway), gestão de assinaturas (RevenueCat, que recebe apenas o identificador interno do usuário e o status da assinatura), envio de notificações (Expo) e processamento de pagamentos pelas lojas oficiais (Apple e Google).`
+
+**Por quê:** não usamos Supabase. E esta seção tem peso extra agora: a terceira
+pergunta da Apple é literalmente *"onde essas informações serão armazenadas?"*.
+Responder a ela com a política pública apontando um provedor que não existe é
+inconsistência direta com o que vamos declarar. RevenueCat e Expo são terceiros
+reais que recebem dados e hoje não estão citados.
+
+## 6. Política — remover a alegação de criptografia de ponta a ponta
+
+**Onde:** seção "4. Armazenamento, Segurança e Criptografia". Texto atual:
+`Criptografia: Seus dados financeiros e de comportamento são protegidos por protocolos de segurança de ponta a ponta.`
+
+**Trocar por:** `Criptografia: todo o tráfego entre o aplicativo e nossos servidores é protegido por HTTPS/TLS, e as senhas são armazenadas de forma criptografada.`
+
+**Por quê:** "ponta a ponta" significa que nem nós conseguimos ler os dados — e
+não é o caso: os registros financeiros são armazenados no nosso banco e são
+legíveis pela aplicação, que os usa para gerar os gráficos. É uma afirmação falsa
+sobre segurança, o tipo de coisa que cria problema com a LGPD e com o Procon
+independentemente da Apple. O texto novo descreve a proteção real, que é boa.
+
+## 7. Política — alinhar a seção 7 (menores de idade)
+
+**Onde:** seção "7. Menores de Idade". Texto atual:
+`Usuários menores de 18 anos devem utilizar o aplicativo sob supervisão de seus pais ou responsáveis.`
+
+**Trocar por:** `O Bethunter não é destinado a menores de 18 anos e não coletamos intencionalmente dados de crianças e adolescentes. Caso identifiquemos que dados de um menor foram coletados, tomaremos medidas para excluí-los prontamente.`
+
+**Por quê:** é um app sobre vício em apostas, com classificação etária alta na
+loja. A redação atual admite uso por menores, o que conflita com a classificação
+declarada na App Store e com o próprio posicionamento do produto.
+
+## 8. Correções menores
 
 - **Typo na seção 3 atual** ("Compartilhamento de Informações"): `terceiAros` → `terceiros`.
 - **Home:** `Disponível na Google Play para Android · iOS em breve` — precisa ser
@@ -172,8 +209,17 @@ o diff.
    está visível na página renderizada (não só no código).
 2. Buscar "VPN" na página: tem de aparecer.
 3. Buscar "Sem VPN" na home: **não** pode aparecer.
-4. Buscar "Supabase" no site inteiro: não pode aparecer.
-5. Confirmar que `/privacidade` responde 200 sem redirecionar para a home.
+4. Buscar "Supabase" no site inteiro: não pode aparecer (são duas ocorrências,
+   seções 1.1 e 3).
+5. Buscar "ponta a ponta": não pode aparecer.
+6. Confirmar que `/privacidade` responde 200 sem redirecionar para a home.
+
+**Fora do escopo deste documento, mas relacionado:** a seção 5 da política afirma
+que a exclusão de conta é feita "diretamente pela Aplicação, de forma
+automatizada". Hoje o app abre um Google Forms e o botão se chama "Desativar
+conta". Isso é problema no **app**, não no site — está registrado no plano
+(`docs/PLANO_APP_REVIEW_IOS.md`, item 27) e não deve ser "resolvido" mudando o
+texto da política.
 
 Avisar quando estiver no ar — a resposta à Apple depende disso, e o campo
 *Privacy Policy URL* no App Store Connect já aponta para essa página

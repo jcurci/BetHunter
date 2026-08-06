@@ -153,6 +153,23 @@ const App: React.FC = () => {
         }
 
         if (!authed) {
+          // A sessão do NOSSO backend expira em 30 dias e não tem refresh; quando
+          // ela cai, o worker de enforcement fica inerte e a licença do bloqueador
+          // vence sozinha — a proteção de quem está pagando ia embora em silêncio,
+          // sem nada que a trouxesse de volta.
+          //
+          // O RevenueCat não depende dessa sessão: o SDK guarda o último
+          // app_user_id, e `computeIsPremium` trata "sem usuário logado" como
+          // suficiente quando há entitlement ativo. Então dá para renovar a licença
+          // aqui mesmo, antes de mandar o usuário para o Login.
+          if (rcReady) {
+            try {
+              await useSubscriptionStore.getState().refresh();
+              syncBlockerWithPremium("boot-unauthed");
+            } catch (blockerGateError) {
+              console.warn("[BLOCKER GATE] falha ao renovar licença sem sessão", blockerGateError);
+            }
+          }
           finishBoot("Login");
           return;
         }

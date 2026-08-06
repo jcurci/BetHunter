@@ -98,6 +98,12 @@ interface BlockerNativeModule {
   getManufacturerInfo?: () => Promise<{ isXiaomi: boolean }>;
   openAutoStartSettings?: () => Promise<boolean>;
   getVpnEventLog?: () => Promise<string>;
+  /**
+   * `true` uma única vez, quando o usuário chegou ao app pela notificação de
+   * reativação. Consumido na leitura — a Home usa isso para abrir a jornada em vez
+   * de deixar o usuário parado numa tela sem indicação do que fazer.
+   */
+  consumePendingReactivation?: () => Promise<boolean>;
 
   // VPN sempre ativa — passo obrigatório da jornada de ativação.
   // Ver docs/jornada-unica-ativacao-bloqueio.md §3.7.
