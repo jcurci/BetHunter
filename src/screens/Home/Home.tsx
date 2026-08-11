@@ -1691,7 +1691,7 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
           setShowSetupModal(false);
         }}
         size={
-          setupStep === "done" ? "smaller" : setupStep === "alwaysOn" ? "big" : "medium"
+          setupStep === "done" ? "smaller" : setupStep === "alwaysOn" ? "bigger" : "medium"
         }
         title={
           setupStep === "intro"
@@ -1846,15 +1846,26 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
                 label="Abrir configurações de VPN"
                 onPress={handleOpenAlwaysOnVpnSettings}
               />
+              {/* Mesmo tamanho do botão de cima, mas contornado: é a única saída
+                  do passo por autoatestado, então precisa ser óbvio que é um
+                  botão — como link fino o usuário voltava das configurações e
+                  não achava como confirmar. */}
               <TouchableOpacity
-                style={styles.batteryWarningManualLink}
+                style={[
+                  styles.setupSecondaryButton,
+                  isCheckingAlwaysOn && styles.setupSecondaryButtonDisabled,
+                ]}
                 onPress={handleRecheckAlwaysOn}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
                 disabled={isCheckingAlwaysOn}
               >
-                <Text style={styles.batteryWarningManualLinkText}>
-                  {isCheckingAlwaysOn ? "Verificando…" : "Já ativei — verificar de novo"}
-                </Text>
+                {isCheckingAlwaysOn ? (
+                  <ActivityIndicator color="#E8E4F0" size="small" />
+                ) : (
+                  <Text style={styles.setupSecondaryButtonText}>
+                    Já ativei — verificar de novo
+                  </Text>
+                )}
               </TouchableOpacity>
 
               {/* Opcional de propósito: com o lockdown ligado, uma VPN que não
@@ -2243,11 +2254,30 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingBottom: 12,
   },
+  setupSecondaryButton: {
+    width: "100%",
+    marginTop: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setupSecondaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  setupSecondaryButtonText: {
+    color: "#E8E4F0",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   alwaysOnLockdownRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 14,
+    marginTop: 20,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,

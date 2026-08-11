@@ -38,8 +38,13 @@ android {
         applicationId 'com.bethunter.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23
-        versionName "1.1.6"
+        versionCode 24
+        versionName "1.1.7"
+
+        // Testes instrumentados do bloqueador: rodam DENTRO do processo do app, que é
+        // a única forma de exercitar o caminho de instalação nova (banco nascendo do
+        // zero, seed, ingestão da lista remota). Não entram no APK de release.
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -118,4 +123,7 @@ dependencies {
     }
 
     testImplementation("junit:junit:4.13.2")
+
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:runner:1.5.2")
 }

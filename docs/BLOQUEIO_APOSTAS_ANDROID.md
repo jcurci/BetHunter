@@ -338,9 +338,22 @@ adb shell dumpsys meminfo com.bethunter.app:vpn | grep -A8 "App Summary"
 sqlite3 /tmp/b.db "select count(*) from domains; select count(*) from blocked_ips;"
 ```
 
-Testes unitários: `cd android && ./gradlew :app:testDebugUnitTest` (sufixos, caches, TTL de DNS,
-backoff, validação de IP). Os caminhos que dependem de SQLite **não** têm cobertura automatizada —
-o projeto não usa Robolectric; valem os comandos acima.
+### Testes automatizados
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest        # lógica pura: sufixos, caches, TTL de DNS, backoff, IPs
+./gradlew :app:connectedDebugAndroidTest # instalação nova, com emulador/aparelho ligado
+```
+
+`ColdStartBlockerTest` (androidTest) roda **dentro do processo do app** e cobre o caminho de quem
+instalou agora: banco nascendo vazio, seed dos defaults, consulta por sufixos, licença ausente
+tratada como válida, persistência do KV entre instâncias, lock de refresh, coalescência do event
+log e o **download + ingestão das ~300 mil linhas com o bloqueio passando a valer**. É o único
+lugar onde a SQL do caminho quente é executada de verdade — rode antes de cada release.
+
+O que nenhum teste automatizado cobre: compra no RevenueCat, jornada guiada, diálogo de
+consentimento do Android, device admin e VPN sempre ativa. Isso exige aparelho e conta reais.
 
 ---
 
