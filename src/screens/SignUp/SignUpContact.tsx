@@ -92,7 +92,7 @@ const SignUpContact: React.FC = () => {
   const isFormValid =
     email.trim() !== "" &&
     emailRegex.test(email) &&
-    phoneDigits.length === 11 &&
+    (phoneDigits.length === 0 || phoneDigits.length === 11) &&
     !emailError &&
     !phoneError;
 
@@ -101,14 +101,14 @@ const SignUpContact: React.FC = () => {
     const emailV = validateEmail(email);
     const phoneV = validatePhone(phone);
     setEmailError(emailV || (!email.trim() ? "Digite um endereço de email válido" : ""));
-    setPhoneError(phoneV || (!phone.trim() ? "Digite um número de telefone válido" : ""));
-    if (emailV || phoneV || !email.trim() || !phone.trim()) return;
+    setPhoneError(phoneV);
+    if (emailV || phoneV || !email.trim()) return;
 
     navigation.navigate("SignUpPassword", {
       name,
       username,
       email: email.trim(),
-      phone: phoneDigits,
+      phone: phoneDigits || undefined,
     });
   };
 
@@ -132,7 +132,7 @@ const SignUpContact: React.FC = () => {
           {/* Title */}
           <Animated.View style={{ opacity: titleFade, transform: [{ translateY: titleSlide }] }}>
             <Text style={styles.title}>Perfeito, {firstName}!</Text>
-            <Text style={styles.subtitle}>Agora precisamos do seu email e telefone para prosseguir.</Text>
+            <Text style={styles.subtitle}>Agora precisamos do seu email para prosseguir. O telefone é opcional.</Text>
           </Animated.View>
 
           {/* Email field */}
@@ -157,7 +157,7 @@ const SignUpContact: React.FC = () => {
 
           {/* Phone field */}
           <Animated.View style={[styles.fieldBlock, { opacity: field2Fade, transform: [{ translateY: field2Slide }] }]}>
-            <Text style={styles.fieldLabel}>Telefone</Text>
+            <Text style={styles.fieldLabel}>Telefone (opcional)</Text>
             <View style={[styles.phoneRow]}>
               <View style={styles.countryBadge}>
                 <Text style={styles.countryText}>🇧🇷 +55</Text>

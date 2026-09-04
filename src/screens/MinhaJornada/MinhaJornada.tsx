@@ -188,7 +188,7 @@ const MinhaJornada: React.FC = () => {
                 </Text>
               </View>
               <Text style={styles.valueDescription}>
-                Valor de todas as entradas e saídas já cadastradas no Meu Acessor
+                Valor de todas as entradas e saídas já cadastradas no Meu Assessor
               </Text>
             </View>
 

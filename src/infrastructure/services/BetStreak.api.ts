@@ -1,7 +1,41 @@
 import { apiClient } from '../../services/api/apiClient';
 import { BetCheckInResult } from '../../domain/entities/BetCheckInResult';
 import { BetCheckInStatus } from '../../domain/entities/BetCheckInStatus';
+import {
+  BetStreakDuration,
+  ZERO_BET_STREAK_DURATION,
+} from '../../domain/entities/BetStreakDuration';
 import { AuthenticationError } from '../../domain/errors/CustomErrors';
+
+/** Inteiro >= 0, ou 0 se o backend mandar null/string/lixo. */
+function toCount(value: any): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+}
+
+/**
+ * Normaliza o `betStreak` da API para `{ days, hours, minutes }`.
+ *
+ * O backend passou a devolver o objeto, mas o formato antigo era um número
+ * puro. Aceitamos os dois para que um rollback do backend (ou o app apontando
+ * para um ambiente ainda não atualizado) não zere o contador da Home.
+ */
+export function parseBetStreak(raw: any): BetStreakDuration {
+  // Formato legado: dias como número puro (ou string numérica).
+  if (typeof raw === 'number' || typeof raw === 'string') {
+    return { ...ZERO_BET_STREAK_DURATION, days: toCount(raw) };
+  }
+
+  if (raw && typeof raw === 'object') {
+    return {
+      days: toCount(raw.days),
+      hours: toCount(raw.hours),
+      minutes: toCount(raw.minutes),
+    };
+  }
+
+  return { ...ZERO_BET_STREAK_DURATION };
+}
 
 export class BetStreakApi {
   async getStatus(): Promise<BetCheckInStatus> {
@@ -12,7 +46,7 @@ export class BetStreakApi {
       const response = await apiClient.get(url);
 
       return {
-        betStreak: response.data.betStreak,
+        betStreak: parseBetStreak(response.data.betStreak),
         canCheckIn: response.data.canCheckIn,
         nextCheckInAt: response.data.nextCheckInAt,
       };
@@ -62,7 +96,7 @@ export class BetStreakApi {
       const response = await apiClient.post(url);
 
       return {
-        betStreak: response.data.betStreak,
+        betStreak: parseBetStreak(response.data.betStreak),
         nextCheckInAt: response.data.nextCheckInAt,
       };
     } catch (error: any) {

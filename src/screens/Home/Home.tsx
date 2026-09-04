@@ -30,6 +30,7 @@ import MaskedView from "@react-native-masked-view/masked-view";
 // Components
 import { Footer, StatsDisplay, IconCard, GradientBorderButton } from "../../components";
 import Modal from "../../components/common/Modal/Modal";
+import ShareCardModal from "./ShareCardModal";
 import { AppLoadingScreen } from "../../components/AppLoadingScreen";
 
 // Config
@@ -44,7 +45,7 @@ import {
 
 // Assets
 import BetHunterIcon from "../../assets/home/bethunter.svg";
-import AcessorIcon from "../../assets/home/acessor.svg";
+import AssessorIcon from "../../assets/home/assessor.svg";
 import CursosIcon from "../../assets/home/cursos.svg";
 
 // Domain & Infrastructure
@@ -56,10 +57,24 @@ import type {
 } from "../../infrastructure/native/blockerModule";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
-import { useDashboardStore } from "../../storage/dashboardStore";
+import { useBetStreakDays, useDashboardStore } from "../../storage/dashboardStore";
 import { useCoursesStore, selectCurrentCourse } from "../../storage/coursesStore";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
-import { notifyStreakMilestone } from "../../services/notifications";
+import {
+  cancelShareInvite,
+  isMilestone,
+  scheduleMilestoneShareInvite,
+  scheduleShareInvite,
+} from "../../services/notifications";
+import {
+  hasSeenShare,
+  hasShared,
+  lastCelebratedMilestone,
+  markShared,
+  markShareSeen,
+  setCelebratedMilestone,
+} from "../../services/shareDiscovery";
+import { maybeRequestReview } from "../../services/appReview";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
@@ -70,6 +85,15 @@ const BANNER_REVEAL_DELAY_MS = 600;
 /** Chave por usuário — garante que cada conta veja o modal exatamente uma vez. */
 const blockerPromoSeenKey = (userId: string): string =>
   `@bethunter_blocker_promo_seen_${userId}`;
+/**
+ * Piso para o convite recorrente de compartilhamento. Abaixo disso o contador
+ * ainda não conta história nenhuma — convidar alguém no dia 1 a exibir "1 dia"
+ * é o tipo de aviso que ensina o usuário a ignorar as notificações do app.
+ */
+const SHARE_INVITE_MIN_STREAK = 3;
+/** Geometria do CTA de compartilhar — o raio interno deriva dos dois. */
+const SHARE_BUTTON_RADIUS = 22;
+const SHARE_BUTTON_BORDER = 1.5;
 
 type BlockFlowStep = "choices" | "report";
 
@@ -157,7 +181,6 @@ const Home: React.FC = () => {
   // Dashboard store
   const {
     dashboard,
-    betStreak,
     canCheckIn,
     isLoading,
     loadAll,
@@ -167,6 +190,17 @@ const Home: React.FC = () => {
     clearLoadError,
     updateAfterCheckIn
   } = useDashboardStore();
+  const betStreakDays = useBetStreakDays();
+  const betStreakDuracaoReal = useDashboardStore((s) => s.betStreak);
+  // ⚠️ MOCK TEMPORÁRIO — REMOVER DEPOIS.
+  // Contador congelado só para tirar print da tela de compartilhar.
+  // Base: 21 dias em 21/07/2026 → +36 dias até 26/08/2026 = 57 dias.
+  // Para voltar ao normal: apague este bloco e renomeie `betStreakDuracaoReal`
+  // de volta para `betStreakDuracao`.
+  const MOCK_SHARE_CARD = true;
+  const betStreakDuracao = MOCK_SHARE_CARD
+    ? { days: 57, hours: 23, minutes: 46 }
+    : betStreakDuracaoReal;
 
   const [hasBooted, setHasBooted] = useState<boolean>(sessionBooted);
 
@@ -675,6 +709,17 @@ const Home: React.FC = () => {
 
   // Modal states
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  /** Marco a comemorar, ou null. Vira o título do modal de conquista. */
+  const [milestoneToCelebrate, setMilestoneToCelebrate] = useState<number | null>(null);
+  /** Enquanto false, o CTA de compartilhar pulsa e exibe o selo "Novo". */
+  const [shareIsNew, setShareIsNew] = useState<boolean>(false);
+  /**
+   * Deep link que chegou antes do contador carregar. O card precisa de
+   * `statsReady` — abrir antes gera a imagem com o 0 do loading.
+   */
+  const pendingShareRef = useRef<boolean>(false);
+  const sharePulse = useRef(new Animated.Value(0)).current;
   const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const [showBlockFlowModal, setShowBlockFlowModal] = useState<boolean>(false);
   const [blockFlowStep, setBlockFlowStep] = useState<BlockFlowStep>("choices");
@@ -800,6 +845,121 @@ const Home: React.FC = () => {
     }, [navigation, route.params?.openBlockFlow, blockFlowFade]),
   );
 
+  // ---------------------------------------------------------------------------
+  // Compartilhamento do contador — descoberta
+  //
+  // Três caminhos levam ao card (botão da Home, notificação e modal de marco) e
+  // todos passam por `openShareCardModal`, para o selo "Novo" cair em qualquer
+  // um deles. Ver docs/share-card-contador.md.
+  // ---------------------------------------------------------------------------
+
+  /** Único ponto de abertura do card. */
+  const openShareCardModal = useCallback((): void => {
+    if (user?.id) {
+      setShareIsNew(false);
+      void markShareSeen(user.id);
+    }
+    setShowShareModal(true);
+  }, [user?.id]);
+
+  // Selo "Novo" enquanto o usuário nunca tiver aberto o card.
+  useEffect(() => {
+    if (!user?.id) return;
+    let vivo = true;
+    hasSeenShare(user.id).then((visto) => {
+      if (vivo) setShareIsNew(!visto);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [user?.id]);
+
+  // Pulso lento do CTA, só enquanto ele é novidade. Escala e opacidade rodam na
+  // thread nativa — o loop não compete com o scroll da Home.
+  useEffect(() => {
+    if (!shareIsNew) {
+      sharePulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sharePulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(sharePulse, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shareIsNew, sharePulse]);
+
+  /**
+   * Deep link vindo de uma notificação (`action: 'share'` → App.tsx).
+   *
+   * O param é limpo na hora, senão o card reabre a cada foco da Home. Se o
+   * contador ainda não carregou, a intenção fica pendente: abrir sem
+   * `statsReady` geraria a imagem com o 0 do loading.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.openShareCard !== true) return;
+      navigation.setParams({ openShareCard: undefined });
+      if (statsReady) openShareCardModal();
+      else pendingShareRef.current = true;
+    }, [navigation, route.params?.openShareCard, statsReady, openShareCardModal]),
+  );
+
+  // Descarrega a intenção pendente assim que o contador fica pronto.
+  useEffect(() => {
+    if (!statsReady || !pendingShareRef.current) return;
+    pendingShareRef.current = false;
+    openShareCardModal();
+  }, [statsReady, openShareCardModal]);
+
+  /**
+   * Convite recorrente para quem nunca compartilhou.
+   *
+   * Fica aqui, e não no boot do App.tsx, porque a regra tem piso de streak e o
+   * contador só existe nesta tela. Quem já compartilhou tem o agendamento
+   * cancelado — cobre também o usuário que compartilhou em outro aparelho e
+   * chegou aqui com a flag já marcada.
+   */
+  useEffect(() => {
+    if (!statsReady || !user?.id) return;
+    if (betStreakDays < SHARE_INVITE_MIN_STREAK) return;
+    hasShared(user.id)
+      .then((ja) => (ja ? cancelShareInvite() : scheduleShareInvite()))
+      .catch(() => {});
+  }, [statsReady, user?.id, betStreakDays]);
+
+  /** Envio concluído: para o convite recorrente de vez. */
+  const handleShared = useCallback((): void => {
+    if (!user?.id) return;
+    void markShared(user.id);
+    void cancelShareInvite().catch(() => {});
+  }, [user?.id]);
+
+  const dismissMilestone = useCallback((): void => {
+    const marco = milestoneToCelebrate;
+    setMilestoneToCelebrate(null);
+    if (marco !== null && user?.id) void setCelebratedMilestone(user.id, marco);
+  }, [milestoneToCelebrate, user?.id]);
+
+  const handleCelebrateShare = useCallback((): void => {
+    dismissMilestone();
+    // Mesma precaução do handleBlockerPromoActivate: sem esperar o primeiro
+    // modal terminar de fechar, o Android engole o segundo.
+    InteractionManager.runAfterInteractions(() => openShareCardModal());
+  }, [dismissMilestone, openShareCardModal]);
+
   useFocusEffect(
     useCallback(() => {
       setGreetingLine(periodGreetingLabel());
@@ -841,6 +1001,45 @@ const Home: React.FC = () => {
     }
   };
 
+  /**
+   * Fecha o ciclo de um marco recém-batido: modal agora, notificação depois.
+   *
+   * O check-in só acontece com o app aberto, então a comemoração imediata é o
+   * modal. A notificação vai agendada com atraso para alcançar o usuário fora do
+   * app — antes ela disparava na hora e aparecia por cima do próprio app.
+   *
+   * O guard é `>` contra o maior marco já comemorado: quem reseta o contador e
+   * volta a subir não recebe o mesmo modal de novo, mas recebe o próximo.
+   */
+  const celebrateMilestone = async (days: number): Promise<boolean> => {
+    if (!isMilestone(days) || !user?.id) return false;
+    if (days <= (await lastCelebratedMilestone(user.id))) return false;
+    setMilestoneToCelebrate(days);
+    await scheduleMilestoneShareInvite(days);
+    return true;
+  };
+
+  /**
+   * Pede avaliação na loja logo depois do check-in — o pico emocional do app.
+   *
+   * Roda em `runAfterInteractions` pela mesma razão do `handleCelebrateShare`:
+   * o `setShowCheckInModal(false)` ainda está animando e o Android engole um
+   * diálogo aberto por cima de um modal que está fechando. A regra de quando
+   * disparar (dia 2, uma vez só) mora inteira no serviço.
+   *
+   * `celebrouMarco` é o único caso em que o convite é abortado: a tela já está
+   * ocupada pelo modal de conquista, e o diálogo da loja subiria por cima dele.
+   * Quem cair exatamente num marco é convidado no próximo check-in comum — a
+   * flag do serviço só é gravada quando o diálogo realmente vai ao ar.
+   */
+  const inviteReview = (days: number, celebrouMarco: boolean): void => {
+    if (celebrouMarco || !user?.id) return;
+    const userId = user.id;
+    InteractionManager.runAfterInteractions(() => {
+      void maybeRequestReview(userId, days);
+    });
+  };
+
   const handleCheckIn = async () => {
     setShowCheckInModal(false);
     setIsCheckInSubmitting(true);
@@ -848,7 +1047,8 @@ const Home: React.FC = () => {
       const container = Container.getInstance();
       const result = await container.getBetCheckInUseCase().execute();
       updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
-      await notifyStreakMilestone(result.betStreak);
+      const celebrou = await celebrateMilestone(result.betStreak.days);
+      inviteReview(result.betStreak.days, celebrou);
     } catch (error: any) {
       console.log("BetCheckIn POST:", error?.message ?? error);
       triggerError('Não foi possível registrar o check-in. Tente novamente.', async () => {
@@ -857,7 +1057,8 @@ const Home: React.FC = () => {
           const container = Container.getInstance();
           const result = await container.getBetCheckInUseCase().execute();
           updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
-          await notifyStreakMilestone(result.betStreak);
+          const celebrou = await celebrateMilestone(result.betStreak.days);
+          inviteReview(result.betStreak.days, celebrou);
         } finally {
           setIsCheckInSubmitting(false);
         }
@@ -1070,7 +1271,7 @@ const Home: React.FC = () => {
       <StatsDisplay 
         loading={!statsReady}
         energy={statsReady && dashboard ? dashboard.energy : undefined}
-        streak={statsReady ? `${betStreak}d` : undefined}
+        streak={statsReady ? `${betStreakDays}d` : undefined}
       />
     </View>
   );
@@ -1112,8 +1313,11 @@ const Home: React.FC = () => {
         ) : (
           <>
             {/* betStreak inicia em 0, se loadBetStreak falhar mantém 0 - fallback honesto */}
-            {renderGradientText(`${betStreak}`, styles.freeOfBetDaysNumber)}
-            {renderGradientText(" dias", styles.freeOfBetDaysUnit)}
+            {renderGradientText(`${betStreakDays}`, styles.freeOfBetDaysNumber)}
+            {renderGradientText(
+              betStreakDays === 1 ? " dia" : " dias",
+              styles.freeOfBetDaysUnit
+            )}
           </>
         )}
       </TouchableOpacity>
@@ -1125,6 +1329,58 @@ const Home: React.FC = () => {
         >
           <Text style={styles.checkInHintText}>Toque para marcar se apostou hoje</Text>
         </TouchableOpacity>
+      )}
+      {/* Só com statsReady: sem isso o card sairia com o 0 do estado de loading. */}
+      {statsReady && (
+        <Animated.View
+          style={{
+            transform: [
+              {
+                scale: sharePulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.04],
+                }),
+              },
+            ],
+          }}
+        >
+          <TouchableOpacity
+            onPress={openShareCardModal}
+            activeOpacity={0.85}
+            style={styles.shareButton}
+            accessibilityRole="button"
+            accessibilityLabel={
+              shareIsNew
+                ? "Novidade: compartilhar seus dias sem apostar"
+                : "Compartilhar seus dias sem apostar"
+            }
+          >
+            {/*
+              Borda gradiente: o LinearGradient pinta a peça inteira e o miolo
+              opaco por cima deixa só a moldura à vista. O interno PRECISA ser
+              opaco — com `transparent` o gradiente vaza pelo meio e o botão
+              vira o preenchimento que ele não deve ser.
+            */}
+            <LinearGradient
+              colors={HORIZONTAL_GRADIENT_COLORS}
+              locations={HORIZONTAL_GRADIENT_LOCATIONS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.shareButtonBorder}
+            >
+              <View style={styles.shareButtonInner}>
+                <MaterialCommunityIcons name="share-variant" size={16} color="#B8A8E8" />
+                <Text style={styles.shareButtonText}>Compartilhar</Text>
+              </View>
+            </LinearGradient>
+            {/* Some no primeiro toque — ver openShareCardModal. */}
+            {shareIsNew && (
+              <View style={styles.shareBadge} pointerEvents="none">
+                <Text style={styles.shareBadgeText}>NOVO</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       )}
     </View>
   );
@@ -1443,7 +1699,7 @@ const Home: React.FC = () => {
             </View>
           </View>
 
-          {/* Minha conta, Meu acessor, Menu Educacional */}
+          {/* Minha conta, Meu assessor, Menu Educacional */}
           <View style={styles.cardsContainer}>
             <IconCard
               icon={<BetHunterIcon width={20} height={20} />}
@@ -1453,11 +1709,11 @@ const Home: React.FC = () => {
               onPress={() => navigation.navigate("MinhaConta")}
             />
             <IconCard
-              icon={<AcessorIcon width={20} height={20} />}
-              title={"Meu\nAcessor"}
+              icon={<AssessorIcon width={20} height={20} />}
+              title={"Meu\nAssessor"}
               cardBackgroundColor="#14121B"
               size={cardSize}
-              onPress={() => navigation.navigate("Acessor")}
+              onPress={() => navigation.navigate("Assessor")}
             />
             <IconCard
               icon={<CursosIcon width={20} height={20} />}
@@ -1993,6 +2249,45 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/*
+        Marco recém-batido. Fica antes do ShareCardModal na árvore, mas nunca
+        aparece junto: handleCelebrateShare fecha este e só então abre aquele.
+      */}
+      <Modal
+        visible={milestoneToCelebrate !== null}
+        onClose={dismissMilestone}
+        size="medium"
+        title={
+          milestoneToCelebrate === 1
+            ? "1 dia livre de apostas"
+            : `${milestoneToCelebrate ?? 0} dias livre de apostas`
+        }
+        subtitle="Um marco de verdade. Mostre pra quem torce por você — o card sai pronto, com o seu contador e sem o seu nome."
+        scrollEnabled={false}
+      >
+        <View style={styles.blockerPromoContent}>
+          <GradientBorderButton
+            label="Compartilhar minha conquista"
+            onPress={handleCelebrateShare}
+          />
+          <TouchableOpacity
+            style={styles.blockerPromoDismissButton}
+            onPress={dismissMilestone}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.blockerPromoDismissText}>Agora não</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <ShareCardModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        duracao={betStreakDuracao}
+        userId={user?.id ?? null}
+        onShared={handleShared}
+      />
     </SafeAreaView>
   );
 };
@@ -2071,6 +2366,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     textAlign: "center",
+  },
+  // O CTA precisa competir com o contador logo acima dele, que é o maior
+  // elemento da tela. O que resolve isso é a moldura em gradiente: o pill
+  // anterior tinha borda #373344 chapada e sumia contra o fundo da Home.
+  shareButton: {
+    marginTop: 14,
+    borderRadius: SHARE_BUTTON_RADIUS,
+    // O selo "Novo" sai da caixa; sem isto o Android o corta.
+    overflow: "visible",
+  },
+  // O padding é a espessura da borda — é ele que vira a moldura visível.
+  shareButtonBorder: {
+    borderRadius: SHARE_BUTTON_RADIUS,
+    padding: SHARE_BUTTON_BORDER,
+  },
+  shareButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 20,
+    // Raio interno acompanha o externo menos a borda, senão a moldura
+    // engrossa nos cantos.
+    borderRadius: SHARE_BUTTON_RADIUS - SHARE_BUTTON_BORDER,
+    backgroundColor: BUTTON_INNER_BACKGROUND,
+  },
+  shareButtonText: {
+    color: "#B8A8E8",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  shareBadge: {
+    position: "absolute",
+    top: -7,
+    right: -8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+  },
+  shareBadgeText: {
+    color: "#14091B",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   freeOfBetDaysNumber: {
     fontSize: 56,

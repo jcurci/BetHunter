@@ -121,7 +121,7 @@ const SignUpPassword: React.FC = () => {
         email,
         name,
         username,
-        cellphone: phone,
+        cellphone: phone || undefined,
         password,
       });
 
@@ -142,7 +142,7 @@ const SignUpPassword: React.FC = () => {
           const rcInfo = await identifyUser(userId, {
             email: session.user?.email,
             name: session.user?.name,
-            phone,
+            ...(phone ? { phone } : {}),
           });
           useSubscriptionStore.getState().setFromCustomerInfo(rcInfo);
         } catch (e) {

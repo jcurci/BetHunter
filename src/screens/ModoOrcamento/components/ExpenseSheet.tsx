@@ -20,8 +20,8 @@ import {
 } from "../../../config/colors";
 import { FinancialCategory } from "../../../domain/entities/FinancialCategory";
 
-// Locale do calendário em pt-BR já é configurado em Acessor.tsx; redefinir aqui
-// é defensivo: caso o ExpenseSheet seja montado antes do Acessor, o locale
+// Locale do calendário em pt-BR já é configurado em Assessor.tsx; redefinir aqui
+// é defensivo: caso o ExpenseSheet seja montado antes do Assessor, o locale
 // fica disponível mesmo assim.
 if (!LocaleConfig.locales['pt-br']) {
   LocaleConfig.locales['pt-br'] = {
@@ -174,7 +174,7 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
       onClose={handleClose}
       size="bigger"
       title="Registrar gasto"
-      subtitle="Lança a saída no Acessor e atualiza o seu orçamento."
+      subtitle="Lança a saída no Assessor e atualiza o seu orçamento."
     >
       <View style={styles.body}>
         <View style={styles.fieldBlock}>

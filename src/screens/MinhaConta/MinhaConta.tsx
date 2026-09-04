@@ -19,6 +19,7 @@ import { NavigationProp } from "../../types/navigation";
 import { useAuthStore } from "../../storage/authStore";
 import { useSubscriptionStore } from "../../storage/subscriptionStore";
 import { logoutUser } from "../../services/revenueCat";
+import { openStoreListing } from "../../services/appReview";
 
 import {
   HORIZONTAL_GRADIENT_COLORS,
@@ -196,6 +197,16 @@ const MinhaConta: React.FC = () => {
                 icon="info"
                 label="Sobre Nós"
                 onPress={() => navigation.navigate("SobreNos")}
+              />
+              {/*
+                Caminho manual de avaliação. O diálogo nativo que o check-in
+                dispara (ver services/appReview) tem quota própria e às vezes
+                simplesmente não aparece; este item é o que nunca falha.
+              */}
+              <MenuItem
+                icon="star"
+                label="Avaliar o BetHunter"
+                onPress={() => void openStoreListing()}
               />
               <MenuItem
                 icon="log-out"

@@ -20,6 +20,20 @@
       <action android:name="android.intent.action.VIEW"/>
       <data android:scheme="whatsapp"/>
     </intent>
+    <!-- Visibilidade de pacote (Android 11+). O <intent> com scheme "whatsapp"
+         acima cobre Linking.canOpenURL, mas NÃO basta para o react-native-share
+         mirar o WhatsApp por pacote: sem estas duas linhas o shareSingle falha
+         como "não instalado" mesmo com o app presente, e o compartilhamento cai
+         no seletor genérico do sistema. -->
+    <package android:name="com.whatsapp"/>
+    <package android:name="com.whatsapp.w4b"/>
+    <package android:name="com.instagram.android"/>
+    <!-- Envio de imagem: garante que o seletor de fallback enxergue os apps que
+         aceitam ACTION_SEND de imagem. -->
+    <intent>
+      <action android:name="android.intent.action.SEND"/>
+      <data android:mimeType="image/*"/>
+    </intent>
   </queries>
   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>

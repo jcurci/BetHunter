@@ -119,7 +119,8 @@ const DetalhesPessoais: React.FC = () => {
 
   const validatePhone = (value: string): string | undefined => {
     if (!value.trim()) {
-      return "Telefone é obrigatório";
+      // Telefone é opcional — vazio é válido
+      return undefined;
     }
     // Remove common formatting characters
     const cleanPhone = value.replace(/[\s\-\(\)\+]/g, "");

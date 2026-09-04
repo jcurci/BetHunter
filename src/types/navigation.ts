@@ -5,12 +5,12 @@ export type RootStackParamList = {
   Login: undefined;
   SignUpName: undefined;
   SignUpContact: { name: string; username: string };
-  SignUpPassword: { name: string; username: string; email: string; phone: string };
+  SignUpPassword: { name: string; username: string; email: string; phone?: string };
   PasswordResetMethod: undefined;
   PasswordResetEmail: { method: 'email' | 'username' | 'phone' };
   PasswordResetVerification: { method: 'email' | 'username' | 'phone'; value: string };
   PasswordResetNewPassword: { method: 'email' | 'username' | 'phone'; value: string; code: string };
-  Home: { openBlockFlow?: boolean };
+  Home: { openBlockFlow?: boolean; openShareCard?: boolean };
   Roulette: undefined;
   MenuEducacional: undefined;
   Cursos: undefined;
@@ -28,7 +28,7 @@ export type RootStackParamList = {
   AccountHistory: undefined;
   TransactionForm: { type: 'income' | 'expense' };
   EmConstrucao: undefined;
-  Acessor: undefined;
+  Assessor: undefined;
   ModoOrcamento: undefined;
   BudgetHistory: undefined;
   BudgetMonthDetail: { periodKey: string };

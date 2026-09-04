@@ -144,8 +144,8 @@ const Footer: React.FC = () => {
         routeName="ModoOrcamento"
         iconName="wallet"
         iconNameOutline="wallet-outline"
-        label="Acessor"
-        isActive={isActive("ModoOrcamento") || isActive("Acessor")}
+        label="Assessor"
+        isActive={isActive("ModoOrcamento") || isActive("Assessor")}
         onPress={() => handleNavigate("ModoOrcamento")}
       />
     </SafeAreaView>

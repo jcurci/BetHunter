@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 import { Container } from '../infrastructure/di/Container';
+import {
+  BetStreakDuration,
+  ZERO_BET_STREAK_DURATION,
+} from '../domain/entities/BetStreakDuration';
 
 const TTL = 10 * 60 * 1000; // 10 minutos em milissegundos
 
@@ -9,7 +13,9 @@ const TTL = 10 * 60 * 1000; // 10 minutos em milissegundos
 interface DashboardStore {
   // State
   dashboard: { energy: number; streak: number } | null;
-  betStreak: number;
+  /** Tempo livre de apostas. A Home mostra só `days`; horas/minutos ficam
+   *  disponíveis para o card de compartilhamento. */
+  betStreak: BetStreakDuration;
   canCheckIn: boolean;
   nextCheckInAt: string | null;
   isLoading: boolean;
@@ -22,7 +28,7 @@ interface DashboardStore {
   loadAll: (force?: boolean) => Promise<void>;
   loadDashboard: (force?: boolean) => Promise<void>;
   loadBetStreak: (force?: boolean) => Promise<void>;
-  updateAfterCheckIn: (betStreak: number, nextCheckInAt: string) => void;
+  updateAfterCheckIn: (betStreak: BetStreakDuration, nextCheckInAt: string) => void;
   clearLoadError: () => void;
   invalidate: () => void;               // zera timestamps → força refetch
 }
@@ -34,7 +40,7 @@ interface DashboardStore {
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
   // State inicial
   dashboard: null,
-  betStreak: 0,
+  betStreak: { ...ZERO_BET_STREAK_DURATION },
   canCheckIn: false,
   nextCheckInAt: null,
   isLoading: false,
@@ -166,7 +172,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
    * Atualiza o store localmente após check-in bem-sucedido
    * Evita nova chamada de API
    */
-  updateAfterCheckIn: (betStreak: number, nextCheckInAt: string) => {
+  updateAfterCheckIn: (betStreak: BetStreakDuration, nextCheckInAt: string) => {
     console.log('✅ [DashboardStore] Atualizando após check-in:', { betStreak, nextCheckInAt });
     
     set({
@@ -189,7 +195,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     
     set({
       dashboard: null,
-      betStreak: 0,
+      betStreak: { ...ZERO_BET_STREAK_DURATION },
       canCheckIn: false,
       nextCheckInAt: null,
       lastFetchedDashboard: null,
@@ -197,3 +203,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     });
   },
 }));
+
+/**
+ * Dias livres de apostas — o único recorte que as telas exibem hoje.
+ * Seletor dedicado para as telas não dependerem do formato completo.
+ */
+export const useBetStreakDays = (): number =>
+  useDashboardStore((s) => s.betStreak.days);

@@ -24,8 +24,11 @@ export class RegisterUseCase {
       throw new ValidationError('Nome de usuário é obrigatório');
     }
 
-    if (!request.cellphone || !request.cellphone.trim()) {
-      throw new ValidationError('Telefone é obrigatório');
+    if (request.cellphone && request.cellphone.trim()) {
+      const digits = request.cellphone.replace(/\D/g, '');
+      if (digits.length < 10 || digits.length > 11) {
+        throw new ValidationError('Telefone inválido');
+      }
     }
 
     if (!request.password || !request.password.trim()) {

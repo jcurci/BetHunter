@@ -35,6 +35,8 @@ const APP_ENV = process.env.APP_ENV || 'development';
 const IS_STORE_LIKE = APP_ENV === 'production' || APP_ENV === 'staging';
 
 const GOOGLE_SIGNIN_PKG = '@react-native-google-signin/google-signin';
+const MEDIA_LIBRARY_PKG = 'expo-media-library';
+const FONT_PKG = 'expo-font';
 const IOS_SUFFIX = '.apps.googleusercontent.com';
 const IOS_BUNDLE_IDENTIFIER = 'com.bethunter.app.rick';
 const ANDROID_PACKAGE = 'com.bethunter.app';
@@ -157,15 +159,31 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   const iosUrlScheme = iosUrlSchemeFromClientId(googleIosClientId);
 
+  const managedPlugins = [GOOGLE_SIGNIN_PKG, MEDIA_LIBRARY_PKG, FONT_PKG];
   const existingPlugins = (config.plugins ?? []).filter(
     (p) =>
-      p !== GOOGLE_SIGNIN_PKG &&
-      !(Array.isArray(p) && p[0] === GOOGLE_SIGNIN_PKG),
+      !managedPlugins.includes(p as string) &&
+      !(Array.isArray(p) && managedPlugins.includes(p[0] as string)),
   );
 
   const googlePlugin: [string, Record<string, string>] | string = iosUrlScheme
     ? [GOOGLE_SIGNIN_PKG, { iosUrlScheme }]
     : GOOGLE_SIGNIN_PKG;
+
+  // Só o fallback "Salvar imagem" do card de compartilhamento usa a galeria, e
+  // só para gravar. Os defaults do plugin pedem bem mais do que isso: leitura da
+  // biblioteca no iOS e READ_MEDIA_VIDEO/AUDIO no Android. Nada disso é usado —
+  // pedir viraria dívida na Data Safety da Play Store e pergunta no App Review.
+  const mediaLibraryPlugin: [string, Record<string, unknown>] = [
+    MEDIA_LIBRARY_PKG,
+    {
+      savePhotosPermission:
+        'O BetHunter salva na sua galeria a imagem do seu contador de dias sem apostar.',
+      photosPermission: false,
+      granularPermissions: ['photo'],
+      isAccessMediaLocationEnabled: false,
+    },
+  ];
 
   return {
     ...config,
@@ -189,7 +207,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(config.android ?? {}),
       package: ANDROID_PACKAGE,
     },
-    plugins: [...existingPlugins, googlePlugin],
+    plugins: [...existingPlugins, googlePlugin, mediaLibraryPlugin, FONT_PKG],
     extra: {
       ...existingExtra,
       API_BASE_URL: apiBaseUrl,

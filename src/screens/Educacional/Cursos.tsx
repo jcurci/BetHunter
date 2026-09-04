@@ -27,7 +27,7 @@ import {
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useSavedCoursesStore } from "../../storage/savedCoursesStore";
 import { useAuthStore } from "../../storage/authStore";
-import { useDashboardStore } from "../../storage/dashboardStore";
+import { useBetStreakDays, useDashboardStore } from "../../storage/dashboardStore";
 import { useCoursesStore } from "../../storage/coursesStore";
 import { CourseProgress } from "../../domain/entities/CourseProgress";
 import { AuthenticationError, ServerError } from "../../domain/errors/CustomErrors";
@@ -88,7 +88,8 @@ const Cursos = () => {
   const navigation = useNavigation<NavigationProp>();
   const authStore = useAuthStore();
   const user = authStore.user;
-  const { betStreak, dashboard, loadAll: loadDashboardAll } = useDashboardStore();
+  const { dashboard, loadAll: loadDashboardAll } = useDashboardStore();
+  const betStreakDays = useBetStreakDays();
   const { courses, isLoading: coursesLoading, loadCourses } = useCoursesStore();
   const learningModules = courses.map(mapCourseProgressToLearningModule);
   const loading = coursesLoading && courses.length === 0;
@@ -282,7 +283,7 @@ const Cursos = () => {
           <StatsDisplay 
             loading={!statsReady}
             energy={statsReady && dashboard ? dashboard.energy : undefined}
-            streak={statsReady ? `${betStreak}d` : undefined}
+            streak={statsReady ? `${betStreakDays}d` : undefined}
             // Quando statsReady=true mas dashboard=null (erro API), 
             // StatsDisplay mostra 0 energy e "0d" streak como fallback explícito
           />

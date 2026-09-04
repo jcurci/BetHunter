@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { AppState, NativeModules, Platform } from "react-native";
 import * as NavigationBar from "expo-navigation-bar";
 import { AppLoadingScreen } from "./src/components/AppLoadingScreen";
+import {
+  useFonts,
+  InterTight_700Bold,
+  InterTight_700Bold_Italic,
+} from "@expo-google-fonts/inter-tight";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -14,6 +19,7 @@ import {
 } from "./src/storage/subscriptionStore";
 import { useAuthStore } from "./src/storage/authStore";
 import { syncBlockerWithPremium } from "./src/services/blockerPremiumGate";
+import { enforceUpdate } from "./src/services/appUpdate";
 import Login from "./src/screens/Login/Login";
 import {
   SignUpName,
@@ -41,8 +47,8 @@ import AccountHistory from "./src/screens/Account/AccountHistory";
 import TransactionForm from "./src/screens/Account/TransactionForm";
 import EmConstrucao from "./src/screens/EmConstrucao/EmConstrucao";
 import EmBreve from "./src/screens/EmConstrucao/EmConstrucao";
-// import Acessor from "./src/screens/Acessor/Acessor"; // temporariamente substituído por EmBreve
-import HistoryList from "./src/screens/Acessor/HistoryList";
+// import Assessor from "./src/screens/Assessor/Assessor"; // temporariamente substituído por EmBreve
+import HistoryList from "./src/screens/Assessor/HistoryList";
 import ModoOrcamento from "./src/screens/ModoOrcamento/ModoOrcamento";
 import BudgetHistoryScreen from "./src/screens/ModoOrcamento/BudgetHistoryScreen";
 import BudgetMonthDetailScreen from "./src/screens/ModoOrcamento/BudgetMonthDetailScreen";
@@ -62,12 +68,17 @@ import { RootStackParamList } from "./src/types/navigation";
 import OnboardingFlow from "./src/screens/OnboardingFlow/OnboardingFlow";
 import { isOnboardingFlowCompleted } from "./src/screens/OnboardingFlow/onboardingStorage";
 import { Container } from "./src/infrastructure/di/Container";
+// `Notifications` (sem alias) já é a TELA de Config importada acima — daí o
+// prefixo Expo aqui.
+import * as ExpoNotifications from "expo-notifications";
 import {
   configureNotifications,
   hasPermission,
   scheduleDailyCheckInReminder,
   scheduleReengagementReminder,
+  SHARE_ACTION,
 } from "./src/services/notifications";
+import { hasShared } from "./src/services/shareDiscovery";
 import { waitForRCSync } from "./src/utils/waitForRCSync";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -83,6 +94,15 @@ const App: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const prevIsPremiumRef = useRef<boolean | null>(null);
   const expirationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Inter Tight é a fonte da marca, usada hoje só pelo número do card de
+  // compartilhamento. Carregar antes do primeiro render evita o clássico
+  // "primeira imagem sai com a fonte errada" — o asset é local, não vem da
+  // rede, então o custo no boot é desprezível.
+  const [fontsLoaded, fontError] = useFonts({
+    InterTight_700Bold,
+    InterTight_700Bold_Italic,
+  });
 
   useEffect(() => {
     let removeListener: (() => void) | undefined;
@@ -144,7 +164,11 @@ const App: React.FC = () => {
             await configureNotifications();
             const permissionGranted = await hasPermission();
             if (permissionGranted) {
-              await scheduleDailyCheckInReminder();
+              // Quem nunca compartilhou recebe a variante do lembrete diário que
+              // menciona o card. Reagendado a cada boot, então volta ao texto
+              // normal sozinho depois do primeiro envio.
+              const neverShared = !(await hasShared(user.id));
+              await scheduleDailyCheckInReminder({ neverShared });
               await scheduleReengagementReminder(user.name);
             }
           } catch (notificationsError) {
@@ -215,6 +239,14 @@ const App: React.FC = () => {
         finishBoot("Login");
       } finally {
         setIsReady(true);
+
+        // Exigência de atualização: sempre DEPOIS do boot inteiro, e no `finally`
+        // para cobrir todos os ramos de saída (login, onboarding, erro). Sem
+        // `await` e sem poder derrubar nada: a esta altura a licença do bloqueador
+        // já foi renovada por `syncBlockerWithPremium`, que é o que mantém a VPN
+        // de pé. Inverter essa ordem deixaria a proteção atrás de uma chamada de
+        // rede opcional.
+        void enforceUpdate("boot");
       }
     };
     init();
@@ -223,6 +255,37 @@ const App: React.FC = () => {
       removeListener?.();
     };
   }, []);
+
+  /**
+   * Tocar numa notificação marcada com `action: 'share'` abre o card de
+   * compartilhamento direto, em vez de largar o usuário na Home crua. Era a
+   * peça que faltava: até aqui nenhuma notificação do app levava a lugar nenhum.
+   *
+   * Só depois de `isReady` — antes disso o NavigationContainer ainda não montou
+   * e `navigationRef.current` é null, então o toque em cold start se perderia.
+   */
+  useEffect(() => {
+    if (!isReady) return;
+
+    const handle = (response: ExpoNotifications.NotificationResponse | null) => {
+      const data = response?.notification?.request?.content?.data;
+      if (data?.action !== SHARE_ACTION) return;
+      if (!useAuthStore.getState().isAuthenticated) return;
+      // Não é decoração: o boot manda quem não assina para o CouponScreen e o
+      // expiration guard faz reset para lá. Sem esta linha, a notificação seria
+      // um atalho para dentro da Home passando por cima do paywall.
+      if (!useSubscriptionStore.getState().isPremium) return;
+      navigationRef.current?.navigate("Home", { openShareCard: true });
+    };
+
+    // App aberto pelo toque (estava morto): a resposta não passa pelo listener.
+    ExpoNotifications.getLastNotificationResponseAsync()
+      .then(handle)
+      .catch(() => {});
+
+    const sub = ExpoNotifications.addNotificationResponseReceivedListener(handle);
+    return () => sub.remove();
+  }, [isReady]);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
@@ -250,6 +313,21 @@ const App: React.FC = () => {
 
       await useSubscriptionStore.getState().refresh();
       syncBlockerWithPremium("foreground");
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Exigência de atualização a cada volta ao foreground. Listener separado de
+  // propósito: o do bloqueador acima sai cedo quando não há sessão, e a
+  // atualização obrigatória não depende de estar logado. Mexer no throttle
+  // daquele efeito mudaria a janela de reconciliação da VPN.
+  useEffect(() => {
+    let lastUpdateCheck = 0;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      if (Date.now() - lastUpdateCheck < FOREGROUND_CHECK_THROTTLE_MS) return;
+      lastUpdateCheck = Date.now();
+      void enforceUpdate("foreground");
     });
     return () => sub.remove();
   }, []);
@@ -304,7 +382,9 @@ const App: React.FC = () => {
     };
   }, [isPremium, isAuthenticated]);
 
-  if (!isReady) {
+  // `fontError` é tratado como "pronto" de propósito: se a fonte falhar, o card
+  // cai na fonte de sistema, o que é bem melhor do que travar o app no splash.
+  if (!isReady || (!fontsLoaded && !fontError)) {
     return <AppLoadingScreen />;
   }
 
@@ -510,7 +590,7 @@ const App: React.FC = () => {
           }}
         />
         <Stack.Screen
-          name="Acessor"
+          name="Assessor"
           options={{ headerShown: false }}
         >
           {({ navigation: nav }) => (

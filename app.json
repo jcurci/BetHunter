@@ -2,7 +2,7 @@
   "expo": {
     "name": "BetHunter",
     "slug": "bethunter",
-    "version": "1.1.7",
+    "version": "1.1.8",
     "orientation": "portrait",
     "icon": "./src/assets/logo-img/logo_full.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.bethunter.app.rick",
       "buildNumber": "4"
     },
@@ -25,7 +25,7 @@
         "backgroundColor": "#2C1A35"
       },
       "package": "com.bethunter.app",
-      "versionCode": 24
+      "versionCode": 31
     },
     "web": {
       "favicon": "./src/assets/logo-img/logo_full.png"

@@ -13,7 +13,7 @@ export class RegisterApi {
         email: request.email,
         name: request.name,
         username: request.username,
-        cellphone: request.cellphone,
+        cellphone: request.cellphone?.trim() || undefined,
         password: request.password,
         gambler: request.gambler,
       });
@@ -24,7 +24,7 @@ export class RegisterApi {
         id: userData.id,
         email: userData.email,
         name: userData.name,
-        cellphone: userData.cellphone,
+        cellphone: userData.cellphone ?? null,
         betcoins: userData.betcoins || 0,
         ranking_points: userData.ranking_points || 0,
         gambler: userData.gambler || false,

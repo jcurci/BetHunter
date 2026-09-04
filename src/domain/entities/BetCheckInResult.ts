@@ -1,4 +1,6 @@
+import { BetStreakDuration } from './BetStreakDuration';
+
 export interface BetCheckInResult {
-  betStreak: number;
+  betStreak: BetStreakDuration;
   nextCheckInAt: string;
 }

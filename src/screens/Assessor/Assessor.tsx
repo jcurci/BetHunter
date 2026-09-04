@@ -44,8 +44,8 @@ LocaleConfig.defaultLocale = 'pt-br';
 import { Footer, IconCard, Modal, GradientButton } from "../../components";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
-import NovaEntradaIcon from "../../assets/meu-acessor/nova-entrada.svg";
-import NovaCategoriaIcon from "../../assets/meu-acessor/nova-categoria.svg";
+import NovaEntradaIcon from "../../assets/meu-assessor/nova-entrada.svg";
+import NovaCategoriaIcon from "../../assets/meu-assessor/nova-categoria.svg";
 
 // Import Clean Architecture dependencies
 import { Container } from "../../infrastructure/di/Container";
@@ -118,7 +118,7 @@ const getMonthDateRange = () => {
 };
 
 
-const Acessor: React.FC = () => {
+const Assessor: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<"mensal">("mensal");
 
   const navigation = useNavigation<NavigationProp>();
@@ -472,7 +472,7 @@ const Acessor: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title} numberOfLines={2} adjustsFontSizeToFit={false}>
-              Meu{"\n"}Acessor
+              Meu{"\n"}Assessor
             </Text>
           </View>
         </View>
@@ -1922,4 +1922,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Acessor;
+export default Assessor;

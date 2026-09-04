@@ -2,7 +2,7 @@ export interface RegisterRequest {
   email: string;
   name: string;
   username: string;
-  cellphone: string;
+  cellphone?: string;
   password: string;
   gambler?: boolean;
 }

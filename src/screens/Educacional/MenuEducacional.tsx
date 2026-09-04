@@ -16,7 +16,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import { Container } from "../../infrastructure/di/Container";
 import { useAuthStore } from "../../storage/authStore";
-import { useDashboardStore } from "../../storage/dashboardStore";
+import { useBetStreakDays, useDashboardStore } from "../../storage/dashboardStore";
 import { CourseProgress } from "../../domain/entities/CourseProgress";
 
 // Assets
@@ -36,7 +36,8 @@ const MenuEducacional: React.FC = () => {
   const user = useAuthStore((state) => state.user);
 
   // Dashboard store
-  const { dashboard, betStreak, isLoading, loadAll, loadError, clearLoadError } = useDashboardStore();
+  const { dashboard, isLoading, loadAll, loadError, clearLoadError } = useDashboardStore();
+  const betStreakDays = useBetStreakDays();
 
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
@@ -136,7 +137,7 @@ const MenuEducacional: React.FC = () => {
             <StatsDisplay
               loading={!statsReady}
               energy={statsReady && dashboard ? dashboard.energy : undefined}
-              streak={statsReady ? `${betStreak}d` : undefined}
+              streak={statsReady ? `${betStreakDays}d` : undefined}
             />
           </View>
         </View>
@@ -158,9 +159,9 @@ const MenuEducacional: React.FC = () => {
           ) : (
             <DayCounter
               useFireIcons={true}
-              activeFires={Math.min(betStreak, 7)}
+              activeFires={Math.min(betStreakDays, 7)}
               totalFires={7}
-              finalNumber={betStreak > 7 ? betStreak : undefined}
+              finalNumber={betStreakDays > 7 ? betStreakDays : undefined}
               style={styles.streakCounter}
             />
           )}

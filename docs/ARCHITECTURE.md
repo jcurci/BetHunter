@@ -274,7 +274,7 @@ ChangePassword      // Alterar senha
 Notifications       // Notificações
 
 // Other
-Acessor             // Assessor financeiro
+Assessor            // Controle financeiro
 EmConstrucao        // Tela placeholder
 ```
 
