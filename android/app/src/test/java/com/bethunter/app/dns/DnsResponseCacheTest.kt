@@ -107,4 +107,79 @@ class DnsResponseCacheTest {
     assertEquals(2, cache.size())
     assertNull(cache.get(parse(DnsFixtures.query(id = 4, name = "a.com"))))
   }
+
+  @Test
+  fun `cacheia NODATA pelo ttl do SOA`() {
+    val cache = cache()
+    // O navegador pergunta AAAA e HTTPS para todo host e recebe isto na maioria
+    // dos domínios. Recusar essas respostas era o que mandava ~2/3 das consultas
+    // à rede toda vez, com a proteção ligada parecendo lentidão do aparelho.
+    cache.put(
+      parse(DnsFixtures.query(id = 1, qType = 28)),
+      DnsFixtures.negativeResponse(id = 1, qType = 28, soaTtl = 300, soaMinimum = 120),
+    )
+    assertEquals(1, cache.size())
+
+    // Vale o MENOR entre o TTL do SOA e o campo MINIMUM (RFC 2308 §5): 120 s.
+    now = 119_999
+    assertNotNull(cache.get(parse(DnsFixtures.query(id = 2, qType = 28))))
+    now = 120_000
+    assertNull(cache.get(parse(DnsFixtures.query(id = 3, qType = 28))))
+  }
+
+  @Test
+  fun `cacheia NXDOMAIN vindo do upstream`() {
+    val cache = cache()
+    cache.put(
+      parse(DnsFixtures.query(id = 1)),
+      DnsFixtures.negativeResponse(id = 1, rcode = 3, soaTtl = 60, soaMinimum = 60),
+    )
+    assertEquals(1, cache.size())
+    assertNotNull(cache.get(parse(DnsFixtures.query(id = 2))))
+  }
+
+  @Test
+  fun `negativa sem SOA nao e cacheada`() {
+    val cache = cache()
+    // Sem SOA não há TTL negativo confiável, e chutar um valor fixo é como se
+    // quebra um domínio que acabou de subir.
+    cache.put(
+      parse(DnsFixtures.query(id = 1)),
+      DnsFixtures.negativeResponse(id = 1, includeSoa = false),
+    )
+    assertEquals(0, cache.size())
+  }
+
+  @Test
+  fun `negativa tem teto mais baixo que positiva`() {
+    val cache = cache()
+    val tenDays = 10 * 24 * 60 * 60
+    cache.put(
+      parse(DnsFixtures.query(id = 1)),
+      DnsFixtures.negativeResponse(id = 1, soaTtl = tenDays, soaMinimum = tenDays),
+    )
+
+    now = DnsResponseCache.MAX_NEGATIVE_TTL_MS - 1
+    assertNotNull(cache.get(parse(DnsFixtures.query(id = 2))))
+    now = DnsResponseCache.MAX_NEGATIVE_TTL_MS
+    assertNull(
+      "lembrar por muito tempo que algo nao existe quebra dominio novo",
+      cache.get(parse(DnsFixtures.query(id = 3))),
+    )
+  }
+
+  @Test
+  fun `nao cacheia resposta cortada no meio de um registro`() {
+    val cache = cache()
+    val full = DnsFixtures.response(id = 1, ttls = listOf(300))
+    // Simula o corte do kernel quando a resposta nao cabe no buffer de recepcao: o
+    // header continua intacto e plausivel (RCODE=0, ANCOUNT=1) e o bit TC NAO vem
+    // ligado. Uma checagem que so olhe o header aceita, devolve lixo ao cliente e
+    // ainda guarda por ate uma hora — era assim que um site quebrava e CONTINUAVA
+    // quebrado.
+    val chopped = full.copyOfRange(0, full.size - 5)
+
+    cache.put(parse(DnsFixtures.query(id = 1)), chopped)
+    assertEquals(0, cache.size())
+  }
 }

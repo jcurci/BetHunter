@@ -15,7 +15,7 @@
  * `blockerPromoSeenKey` da Home: duas contas no mesmo aparelho não herdam o
  * estado uma da outra.
  *
- * Nenhuma função aqui rejeita. Elas correm no caminho do check-in e da abertura
+ * Nenhuma função aqui rejeita. Elas correm no caminho da carga do contador e da abertura
  * do card — uma falha de AsyncStorage pode custar um selo a mais na tela, nunca
  * a ação que o usuário pediu.
  */

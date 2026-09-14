@@ -2,6 +2,9 @@
 
 Como o usuário transforma o "X dias sem apostar" numa imagem e manda pelo WhatsApp.
 
+De onde vem o número — consulta, cache e compatibilidade com o backend antigo —
+está em `contador-sem-apostar.md`.
+
 ## Fluxo
 
 Três entradas, todas passando por `openShareCardModal` na Home:
@@ -9,7 +12,7 @@ Três entradas, todas passando por `openShareCardModal` na Home:
 1. **Botão "Compartilhar"** na Home — só com `statsReady`.
 2. **Notificação** com `data.action: 'share'` → o listener do `App.tsx` navega
    `Home({ openShareCard: true })` → `useFocusEffect` abre o card.
-3. **Modal de marco**, logo depois de um check-in que bate um marco.
+3. **Modal de marco**, quando uma consulta ao contador cruza um marco.
 
 Daí em diante o caminho é um só:
 
@@ -53,12 +56,17 @@ lento de escala; os dois somem no primeiro toque, não no primeiro envio.
 | `share-invite` | a cada 7 dias, enquanto nunca tiver compartilhado | sim |
 | `daily-checkin` | 20h, todo dia — corpo menciona o card se nunca compartilhou | não |
 
+A chave `daily-checkin` sobreviveu ao fim do check-in de propósito: é por ela que
+`cancelScheduledByKey` acha os agendamentos que já estão nos aparelhos. Só o
+texto mudou.
+
 Marcos: **1, 3, 7, 14, 21, 30, 60, 90, 180, 365** (`MILESTONE_DAYS`). A Home usa
 a mesma lista para decidir o modal, então tela e notificação não divergem.
 
-O atraso de 4h no marco é o ponto: o check-in só acontece com o app em primeiro
-plano, então a notificação imediata (como era antes) aparecia por cima do próprio
-app. O modal cobre o "agora, no app"; a notificação cobre o "depois, fora dele".
+O atraso de 4h no marco é o ponto: o marco é detectado quando a Home consulta o
+contador, ou seja, com o app em primeiro plano — a notificação imediata (como era
+antes) aparecia por cima do próprio app. O modal cobre o "agora, no app"; a
+notificação cobre o "depois, fora dele".
 
 `share-invite` só é agendado com streak ≥ 3 (`SHARE_INVITE_MIN_STREAK`, na Home,
 que é onde o contador existe) e é cancelado no primeiro envio bem-sucedido.
@@ -111,7 +119,16 @@ achatados no PNG. Trocar o copy do CTA exige reexportar a arte **e** atualizar
 ### O contador
 
 Três grupos numa linha só — `33dias 19horas 32min` — vindos do
-`betStreak: { days, hours, minutes }` que a API devolve. Os três aparecem
+`betStreak: { days, hours, minutes }` que `GET /users/bet-streak` devolve. A
+duração é calculada no servidor no instante da consulta, e `openShareCardModal`
+reconsulta **antes** de abrir o card: sem isso a imagem sairia com o valor que
+estava em memória. Se essa consulta falhar o card não abre — erro de rede não é
+zero dia, e mandar o valor velho em silêncio seria pior do que não mandar.
+
+Se a rota nova responder 404 (backend ainda no modelo antigo), a consulta cai
+para `GET /users/bet-checkin` e aproveita só o `betStreak` de lá. Nesse modo o
+número vem do contador de check-ins, não de `bet_free_since_at` — é o que
+mantém o app de pé nos dois ambientes, não uma equivalência. Os três aparecem
 **sempre**, mesmo zerados, para a largura do card não dançar entre um
 compartilhamento e outro.
 

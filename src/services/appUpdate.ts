@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import { addUpdateListener, checkForUpdate, startUpdate } from 'expo-in-app-updates';
+
+type InAppUpdates = typeof import('expo-in-app-updates');
 
 /**
  * Atualização obrigatória via Google Play In-App Updates.
@@ -16,6 +17,32 @@ import { addUpdateListener, checkForUpdate, startUpdate } from 'expo-in-app-upda
  * trancado do lado de fora não consegue nem reativar a VPN, que exige
  * `VpnService.prepare()` por um toque na jornada da Home.
  */
+
+/**
+ * `expo-in-app-updates` resolve o módulo nativo já no topo do próprio arquivo
+ * (`requireNativeModule('ExpoInAppUpdates')`), então um `import` estático derruba
+ * o **bundle inteiro** em qualquer plataforma onde esse módulo não exista. No
+ * iOS o pod não está linkado (`ios/Podfile.lock` não tem `ExpoInAppUpdates`): a
+ * exceção sobe antes do primeiro render e, em Release, não há redbox para
+ * mostrá-la — o app abre numa tela preta e nada mais responde.
+ *
+ * Carregar sob demanda tira o import do caminho de boot do iOS. `isSupported()`
+ * já garante que só o Android chega até aqui, e o `catch` cobre o caso de o
+ * módulo sumir do build Android também: atualização é acessório, o app nunca
+ * pode morrer por causa dela.
+ */
+let cachedModule: InAppUpdates | null | undefined;
+
+function loadInAppUpdates(): InAppUpdates | null {
+  if (cachedModule !== undefined) return cachedModule;
+  try {
+    cachedModule = require('expo-in-app-updates') as InAppUpdates;
+  } catch (error) {
+    if (__DEV__) console.warn('[APP UPDATE] módulo nativo indisponível', error);
+    cachedModule = null;
+  }
+  return cachedModule;
+}
 
 /**
  * Quantas vezes a tela do Google é re-armada depois de o usuário cancelar, por
@@ -52,11 +79,11 @@ function isSupported(): boolean {
  * É este listener que faz a atualização ser obrigatória de fato: no fluxo
  * IMMEDIATE o usuário ainda consegue sair com o botão voltar, e aí a tela volta.
  */
-function registerCancelListener(): void {
+function registerCancelListener(inAppUpdates: InAppUpdates): void {
   if (listenerRegistered) return;
   listenerRegistered = true;
 
-  addUpdateListener('updateCancelled', () => {
+  inAppUpdates.addUpdateListener('updateCancelled', () => {
     if (rearmCount >= MAX_REARM_PER_SESSION) return;
     rearmCount += 1;
     setTimeout(() => {
@@ -77,11 +104,14 @@ export async function enforceUpdate(reason: string): Promise<void> {
   if (!isSupported()) return;
   if (inFlight) return;
 
+  const inAppUpdates = loadInAppUpdates();
+  if (!inAppUpdates) return;
+
   inFlight = true;
   try {
-    registerCancelListener();
+    registerCancelListener(inAppUpdates);
 
-    const info = await checkForUpdate();
+    const info = await inAppUpdates.checkForUpdate();
 
     // `updateInProgress` cobre o IMMEDIATE que ficou pela metade (usuário saiu no
     // meio do download): o Play pede que a retomada seja disparada de novo, e
@@ -90,7 +120,7 @@ export async function enforceUpdate(reason: string): Promise<void> {
 
     // `immediateAllowed` só vem undefined fora do Android, que já saiu no guard
     // acima. Na dúvida, IMMEDIATE — o flexible não bloqueia nada.
-    await startUpdate(info.immediateAllowed !== false);
+    await inAppUpdates.startUpdate(info.immediateAllowed !== false);
   } catch (error) {
     if (__DEV__) console.warn(`[APP UPDATE] ${reason}: falha ignorada`, error);
   } finally {

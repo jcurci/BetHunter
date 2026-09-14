@@ -28,6 +28,13 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
+    // Os testes de unidade exercitam classes que logam via android.util.Log, que no
+    // JVM lança "not mocked" e derruba o teste por um detalhe de infraestrutura.
+    // Com isto, chamadas a APIs do Android devolvem valor padrão em vez de explodir.
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
     ndkVersion rootProject.ext.ndkVersion
 
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -38,8 +45,8 @@ android {
         applicationId 'com.bethunter.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 31
-        versionName "1.1.8"
+        versionCode 32
+        versionName "1.2.0"
 
         // Testes instrumentados do bloqueador: rodam DENTRO do processo do app, que é
         // a única forma de exercitar o caminho de instalação nova (banco nascendo do

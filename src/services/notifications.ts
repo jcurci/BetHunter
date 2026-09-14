@@ -1,6 +1,12 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 
+/**
+ * O valor da chave continua "daily-checkin" apesar de o check-in ter acabado:
+ * `cancelScheduledByKey` a usa para achar agendamentos que já estão nos
+ * aparelhos. Trocar a string deixaria a notificação antiga órfã e impossível de
+ * cancelar em quem já tem o app instalado.
+ */
 const DAILY_REMINDER_KEY = "daily-checkin";
 const REENGAGEMENT_REMINDER_KEY = "reengagement";
 const SHARE_INVITE_KEY = "share-invite";
@@ -12,8 +18,8 @@ const SHARE_INVITE_KEY = "share-invite";
  */
 export const SHARE_ACTION = "share";
 
-const DAILY_TITLE = "Hora do check-in";
-const DAILY_BODY = "venha marcar mais um dia de vitoria";
+const DAILY_TITLE = "Seu contador segue de pe";
+const DAILY_BODY = "Veja quanto tempo voce ja segurou sem apostar.";
 /**
  * Variante para quem nunca compartilhou. O trigger DAILY é um só e não alterna
  * conteúdo entre disparos, então a escolha acontece na hora de agendar — e como
@@ -21,7 +27,7 @@ const DAILY_BODY = "venha marcar mais um dia de vitoria";
  * finalmente compartilha.
  */
 const DAILY_BODY_NEVER_SHARED =
-  "Marque mais um dia de vitoria — e mostre seu contador pra quem torce por voce.";
+  "Seu tempo livre de apostas segue crescendo — mostre seu contador pra quem torce por voce.";
 
 const REENGAGEMENT_FALLBACK_TITLE = "Sentimos sua falta";
 const REENGAGEMENT_BODY =
@@ -38,10 +44,11 @@ const SHARE_INVITE_SECONDS = 7 * 24 * 60 * 60;
 /**
  * Atraso entre bater o marco e a notificação chegar.
  *
- * O check-in só acontece com o app em primeiro plano, então uma notificação
- * imediata apareceria por cima do app que o usuário já está olhando — e do modal
- * de comemoração que a Home abre nesse mesmo instante. O modal cobre o "agora,
- * no app"; esta notificação cobre o "depois, fora do app".
+ * O marco é detectado quando a Home consulta o contador, ou seja, com o app em
+ * primeiro plano — uma notificação imediata apareceria por cima do app que o
+ * usuário já está olhando, e do modal de comemoração que a Home abre nesse mesmo
+ * instante. O modal cobre o "agora, no app"; esta notificação cobre o "depois,
+ * fora do app".
  */
 const MILESTONE_DELAY_SECONDS = 4 * 60 * 60;
 
@@ -140,12 +147,14 @@ export async function hasPermission(): Promise<boolean> {
 }
 
 /**
+ * Lembrete diário de voltar ao app e olhar o contador.
+ *
  * @param opts.neverShared Troca o corpo pela variante que menciona o card.
  *        Deliberadamente **sem** `SHARE_ACTION`: o trabalho principal desta
- *        notificação continua sendo o check-in, então o toque leva à Home
- *        normal, onde o CTA em destaque fecha o caminho.
+ *        notificação continua sendo trazer o usuário de volta, então o toque
+ *        leva à Home normal, onde o CTA em destaque fecha o caminho.
  */
-export async function scheduleDailyCheckInReminder(
+export async function scheduleDailyCounterReminder(
   opts?: { neverShared?: boolean },
 ): Promise<void> {
   await cancelScheduledByKey(DAILY_REMINDER_KEY);

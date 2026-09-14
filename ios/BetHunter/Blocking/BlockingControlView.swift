@@ -21,7 +21,8 @@ struct BlockingControlView: View {
 
   var body: some View {
     ZStack {
-      NavigationView {
+      // NavigationStack: no iPad o NavigationView vira split view e esconde a toolbar.
+      NavigationStack {
         List {
           statusSection
           if isDegraded { degradedSection }

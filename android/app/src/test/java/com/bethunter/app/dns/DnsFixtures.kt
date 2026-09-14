@@ -58,6 +58,56 @@ object DnsFixtures {
     return out.toByteArray()
   }
 
+  /**
+   * Resposta NEGATIVA: sem registro de resposta e com um SOA na seção de
+   * autoridade, que é de onde sai o TTL de uma negativa (RFC 2308).
+   *
+   * `rcode = 0` produz NODATA (o nome existe, mas não para este tipo) e `rcode = 3`
+   * produz NXDOMAIN. As duas formas são a maior fatia do tráfego real: o navegador
+   * pergunta AAAA e HTTPS para todo host, e na maioria dos domínios elas voltam
+   * assim.
+   */
+  fun negativeResponse(
+    id: Int,
+    name: String = "exemplo.com",
+    qType: Int = 1,
+    rcode: Int = 0,
+    soaTtl: Int = 300,
+    soaMinimum: Int = 120,
+    includeSoa: Boolean = true,
+  ): ByteArray {
+    val out = ByteArrayOutputStream()
+    out.writeShort(id)
+    out.writeShort(0x8180 or (rcode and 0x0F)) // QR=1, RD=1, RA=1
+    out.writeShort(1) // qdcount
+    out.writeShort(0) // ancount — é o que faz dela uma negativa
+    out.writeShort(if (includeSoa) 1 else 0) // nscount
+    out.writeShort(0) // arcount
+    out.writeName(name)
+    out.writeShort(qType)
+    out.writeShort(1)
+
+    if (includeSoa) {
+      val rdata = ByteArrayOutputStream().apply {
+        writeName("ns.exemplo.com")
+        writeName("hostmaster.exemplo.com")
+        writeInt(1)     // SERIAL
+        writeInt(3600)  // REFRESH
+        writeInt(600)   // RETRY
+        writeInt(86400) // EXPIRE
+        writeInt(soaMinimum)
+      }.toByteArray()
+
+      out.writeShort(0xC00C) // dono: ponteiro para o nome da pergunta
+      out.writeShort(6) // type SOA
+      out.writeShort(1) // class IN
+      out.writeInt(soaTtl)
+      out.writeShort(rdata.size)
+      out.write(rdata)
+    }
+    return out.toByteArray()
+  }
+
   private fun ByteArrayOutputStream.writeShort(value: Int) {
     write((value ushr 8) and 0xFF)
     write(value and 0xFF)

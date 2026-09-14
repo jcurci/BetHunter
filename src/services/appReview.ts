@@ -2,10 +2,9 @@
  * Pedido de avaliação na loja, disparado no pico emocional.
  *
  * O gatilho não é a abertura do app — ali o usuário quer chegar na tela, não
- * dar nota. É o instante em que ele acabou de confirmar o check-in e viu o
- * contador virar 2 dias livre de apostas: orgulho recém-produzido pelo próprio
- * app, e já filtrado (são dois check-ins separados por 24h, ninguém chega aqui
- * por acidente).
+ * dar nota. É o instante em que a Home consulta o contador e ele vira 2 dias
+ * livre de apostas: orgulho recém-produzido pelo próprio app, e já filtrado
+ * (são 48h seguradas, ninguém chega aqui por acidente).
  *
  * Por que 2 e não 1 ou 3: os dias 1, 3, 7, 14… são marcos
  * (`MILESTONE_DAYS` em `./notifications`) e a Home abre o modal de comemoração
@@ -19,8 +18,8 @@
  * Regra que atravessa o arquivo, igual à do `appUpdate.ts`: **nada aqui pode
  * derrubar o caminho do usuário**. Todas as funções são efeito colateral puro,
  * nenhuma rejeita, nenhuma devolve algo que valha a pena checar. Elas correm no
- * caminho do check-in — no pior caso o usuário perde um convite, nunca a ação
- * que ele pediu.
+ * caminho da carga do contador — no pior caso o usuário perde um convite, nunca
+ * a ação que ele pediu.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -54,7 +53,7 @@ export async function markReviewAsked(userId: string): Promise<void> {
   try {
     await AsyncStorage.setItem(askedKey(userId), "1");
   } catch {
-    // Ver nota no topo: falha aqui não pode derrubar o check-in.
+    // Ver nota no topo: falha aqui não pode derrubar a carga do contador.
   }
 }
 
@@ -62,7 +61,7 @@ export async function markReviewAsked(userId: string): Promise<void> {
  * Pede a avaliação, se for a hora e se ainda não pedimos.
  *
  * `>=` e não `===`: quem some por uma temporada e volta pode ter o `days` já
- * acima de 2 no check-in seguinte. Melhor entrar tarde no funil do que ser
+ * bem acima de 2 na consulta seguinte. Melhor entrar tarde no funil do que ser
  * pulado para sempre por um dia que nunca bateu exato.
  *
  * **Uma vez por usuário, para sempre.** A API do Play não conta se o diálogo
@@ -73,7 +72,7 @@ export async function markReviewAsked(userId: string): Promise<void> {
  * A flag é marcada só quando `requestReview()` **resolve**. No Android a
  * promise rejeita quando o Play recusa abrir o fluxo — é o que acontece num
  * build de dev ou num APK instalado fora da loja. Não marcar nesse caso é o que
- * dá ao usuário a chance real no próximo check-in, já com o app vindo da Play.
+ * dá ao usuário a chance real na próxima consulta, já com o app vindo da Play.
  */
 export async function maybeRequestReview(
   userId: string,

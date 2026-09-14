@@ -17,6 +17,17 @@ data class DnsMessage(
 )
 
 object DnsPacketParser {
+
+  /** Cabeçalho de um resource record já percorrido, com o RDATA localizado. */
+  private class RecordHeader(
+    val type: Int,
+    val ttl: Int,
+    val rdStart: Int,
+    val rdLength: Int,
+  )
+
+  private const val TYPE_SOA = 6
+
   fun parseQuery(payload: ByteArray, length: Int = payload.size): DnsMessage? {
     if (length < 12) return null
     val buf = ByteBuffer.wrap(payload, 0, length).order(ByteOrder.BIG_ENDIAN)
@@ -56,6 +67,42 @@ object DnsPacketParser {
   }
 
   /**
+   * A mensagem inteira fecha dentro de [length]?
+   *
+   * Existe por causa de um modo de falha silencioso: quando a resposta UDP é maior
+   * que o buffer de recepção, o kernel ENTREGA os primeiros bytes e descarta o
+   * resto, sem ligar o bit TC. O header continua íntegro e plausível — RCODE=0,
+   * ANCOUNT>0 — então uma checagem que só olhe o header aceita um pacote mutilado,
+   * devolve ao cliente (que o rejeita) e ainda o guarda no cache por até uma hora.
+   * Só percorrer todos os registros até o fim denuncia o corte.
+   */
+  fun isCompleteMessage(payload: ByteArray, length: Int = payload.size): Boolean {
+    if (length < 12) return false
+    return try {
+      val buf = ByteBuffer.wrap(payload, 0, length).order(ByteOrder.BIG_ENDIAN)
+      buf.short // id
+      buf.short // flags
+      val qdCount = buf.short.toInt() and 0xFFFF
+      val anCount = buf.short.toInt() and 0xFFFF
+      val nsCount = buf.short.toInt() and 0xFFFF
+      val arCount = buf.short.toInt() and 0xFFFF
+
+      repeat(qdCount) {
+        readName(payload, buf, depth = 0) ?: return false
+        if (buf.remaining() < 4) return false
+        buf.short // qtype
+        buf.short // qclass
+      }
+      repeat(anCount + nsCount + arCount) {
+        readRecord(payload, buf) ?: return false
+      }
+      true
+    } catch (e: Exception) {
+      false
+    }
+  }
+
+  /**
    * Menor TTL (em segundos) entre os registros de resposta, ou null quando não dá
    * para determinar com segurança.
    *
@@ -76,32 +123,104 @@ object DnsPacketParser {
       buf.short // arcount
       if (anCount <= 0) return null
 
-      repeat(qdCount) {
-        readName(payload, buf, depth = 0) ?: return null
-        if (buf.remaining() < 4) return null
-        buf.short // qtype
-        buf.short // qclass
-      }
+      if (!skipQuestions(payload, buf, qdCount)) return null
 
       var min = Int.MAX_VALUE
       repeat(anCount) {
-        readName(payload, buf, depth = 0) ?: return null
-        if (buf.remaining() < 10) return null
-        buf.short // type
-        buf.short // class
-        val ttl = buf.int
-        val rdLength = buf.short.toInt() and 0xFFFF
-        if (buf.remaining() < rdLength) return null
-        buf.position(buf.position() + rdLength)
+        val record = readRecord(payload, buf) ?: return null
         // TTL é unsigned de 32 bits; valor com o bit alto ligado chega negativo em
         // Kotlin e não é confiável — descarta a resposta inteira do cache.
-        if (ttl < 0) return null
-        if (ttl < min) min = ttl
+        if (record.ttl < 0) return null
+        if (record.ttl < min) min = record.ttl
       }
       if (min == Int.MAX_VALUE) null else min
     } catch (e: Exception) {
       null
     }
+  }
+
+  /**
+   * TTL para cachear uma resposta NEGATIVA (NXDOMAIN ou NODATA), lido do SOA que
+   * vem na seção de autoridade.
+   *
+   * RFC 2308 §5: o tempo de vida de uma negativa é o MENOR entre o TTL do próprio
+   * registro SOA e o campo MINIMUM dentro do RDATA dele. Sem isso, a alternativa
+   * seria um número fixo chutado — e cachear negativa por tempo demais é
+   * exatamente como se quebra um domínio que acabou de subir.
+   *
+   * Devolve null quando não há SOA ou o RDATA não pode ser lido com segurança; o
+   * chamador então simplesmente não cacheia.
+   */
+  fun negativeTtlSeconds(payload: ByteArray, length: Int = payload.size): Int? {
+    if (length < 12) return null
+    return try {
+      val buf = ByteBuffer.wrap(payload, 0, length).order(ByteOrder.BIG_ENDIAN)
+      buf.short // id
+      buf.short // flags
+      val qdCount = buf.short.toInt() and 0xFFFF
+      val anCount = buf.short.toInt() and 0xFFFF
+      val nsCount = buf.short.toInt() and 0xFFFF
+      buf.short // arcount
+      if (nsCount <= 0) return null
+
+      if (!skipQuestions(payload, buf, qdCount)) return null
+      repeat(anCount) { readRecord(payload, buf) ?: return null }
+
+      repeat(nsCount) {
+        val record = readRecord(payload, buf) ?: return null
+        if (record.type != TYPE_SOA) return@repeat
+        if (record.ttl < 0) return null
+        val minimum = soaMinimum(payload, record) ?: return null
+        if (minimum < 0) return null
+        return if (record.ttl < minimum) record.ttl else minimum
+      }
+      null
+    } catch (e: Exception) {
+      null
+    }
+  }
+
+  /**
+   * Campo MINIMUM do RDATA de um SOA: vem depois de MNAME e RNAME (nomes de
+   * tamanho variável, possivelmente comprimidos) e de quatro inteiros de 32 bits.
+   */
+  private fun soaMinimum(payload: ByteArray, record: RecordHeader): Int? {
+    if (record.rdLength < 22) return null
+    val rd = ByteBuffer.wrap(payload, 0, record.rdStart + record.rdLength)
+      .order(ByteOrder.BIG_ENDIAN)
+    rd.position(record.rdStart)
+    readName(payload, rd, depth = 0) ?: return null // MNAME
+    readName(payload, rd, depth = 0) ?: return null // RNAME
+    if (rd.remaining() < 20) return null
+    rd.int // SERIAL
+    rd.int // REFRESH
+    rd.int // RETRY
+    rd.int // EXPIRE
+    return rd.int // MINIMUM
+  }
+
+  private fun skipQuestions(packet: ByteArray, buf: ByteBuffer, qdCount: Int): Boolean {
+    repeat(qdCount) {
+      readName(packet, buf, depth = 0) ?: return false
+      if (buf.remaining() < 4) return false
+      buf.short // qtype
+      buf.short // qclass
+    }
+    return true
+  }
+
+  /** Percorre um resource record inteiro, deixando [buf] logo depois do RDATA. */
+  private fun readRecord(packet: ByteArray, buf: ByteBuffer): RecordHeader? {
+    readName(packet, buf, depth = 0) ?: return null
+    if (buf.remaining() < 10) return null
+    val type = buf.short.toInt() and 0xFFFF
+    buf.short // class
+    val ttl = buf.int
+    val rdLength = buf.short.toInt() and 0xFFFF
+    if (buf.remaining() < rdLength) return null
+    val rdStart = buf.position()
+    buf.position(rdStart + rdLength)
+    return RecordHeader(type = type, ttl = ttl, rdStart = rdStart, rdLength = rdLength)
   }
 
   private fun readName(packet: ByteArray, buf: ByteBuffer, depth: Int): String? {
@@ -147,4 +266,3 @@ object DnsPacketParser {
     return labels.joinToString(".")
   }
 }
-

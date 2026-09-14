@@ -56,16 +56,14 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
-    <key>NSCameraUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your camera</string>
     <key>NSFamilyControlsUsageDescription</key>
     <string>O BetHunter precisa de acesso ao Tempo de Uso para bloquear apps de apostas e proteger você.</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>O BetHunter usa a rede local para se conectar ao servidor de desenvolvimento durante os testes do app.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>O BetHunter salva na sua galeria a imagem do seu contador de dias sem apostar.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your photos</string>
+    <string>O BetHunter acessa suas fotos para você escolher a imagem do seu perfil.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>BGTaskSchedulerPermittedIdentifiers</key>
@@ -85,10 +83,15 @@
       <string>arm64</string>
     </array>
     <key>UIRequiresFullScreen</key>
-    <false/>
+    <true/>
     <key>UIStatusBarStyle</key>
     <string>UIStatusBarStyleDefault</string>
     <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
       <string>UIInterfaceOrientationPortraitUpsideDown</string>

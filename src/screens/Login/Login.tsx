@@ -32,7 +32,7 @@ import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-si
 import { ENV } from "../../config/env";
 import { identifyUser } from "../../services/revenueCat";
 import type { CustomerInfo } from "react-native-purchases";
-import { isOnboardingFlowCompleted } from "../OnboardingFlow/onboardingStorage";
+import { isOnboardingFlowCompleted, setOnboardingFlowCompleted } from "../OnboardingFlow/onboardingStorage";
 import { waitForRCSync } from "../../utils/waitForRCSync";
 
 const Login: React.FC = () => {
@@ -247,6 +247,9 @@ const Login: React.FC = () => {
           onboardingCompleted: session.user.onboarding_completed ?? false,
         };
         await authStore.login(session.accessToken, userMapeado);
+        // Login por e-mail é sempre de conta existente (o cadastro loga pelo
+        // SignUpPassword): onboarding é só para quem está criando a conta.
+        await setOnboardingFlowCompleted();
         userId = session.user.id;
       } else {
         await authStore.setToken(session.accessToken);

@@ -199,7 +199,7 @@ const MinhaConta: React.FC = () => {
                 onPress={() => navigation.navigate("SobreNos")}
               />
               {/*
-                Caminho manual de avaliação. O diálogo nativo que o check-in
+                Caminho manual de avaliação. O diálogo nativo que a carga do contador
                 dispara (ver services/appReview) tem quota própria e às vezes
                 simplesmente não aparece; este item é o que nunca falha.
               */}

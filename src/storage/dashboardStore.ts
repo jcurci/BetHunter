@@ -8,6 +8,14 @@ import {
 const TTL = 10 * 60 * 1000; // 10 minutos em milissegundos
 
 /**
+ * O contador agora é uma duração viva: o backend calcula a partir de
+ * `bet_free_since_at` no instante da consulta. Com o TTL de 10 min do dashboard
+ * a Home voltaria do segundo plano mostrando um valor velho, então o bet streak
+ * tem o seu próprio, bem mais curto.
+ */
+const BET_STREAK_TTL = 60 * 1000;
+
+/**
  * Interface do DashboardStore
  */
 interface DashboardStore {
@@ -16,8 +24,6 @@ interface DashboardStore {
   /** Tempo livre de apostas. A Home mostra só `days`; horas/minutos ficam
    *  disponíveis para o card de compartilhamento. */
   betStreak: BetStreakDuration;
-  canCheckIn: boolean;
-  nextCheckInAt: string | null;
   isLoading: boolean;
   loadError: string | null;
   lastFetchedDashboard: number | null;  // timestamp ms
@@ -27,8 +33,9 @@ interface DashboardStore {
   /** Com `force=true`, ignora TTL e atualiza dashboard + bet streak. */
   loadAll: (force?: boolean) => Promise<void>;
   loadDashboard: (force?: boolean) => Promise<void>;
-  loadBetStreak: (force?: boolean) => Promise<void>;
-  updateAfterCheckIn: (betStreak: BetStreakDuration, nextCheckInAt: string) => void;
+  /** Devolve a duração recém-gravada — o card de compartilhamento precisa do
+   *  valor fresco, não do que estiver no estado no momento da chamada. */
+  loadBetStreak: (force?: boolean) => Promise<BetStreakDuration>;
   clearLoadError: () => void;
   invalidate: () => void;               // zera timestamps → força refetch
 }
@@ -37,12 +44,30 @@ interface DashboardStore {
  * DashboardStore - Estado reativo de dashboard e bet streak
  * Usa Zustand para gerenciamento de estado com cache TTL de 10 minutos
  */
+/**
+ * Um `loadError` só deve sobreviver enquanto ainda falta dado na tela.
+ *
+ * Chamado no sucesso de cada carga. Sem isso o erro do boot ficava preso: as
+ * consultas de foco e de volta do segundo plano chamam `loadDashboard` /
+ * `loadBetStreak` direto, sem passar pelo `loadAll` — que é o único lugar que
+ * zerava o erro. O resultado era a Home mostrando o contador certo atrás de um
+ * alerta de falha que já não valia mais.
+ *
+ * A limpeza exige as **duas** fontes carregadas: se o dashboard continua
+ * quebrado, o erro tem de continuar à vista mesmo com o contador funcionando.
+ */
+function limparErroSeTudoCarregou(set: any, get: any): void {
+  const { lastFetchedDashboard, lastFetchedBetStreak, loadError } = get();
+  if (loadError && lastFetchedDashboard !== null && lastFetchedBetStreak !== null) {
+    console.log('✅ [DashboardStore] Dados completos, limpando erro anterior');
+    set({ loadError: null });
+  }
+}
+
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
   // State inicial
   dashboard: null,
   betStreak: { ...ZERO_BET_STREAK_DURATION },
-  canCheckIn: false,
-  nextCheckInAt: null,
   isLoading: false,
   loadError: null,
   lastFetchedDashboard: null,
@@ -65,7 +90,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     const needsBetStreak =
       force ||
       state.lastFetchedBetStreak === null ||
-      now - state.lastFetchedBetStreak >= TTL;
+      now - state.lastFetchedBetStreak >= BET_STREAK_TTL;
 
     // Se ambos ainda estão frescos, não faz nada
     if (!needsDashboard && !needsBetStreak) {
@@ -85,7 +110,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
       // Adiciona promise do bet streak se necessário
       if (needsBetStreak) {
-        promises.push(get().loadBetStreak(true));
+        promises.push(get().loadBetStreak(true).then(() => undefined));
       }
 
       // Executa em paralelo
@@ -125,6 +150,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         dashboard: { energy: result.energy, streak: result.streak },
         lastFetchedDashboard: now,
       });
+      limparErroSeTudoCarregou(set, get);
 
       console.log('✅ [DashboardStore] Dashboard carregado:', result);
     } catch (error: any) {
@@ -134,54 +160,42 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   /**
-   * Carrega dados do bet streak (/users/bet-checkin)
+   * Carrega dados do bet streak (GET /users/bet-streak).
+   *
+   * O backend é a única fonte do tempo acumulado — o store guarda o que veio e
+   * nada mais. Num erro a exceção sobe e o valor anterior **fica de pé**: falha
+   * de rede não é zero dia.
    */
   loadBetStreak: async (force = false) => {
     const state = get();
     const now = Date.now();
 
     // Verifica TTL a menos que seja forçado
-    if (!force && state.lastFetchedBetStreak !== null && 
-        (now - state.lastFetchedBetStreak) < TTL) {
+    if (!force && state.lastFetchedBetStreak !== null &&
+        (now - state.lastFetchedBetStreak) < BET_STREAK_TTL) {
       console.log('✅ [DashboardStore] Bet streak ainda fresco no cache');
-      return;
+      return state.betStreak;
     }
 
     try {
       console.log('🔗 [DashboardStore] Carregando bet streak...');
-      
+
       const container = Container.getInstance();
-      const useCase = container.getGetBetStreakStatusUseCase();
-      const result = await useCase.execute();
+      const useCase = container.getGetBetStreakUseCase();
+      const betStreak = await useCase.execute();
 
       set({
-        betStreak: result.betStreak,
-        canCheckIn: result.canCheckIn,
-        nextCheckInAt: result.nextCheckInAt,
+        betStreak,
         lastFetchedBetStreak: now,
       });
+      limparErroSeTudoCarregou(set, get);
 
-      console.log('✅ [DashboardStore] Bet streak carregado:', result);
+      console.log('✅ [DashboardStore] Bet streak carregado:', betStreak);
+      return betStreak;
     } catch (error: any) {
       console.error('❌ [DashboardStore] Erro ao carregar bet streak:', error?.message ?? error);
       throw error;
     }
-  },
-
-  /**
-   * Atualiza o store localmente após check-in bem-sucedido
-   * Evita nova chamada de API
-   */
-  updateAfterCheckIn: (betStreak: BetStreakDuration, nextCheckInAt: string) => {
-    console.log('✅ [DashboardStore] Atualizando após check-in:', { betStreak, nextCheckInAt });
-    
-    set({
-      betStreak,
-      canCheckIn: false, // Após check-in, não pode mais fazer check-in hoje
-      nextCheckInAt,
-      // Mantém o timestamp do bet streak como se tivesse sido buscado agora
-      lastFetchedBetStreak: Date.now(),
-    });
   },
 
   clearLoadError: () => set({ loadError: null }),
@@ -196,8 +210,6 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     set({
       dashboard: null,
       betStreak: { ...ZERO_BET_STREAK_DURATION },
-      canCheckIn: false,
-      nextCheckInAt: null,
       lastFetchedDashboard: null,
       lastFetchedBetStreak: null,
     });

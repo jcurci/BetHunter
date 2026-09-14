@@ -1,18 +1,15 @@
 import { BetStreakRepository } from '../../repositories/BetStreakRepository';
+import { BetStreakDuration } from '../../entities/BetStreakDuration';
 import { BetStreakApi } from '../../../infrastructure/services/BetStreak.api';
 
 export class BetStreakRepositoryImpl implements BetStreakRepository {
   constructor(private betStreakApi: BetStreakApi) {}
 
-  async getStatus() {
-    return await this.betStreakApi.getStatus();
+  async getBetStreak(): Promise<BetStreakDuration> {
+    return await this.betStreakApi.getBetStreak();
   }
 
-  async checkIn() {
-    return await this.betStreakApi.checkIn();
-  }
-
-  async reset() {
+  async reset(): Promise<{ success: boolean }> {
     return await this.betStreakApi.reset();
   }
 }

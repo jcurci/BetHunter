@@ -1,8 +1,6 @@
-import { BetCheckInResult } from '../entities/BetCheckInResult';
-import { BetCheckInStatus } from '../entities/BetCheckInStatus';
+import { BetStreakDuration } from '../entities/BetStreakDuration';
 
 export interface BetStreakRepository {
-  getStatus(): Promise<BetCheckInStatus>;
-  checkIn(): Promise<BetCheckInResult>;
+  getBetStreak(): Promise<BetStreakDuration>;
   reset(): Promise<{ success: boolean }>;
 }

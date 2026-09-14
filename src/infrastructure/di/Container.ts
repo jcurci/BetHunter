@@ -8,8 +8,7 @@ import { RegisterRepositoryImpl } from "../../domain/data/repositories/RegisterR
 import { RegisterApi } from "../services/Register.api";
 
 // Bet Streak imports
-import { BetCheckInUseCase } from "../../domain/usercases/BetCheckInUseCase";
-import { GetBetStreakStatusUseCase } from "../../domain/usercases/GetBetStreakStatusUseCase";
+import { GetBetStreakUseCase } from "../../domain/usercases/GetBetStreakUseCase";
 import { ResetBetStreakUseCase } from "../../domain/usercases/ResetBetStreakUseCase";
 import { BetStreakRepositoryImpl } from "../../domain/data/repositories/BetStreakRepositoryImpl";
 import { BetStreakApi } from "../services/BetStreak.api";
@@ -89,8 +88,8 @@ export class Container {
   private registerUseCase: RegisterUseCase | null = null;
 
   // Bet Streak use cases
-  private betCheckInUseCase: BetCheckInUseCase | null = null;
-  private getBetStreakStatusUseCase: GetBetStreakStatusUseCase | null = null;
+  private betStreakRepository: BetStreakRepositoryImpl | null = null;
+  private getBetStreakUseCase: GetBetStreakUseCase | null = null;
   private resetBetStreakUseCase: ResetBetStreakUseCase | null = null;
 
   // Financial use cases
@@ -174,31 +173,27 @@ export class Container {
   }
 
   // Bet Streak use cases
-  getGetBetStreakStatusUseCase(): GetBetStreakStatusUseCase {
-    if (!this.getBetStreakStatusUseCase) {
-      const betStreakApi = new BetStreakApi();
-      const betStreakRepository = new BetStreakRepositoryImpl(betStreakApi);
-      this.getBetStreakStatusUseCase = new GetBetStreakStatusUseCase(betStreakRepository);
+  // Consulta e reset falam com o mesmo endpoint base, então dividem uma
+  // instância só de api/repositório — antes cada getter construía o seu par.
+  private getBetStreakRepository(): BetStreakRepositoryImpl {
+    if (!this.betStreakRepository) {
+      this.betStreakRepository = new BetStreakRepositoryImpl(new BetStreakApi());
     }
 
-    return this.getBetStreakStatusUseCase;
+    return this.betStreakRepository;
   }
 
-  getBetCheckInUseCase(): BetCheckInUseCase {
-    if (!this.betCheckInUseCase) {
-      const betStreakApi = new BetStreakApi();
-      const betStreakRepository = new BetStreakRepositoryImpl(betStreakApi);
-      this.betCheckInUseCase = new BetCheckInUseCase(betStreakRepository);
+  getGetBetStreakUseCase(): GetBetStreakUseCase {
+    if (!this.getBetStreakUseCase) {
+      this.getBetStreakUseCase = new GetBetStreakUseCase(this.getBetStreakRepository());
     }
 
-    return this.betCheckInUseCase;
+    return this.getBetStreakUseCase;
   }
 
   getResetBetStreakUseCase(): ResetBetStreakUseCase {
     if (!this.resetBetStreakUseCase) {
-      const betStreakApi = new BetStreakApi();
-      const betStreakRepository = new BetStreakRepositoryImpl(betStreakApi);
-      this.resetBetStreakUseCase = new ResetBetStreakUseCase(betStreakRepository);
+      this.resetBetStreakUseCase = new ResetBetStreakUseCase(this.getBetStreakRepository());
     }
 
     return this.resetBetStreakUseCase;

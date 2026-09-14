@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import type { AcquisitionSourceRepository } from '../repositories/AcquisitionSourceRepository';
 import { ValidationError } from '../errors/CustomErrors';
 
@@ -44,8 +42,6 @@ export class SubmitAcquisitionSourceUseCase {
         source === 'OUTRO'
           ? input.sourceOther?.trim().slice(0, 60) || null
           : null,
-      platform: Platform.OS,
-      appVersion: Constants.expoConfig?.version ?? undefined,
     });
   }
 }

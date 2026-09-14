@@ -74,7 +74,7 @@ import * as ExpoNotifications from "expo-notifications";
 import {
   configureNotifications,
   hasPermission,
-  scheduleDailyCheckInReminder,
+  scheduleDailyCounterReminder,
   scheduleReengagementReminder,
   SHARE_ACTION,
 } from "./src/services/notifications";
@@ -168,7 +168,7 @@ const App: React.FC = () => {
               // menciona o card. Reagendado a cada boot, então volta ao texto
               // normal sozinho depois do primeiro envio.
               const neverShared = !(await hasShared(user.id));
-              await scheduleDailyCheckInReminder({ neverShared });
+              await scheduleDailyCounterReminder({ neverShared });
               await scheduleReengagementReminder(user.name);
             }
           } catch (notificationsError) {

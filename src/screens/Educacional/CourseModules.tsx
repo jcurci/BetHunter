@@ -198,7 +198,7 @@ const CourseModules: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const hasDataRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const [dashboard, setDashboard] = useState<{ energy: number; streak: number } | null>(null);
+  const [dashboard, setDashboard] = useState<{ energy: number } | null>(null);
   const [statsReady, setStatsReady] = useState(false);
   const [modulesCompletedCount, setModulesCompletedCount] = useState(initialModulesCompleted);
   const completedFallbackRef = useRef(initialModulesCompleted);
@@ -219,20 +219,14 @@ const CourseModules: React.FC = () => {
     try {
       const container = Container.getInstance();
       let energy = 0;
-      let streak = 0;
       try {
         const dash = await container.getLoadDashboardUseCase().execute();
         energy = dash.energy;
       } catch {
         /* energia não crítica */
       }
-      try {
-        const bet = await container.getGetBetStreakStatusUseCase().execute();
-        streak = bet.betStreak.days;
-      } catch {
-        /* streak não crítico */
-      }
-      setDashboard({ energy, streak });
+      // Só energia: o streak do header vem de `useBetStreakDays()`, do store.
+      setDashboard({ energy });
     } catch {
       // Non-critical
     }

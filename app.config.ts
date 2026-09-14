@@ -179,7 +179,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     {
       savePhotosPermission:
         'O BetHunter salva na sua galeria a imagem do seu contador de dias sem apostar.',
-      photosPermission: false,
+      // Leitura É usada: `DetalhesPessoais` chama
+      // `ImagePicker.requestMediaLibraryPermissionsAsync()` para a foto de perfil.
+      // Com `false` o plugin removeria `NSPhotoLibraryUsageDescription` e esse
+      // pedido viraria crash. Mantém as duas strings em sincronia com o
+      // `ios/BetHunter/Info.plist`, que é quem vale (prebuild não roda).
+      photosPermission:
+        'O BetHunter acessa suas fotos para você escolher a imagem do seu perfil.',
       granularPermissions: ['photo'],
       isAccessMediaLocationEnabled: false,
     },

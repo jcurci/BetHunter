@@ -42,6 +42,20 @@ public class AppDelegate: ExpoAppDelegate {
       withModuleName: "main",
       in: window,
       launchOptions: launchOptions)
+
+    // `startReactNative` troca a launch storyboard pela root view do RN ainda
+    // aqui dentro, de forma síncrona. Na prática a storyboard nunca chega a ser
+    // desenhada: o que aparece enquanto o bundle JS não pintou o primeiro frame
+    // é o fundo desta view — e o padrão dela é **preto puro**.
+    //
+    // Num boot saudável isso dura ~300 ms e ninguém nota. Quando algo atrasa ou
+    // quebra a montagem do RN, vira uma tela preta com a status bar por cima,
+    // indistinguível de um aparelho morto — exatamente a captura que a App
+    // Review anexou na rejeição 2.1(a) de 02/09/2026. Pintar de
+    // `SplashScreenBackground` faz esse mesmo estado parecer um splash da marca.
+    let launchBackground = UIColor(named: "SplashScreenBackground") ?? .black
+    window?.backgroundColor = launchBackground
+    window?.rootViewController?.view.backgroundColor = launchBackground
 #endif
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

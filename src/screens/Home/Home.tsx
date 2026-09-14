@@ -62,19 +62,17 @@ import { useCoursesStore, selectCurrentCourse } from "../../storage/coursesStore
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
 import {
   cancelShareInvite,
-  isMilestone,
-  scheduleMilestoneShareInvite,
   scheduleShareInvite,
 } from "../../services/notifications";
 import {
   hasSeenShare,
   hasShared,
-  lastCelebratedMilestone,
   markShared,
   markShareSeen,
   setCelebratedMilestone,
 } from "../../services/shareDiscovery";
-import { maybeRequestReview } from "../../services/appReview";
+import BetStreakCounter from "./BetStreakCounter";
+import { useBetStreakCounter } from "./useBetStreakCounter";
 
 // Constants
 const GRADIENT_HEIGHT_EXPANDED = 450;
@@ -181,26 +179,15 @@ const Home: React.FC = () => {
   // Dashboard store
   const {
     dashboard,
-    canCheckIn,
     isLoading,
     loadAll,
     loadDashboard,
     loadBetStreak,
     loadError,
     clearLoadError,
-    updateAfterCheckIn
   } = useDashboardStore();
   const betStreakDays = useBetStreakDays();
-  const betStreakDuracaoReal = useDashboardStore((s) => s.betStreak);
-  // ⚠️ MOCK TEMPORÁRIO — REMOVER DEPOIS.
-  // Contador congelado só para tirar print da tela de compartilhar.
-  // Base: 21 dias em 21/07/2026 → +36 dias até 26/08/2026 = 57 dias.
-  // Para voltar ao normal: apague este bloco e renomeie `betStreakDuracaoReal`
-  // de volta para `betStreakDuracao`.
-  const MOCK_SHARE_CARD = true;
-  const betStreakDuracao = MOCK_SHARE_CARD
-    ? { days: 57, hours: 23, minutes: 46 }
-    : betStreakDuracaoReal;
+  const betStreakDuracao = useDashboardStore((s) => s.betStreak);
 
   const [hasBooted, setHasBooted] = useState<boolean>(sessionBooted);
 
@@ -661,11 +648,28 @@ const Home: React.FC = () => {
     clearLoadError();
   }, [retryCallback, clearLoadError]);
 
+  /**
+   * Espelha o erro de carga no modal — nos dois sentidos.
+   *
+   * A volta importa tanto quanto a ida: as consultas de foco e de retorno do
+   * segundo plano resolvem sozinhas o erro do boot, e sem fechar o modal a Home
+   * ficava mostrando o contador certo atrás de um alerta de falha antigo, com a
+   * mensagem congelada da tentativa anterior.
+   */
+  const erroDeCargaVisivelRef = useRef<boolean>(false);
+
   useEffect(() => {
     if (loadError) {
+      erroDeCargaVisivelRef.current = true;
       triggerError(loadError, async () => {
         await Promise.all([loadDashboard(true), loadBetStreak(true)]);
       });
+      return;
+    }
+
+    if (erroDeCargaVisivelRef.current) {
+      erroDeCargaVisivelRef.current = false;
+      setShowErrorModal(false);
     }
   }, [loadError, triggerError, loadDashboard, loadBetStreak]);
 
@@ -789,9 +793,6 @@ const Home: React.FC = () => {
   // antigo de propósito — senão a base instalada perderia o aviso em silêncio.
   const canShowReinforcementBanners = !bannersHeld && setupOutcome !== "completed";
 
-  const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
-  const [showAlreadyMarkedModal, setShowAlreadyMarkedModal] = useState<boolean>(false);
-  const [isCheckInSubmitting, setIsCheckInSubmitting] = useState<boolean>(false);
 
   // Blocker promo modal — exibido apenas no primeiro acesso
   const [showBlockerPromoModal, setShowBlockerPromoModal] = useState<boolean>(false);
@@ -799,6 +800,28 @@ const Home: React.FC = () => {
   
   // Calcula statsReady baseado no store
   const statsReady = !isLoading && dashboard !== null;
+  /**
+   * O contador tem uma prontidão própria, separada da do dashboard.
+   *
+   * `statsReady` olha o dashboard (energia e afins). Quando ele carrega e a
+   * consulta do contador falha, o estado inicial `days: 0` vazaria para a tela
+   * como se fosse um valor real — era o "0 dias" aparecendo junto com o modal de
+   * erro. `lastFetchedBetStreak` é o que separa "o usuário está em zero dia" de
+   * "ainda não sabemos": só deixa de ser null quando uma consulta volta.
+   */
+  const betStreakCarregado = useDashboardStore((s) => s.lastFetchedBetStreak !== null);
+  const contadorPronto = statsReady && betStreakCarregado;
+
+  /**
+   * Orquestração do contador: refetch no foco e na volta do segundo plano,
+   * refetch antes do card, e os gatilhos de marco/avaliação. Fica fora deste
+   * arquivo porque é a única parte da Home que precisa de teste isolado.
+   */
+  const { prepararCompartilhamento } = useBetStreakCounter({
+    userId: user?.id ?? null,
+    statsReady,
+    onMilestone: setMilestoneToCelebrate,
+  });
 
   const [greetingLine, setGreetingLine] = useState<string>(() => periodGreetingLabel());
 
@@ -853,14 +876,28 @@ const Home: React.FC = () => {
   // um deles. Ver docs/share-card-contador.md.
   // ---------------------------------------------------------------------------
 
-  /** Único ponto de abertura do card. */
-  const openShareCardModal = useCallback((): void => {
+  /**
+   * Único ponto de abertura do card.
+   *
+   * Reconsulta o contador **antes** de abrir. O card mostra dias, horas e
+   * minutos, e a resposta é calculada no instante da consulta — abrir com o
+   * valor que estava em memória mandaria uma imagem defasada.
+   *
+   * Se a consulta falhar, o card **não abre**: um erro de rede não é zero dia, e
+   * compartilhar o valor velho em silêncio seria pior do que não compartilhar.
+   */
+  const openShareCardModal = useCallback(async (): Promise<void> => {
+    const duracao = await prepararCompartilhamento();
+    if (duracao === null) {
+      triggerError('Não foi possível atualizar seu contador. Tente novamente.');
+      return;
+    }
     if (user?.id) {
       setShareIsNew(false);
       void markShareSeen(user.id);
     }
     setShowShareModal(true);
-  }, [user?.id]);
+  }, [user?.id, prepararCompartilhamento, triggerError]);
 
   // Selo "Novo" enquanto o usuário nunca tiver aberto o card.
   useEffect(() => {
@@ -912,17 +949,17 @@ const Home: React.FC = () => {
     useCallback(() => {
       if (route.params?.openShareCard !== true) return;
       navigation.setParams({ openShareCard: undefined });
-      if (statsReady) openShareCardModal();
+      if (contadorPronto) void openShareCardModal();
       else pendingShareRef.current = true;
-    }, [navigation, route.params?.openShareCard, statsReady, openShareCardModal]),
+    }, [navigation, route.params?.openShareCard, contadorPronto, openShareCardModal]),
   );
 
   // Descarrega a intenção pendente assim que o contador fica pronto.
   useEffect(() => {
-    if (!statsReady || !pendingShareRef.current) return;
+    if (!contadorPronto || !pendingShareRef.current) return;
     pendingShareRef.current = false;
-    openShareCardModal();
-  }, [statsReady, openShareCardModal]);
+    void openShareCardModal();
+  }, [contadorPronto, openShareCardModal]);
 
   /**
    * Convite recorrente para quem nunca compartilhou.
@@ -933,12 +970,12 @@ const Home: React.FC = () => {
    * chegou aqui com a flag já marcada.
    */
   useEffect(() => {
-    if (!statsReady || !user?.id) return;
+    if (!contadorPronto || !user?.id) return;
     if (betStreakDays < SHARE_INVITE_MIN_STREAK) return;
     hasShared(user.id)
       .then((ja) => (ja ? cancelShareInvite() : scheduleShareInvite()))
       .catch(() => {});
-  }, [statsReady, user?.id, betStreakDays]);
+  }, [contadorPronto, user?.id, betStreakDays]);
 
   /** Envio concluído: para o convite recorrente de vez. */
   const handleShared = useCallback((): void => {
@@ -957,7 +994,7 @@ const Home: React.FC = () => {
     dismissMilestone();
     // Mesma precaução do handleBlockerPromoActivate: sem esperar o primeiro
     // modal terminar de fechar, o Android engole o segundo.
-    InteractionManager.runAfterInteractions(() => openShareCardModal());
+    InteractionManager.runAfterInteractions(() => void openShareCardModal());
   }, [dismissMilestone, openShareCardModal]);
 
   useFocusEffect(
@@ -993,80 +1030,8 @@ const Home: React.FC = () => {
   }, []);
 
 
-  const handleDaysPress = () => {
-    if (canCheckIn) {
-      setShowCheckInModal(true);
-    } else {
-      setShowAlreadyMarkedModal(true);
-    }
-  };
-
-  /**
-   * Fecha o ciclo de um marco recém-batido: modal agora, notificação depois.
-   *
-   * O check-in só acontece com o app aberto, então a comemoração imediata é o
-   * modal. A notificação vai agendada com atraso para alcançar o usuário fora do
-   * app — antes ela disparava na hora e aparecia por cima do próprio app.
-   *
-   * O guard é `>` contra o maior marco já comemorado: quem reseta o contador e
-   * volta a subir não recebe o mesmo modal de novo, mas recebe o próximo.
-   */
-  const celebrateMilestone = async (days: number): Promise<boolean> => {
-    if (!isMilestone(days) || !user?.id) return false;
-    if (days <= (await lastCelebratedMilestone(user.id))) return false;
-    setMilestoneToCelebrate(days);
-    await scheduleMilestoneShareInvite(days);
-    return true;
-  };
-
-  /**
-   * Pede avaliação na loja logo depois do check-in — o pico emocional do app.
-   *
-   * Roda em `runAfterInteractions` pela mesma razão do `handleCelebrateShare`:
-   * o `setShowCheckInModal(false)` ainda está animando e o Android engole um
-   * diálogo aberto por cima de um modal que está fechando. A regra de quando
-   * disparar (dia 2, uma vez só) mora inteira no serviço.
-   *
-   * `celebrouMarco` é o único caso em que o convite é abortado: a tela já está
-   * ocupada pelo modal de conquista, e o diálogo da loja subiria por cima dele.
-   * Quem cair exatamente num marco é convidado no próximo check-in comum — a
-   * flag do serviço só é gravada quando o diálogo realmente vai ao ar.
-   */
-  const inviteReview = (days: number, celebrouMarco: boolean): void => {
-    if (celebrouMarco || !user?.id) return;
-    const userId = user.id;
-    InteractionManager.runAfterInteractions(() => {
-      void maybeRequestReview(userId, days);
-    });
-  };
-
-  const handleCheckIn = async () => {
-    setShowCheckInModal(false);
-    setIsCheckInSubmitting(true);
-    try {
-      const container = Container.getInstance();
-      const result = await container.getBetCheckInUseCase().execute();
-      updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
-      const celebrou = await celebrateMilestone(result.betStreak.days);
-      inviteReview(result.betStreak.days, celebrou);
-    } catch (error: any) {
-      console.log("BetCheckIn POST:", error?.message ?? error);
-      triggerError('Não foi possível registrar o check-in. Tente novamente.', async () => {
-        setIsCheckInSubmitting(true);
-        try {
-          const container = Container.getInstance();
-          const result = await container.getBetCheckInUseCase().execute();
-          updateAfterCheckIn(result.betStreak, result.nextCheckInAt);
-          const celebrou = await celebrateMilestone(result.betStreak.days);
-          inviteReview(result.betStreak.days, celebrou);
-        } finally {
-          setIsCheckInSubmitting(false);
-        }
-      });
-    } finally {
-      setIsCheckInSubmitting(false);
-    }
-  };
+  /** "Apostei": o toque no contador leva à mesma confirmação do botão Resetar. */
+  const handleDaysPress = () => setShowResetModal(true);
 
   /**
    * Passo "intro" da jornada: pede o consentimento de VPN ao Android e, ao ser
@@ -1271,67 +1236,20 @@ const Home: React.FC = () => {
       <StatsDisplay 
         loading={!statsReady}
         energy={statsReady && dashboard ? dashboard.energy : undefined}
-        streak={statsReady ? `${betStreakDays}d` : undefined}
+        streak={contadorPronto ? `${betStreakDays}d` : undefined}
       />
     </View>
   );
 
-  const renderGradientText = (text: string, style: object) => (
-    <MaskedView
-      maskElement={
-        <Text style={[style, { backgroundColor: "transparent" }]}>{text}</Text>
-      }
-    >
-      <LinearGradient
-        colors={HORIZONTAL_GRADIENT_COLORS}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      >
-        <Text style={[style, { opacity: 0 }]}>{text}</Text>
-      </LinearGradient>
-    </MaskedView>
-  );
-
   const renderFreeOfBetDaysDisplay = () => (
     <View style={styles.freeOfBetDaysContainer}>
-      <Text style={styles.freeOfBetDaysLabel}>
-        Você está livre de apostas por:
-      </Text>
-      <TouchableOpacity
-        onPress={statsReady ? handleDaysPress : undefined}
-        activeOpacity={statsReady && canCheckIn ? 0.7 : 1}
-        disabled={!statsReady || isCheckInSubmitting}
-        style={styles.freeOfBetDaysValueWrapper}
-      >
-        {!statsReady ? (
-          <View style={styles.daysSkeleton}>
-            <View style={styles.daysNumberPlaceholder} />
-            <View style={styles.daysUnitPlaceholder} />
-          </View>
-        ) : isCheckInSubmitting ? (
-          <ActivityIndicator size="small" color="#B8A8E8" />
-        ) : (
-          <>
-            {/* betStreak inicia em 0, se loadBetStreak falhar mantém 0 - fallback honesto */}
-            {renderGradientText(`${betStreakDays}`, styles.freeOfBetDaysNumber)}
-            {renderGradientText(
-              betStreakDays === 1 ? " dia" : " dias",
-              styles.freeOfBetDaysUnit
-            )}
-          </>
-        )}
-      </TouchableOpacity>
-      {statsReady && canCheckIn && (
-        <TouchableOpacity
-          onPress={handleDaysPress}
-          activeOpacity={0.7}
-          style={styles.checkInHint}
-        >
-          <Text style={styles.checkInHintText}>Toque para marcar se apostou hoje</Text>
-        </TouchableOpacity>
-      )}
-      {/* Só com statsReady: sem isso o card sairia com o 0 do estado de loading. */}
-      {statsReady && (
+      <BetStreakCounter
+        days={betStreakDays}
+        statsReady={contadorPronto}
+        onPress={handleDaysPress}
+      />
+      {/* Só com o contador carregado: sem isso o card sairia com o 0 do loading. */}
+      {contadorPronto && (
         <Animated.View
           style={{
             transform: [
@@ -1345,7 +1263,7 @@ const Home: React.FC = () => {
           }}
         >
           <TouchableOpacity
-            onPress={openShareCardModal}
+            onPress={() => void openShareCardModal()}
             activeOpacity={0.85}
             style={styles.shareButton}
             accessibilityRole="button"
@@ -2156,56 +2074,6 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
         </View>
       </Modal>
 
-      {/* Modal de Check-in (Apostou / Não apostei) */}
-      <Modal
-        visible={showCheckInModal}
-        onClose={() => setShowCheckInModal(false)}
-        size="small"
-        title="Marcar check-in"
-        subtitle="Você apostou hoje?"
-      >
-        <View style={styles.checkInModalContent}>
-          <GradientBorderButton
-            label="Não apostei"
-            onPress={handleCheckIn}
-            loading={isCheckInSubmitting}
-          />
-          <GradientBorderButton
-            label="Apostou"
-            onPress={async () => {
-              try {
-                const container = Container.getInstance();
-                await container.getResetBetStreakUseCase().execute();
-                setShowCheckInModal(false);
-                setShowResetConfirmModal(true);
-                loadAll(true).catch(() => {});
-              } catch (error: any) {
-                console.log("BetCheckIn apostou (reset):", error?.message ?? error);
-                setShowCheckInModal(false);
-                triggerError();
-              }
-            }}
-            disabled={isCheckInSubmitting}
-          />
-        </View>
-      </Modal>
-
-      {/* Modal Já marcado */}
-      <Modal
-        visible={showAlreadyMarkedModal}
-        onClose={() => setShowAlreadyMarkedModal(false)}
-        size="small"
-        title="Já marcado"
-        subtitle="Já foi marcado. Aguarde 1 dia para marcar novamente."
-      >
-        <View style={styles.resetModalContent}>
-          <GradientBorderButton
-            label="Entendi"
-            onPress={() => setShowAlreadyMarkedModal(false)}
-          />
-        </View>
-      </Modal>
-
       {/* Modal de Erro */}
       <Modal
         visible={showErrorModal}
@@ -2344,29 +2212,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 12,
   },
-  freeOfBetDaysLabel: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    textAlign: "center",
-    fontWeight: "500",
-    marginBottom: 8,
-  },
-  freeOfBetDaysValueWrapper: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    flexWrap: "wrap",
-  },
-  checkInHint: {
-    marginTop: 10,
-    paddingHorizontal: 4,
-  },
-  checkInHintText: {
-    color: "#B8B3BF",
-    fontSize: 13,
-    fontWeight: "500",
-    textAlign: "center",
-  },
   // O CTA precisa competir com o contador logo acima dele, que é o maior
   // elemento da tela. O que resolve isso é a moldura em gradiente: o pill
   // anterior tinha borda #373344 chapada e sumia contra o fundo da Home.
@@ -2412,32 +2257,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
-  },
-  freeOfBetDaysNumber: {
-    fontSize: 56,
-    fontWeight: "bold",
-  },
-  freeOfBetDaysUnit: {
-    fontSize: 56,
-    fontWeight: "bold",
-    marginLeft: 4,
-  },
-  daysSkeleton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  daysNumberPlaceholder: {
-    width: 80,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  daysUnitPlaceholder: {
-    width: 120,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginLeft: 4,
   },
 
   // Free of Bet Box Styles
@@ -2857,10 +2676,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 8,
     width: "100%",
-  },
-  checkInModalContent: {
-    alignItems: "center",
-    gap: 12,
   },
   resetConfirmModalContent: {
     display: "none",

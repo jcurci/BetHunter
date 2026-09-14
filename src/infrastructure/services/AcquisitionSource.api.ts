@@ -7,11 +7,11 @@ export class AcquisitionSourceApi {
     try {
       // Spreads condicionais: o ValidationPipe do backend usa
       // forbidNonWhitelisted, e mandar `sourceOther: null` seria campo extra.
-      await apiClient.post('/acquisition-sources', {
+      // PUT porque é idempotente: o retry da CelebrationScreen e um onboarding
+      // refeito só sobrescrevem a resposta anterior.
+      await apiClient.put('/users/me/acquisition-source', {
         source: payload.source,
         ...(payload.sourceOther ? { sourceOther: payload.sourceOther } : {}),
-        ...(payload.platform ? { platform: payload.platform } : {}),
-        ...(payload.appVersion ? { appVersion: payload.appVersion } : {}),
       });
     } catch (error: any) {
       if (error instanceof AuthenticationError) {

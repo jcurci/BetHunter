@@ -135,7 +135,10 @@ struct ActivityPickerWrapper: View {
 
   var body: some View {
     ZStack {
-      NavigationView {
+      // NavigationStack, não NavigationView: no iPad o NavigationView vira split
+      // view, o picker cai na sidebar e o botão "Salvar" some — o usuário fica
+      // preso na tela sem conseguir ativar o bloqueio.
+      NavigationStack {
         FamilyActivityPicker(selection: $selection)
           .navigationTitle("Selecionar Apps")
           .navigationBarTitleDisplayMode(.inline)

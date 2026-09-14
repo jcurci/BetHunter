@@ -102,12 +102,16 @@ class BetBlockerVpnService : VpnService() {
       },
     )
     dnsInterceptor = DnsInterceptor(
-      domainMatcher = domainMatcher,
+      isBlocked = { domain -> domainMatcher.isBlocked(domain) },
       protect = { socket: DatagramSocket -> protect(socket) },
       // O resolver da própria rede na frente dos públicos: é o que faz a proteção
       // funcionar em Wi-Fi corporativo, portal cativo e operadora que bloqueia
       // DNS público — onde antes o aparelho simplesmente ficava sem internet.
       upstreams = { upstreamDnsProvider.servers() },
+      // Fecha o laço da memória de saúde: sem isto, um resolver morto anunciado
+      // pela rede continuaria sendo o PRIMEIRO tentado em cada query.
+      onUpstreamSuccess = { server -> upstreamDnsProvider.reportSuccess(server) },
+      onUpstreamFailure = { server -> upstreamDnsProvider.reportFailure(server) },
     )
     startAsForeground()
     VpnEventLog.log(this, "service_create")
@@ -923,8 +927,14 @@ class BetBlockerVpnService : VpnService() {
     /**
      * Workers de DNS. Poucos e fixos: o gargalo é espera de rede, não CPU, e cada
      * thread a mais é memória num processo que precisa ficar pequeno.
+     *
+     * Subiu de 6 para 8, e deliberadamente não mais que isso: cada worker preso num
+     * upstream lento é também um leitor a mais disputando o SQLite da blocklist,
+     * que ainda roda no caminho quente com `busy_timeout` de 3 s. O ganho real de
+     * vazão veio de o cache passar a guardar as respostas negativas, não de
+     * empilhar thread aqui.
      */
-    private const val DNS_POOL_SIZE = 6
+    private const val DNS_POOL_SIZE = 8
     private const val DNS_QUEUE_CAPACITY = 256
 
     /** Abaixo disto, a queda do laço conta como falha rápida (causa persistente). */
