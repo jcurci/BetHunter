@@ -42,7 +42,7 @@ const FEATURES: Feature[] = [
   },
   {
     icon: 'heart',
-    color: '#D783D8',
+    color: '#DE57DF',
     bg: 'rgba(215,131,216,0.15)',
     title: 'Modo meditação',
     description: 'Para momentos de crise',
@@ -121,7 +121,7 @@ export const PlanPreviewScreen: React.FC<Props> = ({
       <Animated.View style={{ opacity: headerFade, marginBottom: 20 }}>
         <Text style={styles.title}>O que te espera na jornada</Text>
         <View style={styles.goalBadge}>
-          <Icon name="target" size={13} color="#D783D8" />
+          <Icon name="target" size={13} color="#DE57DF" />
           <Text style={styles.goalText}>
             Meta: {mainGoal.toLowerCase()}
           </Text>
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   goalText: {
     fontSize: 13,
-    color: '#D783D8',
+    color: '#DE57DF',
     fontWeight: '600',
   },
   featuresList: {

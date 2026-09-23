@@ -22,7 +22,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
         <Text style={[styles.value, { color: valueColor }]}>{value}</Text>
         {onEdit && (
           <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-            <Icon name="edit-2" size={16} color="#FF6A56" />
+            <Icon name="edit-2" size={16} color="#FF4C33" />
           </TouchableOpacity>
         )}
       </View>

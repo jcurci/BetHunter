@@ -73,7 +73,7 @@ export const OnboardingChip: React.FC<OnboardingChipProps> = ({
   // Animated.View interna e não no wrapper de transform.
   const borderColor = selectedAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#2B2737', '#D783D8'],
+    outputRange: ['#2B2737', '#DE57DF'],
   });
 
   const backgroundColor = selectedAnim.interpolate({

@@ -28,8 +28,8 @@ type Props = {
 };
 
 const BENEFITS = [
-  { icon: 'clock', color: '#D783D8', text: 'Lembretes diários da sua jornada' },
-  { icon: 'alert-circle', color: '#FF6A56', text: 'Alertas anti-recaída em momentos críticos' },
+  { icon: 'clock', color: '#DE57DF', text: 'Lembretes diários da sua jornada' },
+  { icon: 'alert-circle', color: '#FF4C33', text: 'Alertas anti-recaída em momentos críticos' },
   { icon: 'trending-up', color: '#34C759', text: 'Conquistas e progresso em tempo real' },
 ];
 

@@ -48,7 +48,7 @@ type Props = {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CONFETTI_COUNT = 50;
-const CONFETTI_COLORS = ['#D783D8', '#34C759', '#FFD866', '#6366F1', '#FF6A56', '#7456C8', '#FF90A5', '#00C9FF'];
+const CONFETTI_COLORS = ['#DE57DF', '#34C759', '#FFD866', '#6366F1', '#FF4C33', '#5026C7', '#E07085', '#00C9FF'];
 
 /**
  * Marca o onboarding como concluído no backend (fonte de verdade entre dispositivos).
@@ -235,7 +235,7 @@ const StatBubble: React.FC<StatBubbleProps> = ({ value, label, icon, color, bgCo
 const ACHIEVEMENTS = [
   { icon: 'check-circle', color: '#34C759', bg: 'rgba(52,199,89,0.12)', text: 'Primeira aula concluída' },
   { icon: 'zap', color: '#FFD866', bg: 'rgba(255,216,102,0.12)', text: 'Streak iniciado' },
-  { icon: 'award', color: '#7456C8', bg: 'rgba(116,86,200,0.12)', text: 'Perfil criado' },
+  { icon: 'award', color: '#5026C7', bg: 'rgba(116,86,200,0.12)', text: 'Perfil criado' },
 ];
 
 export const CelebrationScreen: React.FC<Props> = ({
@@ -501,7 +501,7 @@ export const CelebrationScreen: React.FC<Props> = ({
         style={styles.couponContainer}
       >
         <View style={styles.couponContent}>
-          <Icon name="tag" size={48} color="#D783D8" />
+          <Icon name="tag" size={48} color="#DE57DF" />
           <Text style={styles.couponTitle}>Tem um cupom?</Text>
           <Text style={styles.couponSubtitle}>
             Digite seu código para obter um desconto especial
@@ -624,7 +624,7 @@ export const CelebrationScreen: React.FC<Props> = ({
                 ],
               }}
             >
-              <Icon name="gift" size={56} color="#D783D8" />
+              <Icon name="gift" size={56} color="#DE57DF" />
             </Animated.View>
 
             <Animated.View
@@ -660,7 +660,7 @@ export const CelebrationScreen: React.FC<Props> = ({
               value={`${streak}`}
               label="Streak"
               icon="trending-up"
-              color="#FF6A56"
+              color="#FF4C33"
               bgColor="rgba(255,106,86,0.12)"
               delay={660}
             />

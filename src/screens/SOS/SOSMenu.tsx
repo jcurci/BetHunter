@@ -162,7 +162,7 @@ const SOSMenu: React.FC = () => {
           accessibilityLabel="Botão de resgate: chamar sua rede de apoio no WhatsApp"
         >
           <View style={[styles.cardIcon, { backgroundColor: "rgba(255,106,86,0.16)" }]}>
-            <MaterialCommunityIcons name="lifebuoy" size={34} color="#FF6A56" />
+            <MaterialCommunityIcons name="lifebuoy" size={34} color="#FF4C33" />
           </View>
           <View style={styles.cardTextWrap}>
             <Text style={styles.cardTitle}>Botão de Resgate</Text>
@@ -203,7 +203,7 @@ const SOSMenu: React.FC = () => {
               onPress={() => setChallengeVisible(false)}
             >
               <LinearGradient
-                colors={["#7456C8", "#D783D8"]}
+                colors={["#5026C7", "#DE57DF"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.modalPrimaryGradient}

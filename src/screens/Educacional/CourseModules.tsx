@@ -344,7 +344,7 @@ const CourseModules: React.FC = () => {
       >
         {loading ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#D783D8" />
+            <ActivityIndicator size="large" color="#DE57DF" />
           </View>
         ) : error ? (
           <View style={styles.centered}>

@@ -10,12 +10,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
-import { Footer, BackIconButton } from "../../components";
+import { BackIconButton, useFooterHeight } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 import { useSavedCoursesStore, SavedCourse } from "../../storage/savedCoursesStore";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 const CursosSalvos: React.FC = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const navigation = useNavigation<NavigationProp>();
   const { savedCourses, removeCourse } = useSavedCoursesStore();
 
@@ -92,7 +94,7 @@ const CursosSalvos: React.FC = () => {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: footerHeight + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {savedCourses.length > 0 ? (
@@ -110,7 +112,6 @@ const CursosSalvos: React.FC = () => {
         )}
       </ScrollView>
 
-      <Footer />
     </SafeAreaView>
   );
 };

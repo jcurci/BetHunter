@@ -124,7 +124,7 @@ const EmergencyContactScreen: React.FC = () => {
 
         <View style={styles.content}>
           <View style={styles.iconWrap}>
-            <MaterialCommunityIcons name="lifebuoy" size={40} color="#FF6A56" />
+            <MaterialCommunityIcons name="lifebuoy" size={40} color="#FF4C33" />
           </View>
 
           <Text style={styles.title}>Contato de resgate</Text>
@@ -171,7 +171,7 @@ const EmergencyContactScreen: React.FC = () => {
             onPress={handleSave}
           >
             <LinearGradient
-              colors={["#7456C8", "#D783D8"]}
+              colors={["#5026C7", "#DE57DF"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.saveGradient}
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   removeText: {
-    color: "#FF6A56",
+    color: "#FF4C33",
     fontSize: 15,
     fontWeight: "600",
   },

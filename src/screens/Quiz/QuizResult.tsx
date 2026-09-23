@@ -37,7 +37,7 @@ const QuizResult = () => {
       <View style={styles.centerContent}>
         <View style={styles.ringWrapper}>
           <LinearGradient
-            colors={["#7456C8", "#D783D8", "#FF90A5", "#FF8071"]}
+            colors={["#5026C7", "#DE57DF", "#E07085", "#FF8071"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.ring}
@@ -66,7 +66,7 @@ const QuizResult = () => {
 
       <View style={styles.footer}>
         <LinearGradient
-          colors={["#7456C8", "#8C63E6"]}
+          colors={["#5026C7", "#8C63E6"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.primaryButton}
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     width: RING_SIZE + 40,
     height: RING_SIZE + 40,
     borderRadius: (RING_SIZE + 40) / 2,
-    backgroundColor: "#7456C8",
+    backgroundColor: "#5026C7",
     opacity: 0.15,
   },
   ring: {
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scoreLabel: {
-    color: "#D783D8",
+    color: "#DE57DF",
     fontSize: 18,
     marginBottom: 6,
   },

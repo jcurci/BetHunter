@@ -82,7 +82,7 @@ const COR_DO_FUNDO: Record<FundoId, string> = {
   bgBranco: '#B9B8B7',
 };
 
-const COR_SELECAO = '#7456C8';
+const COR_SELECAO = '#5026C7';
 
 interface ShareCardModalProps {
   visible: boolean;

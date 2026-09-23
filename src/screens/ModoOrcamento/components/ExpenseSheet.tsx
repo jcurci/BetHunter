@@ -235,20 +235,20 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
                 markedDates={{
                   [date.toISOString().split("T")[0]]: {
                     selected: true,
-                    selectedColor: "#D783D8",
+                    selectedColor: "#DE57DF",
                   },
                 }}
                 theme={{
                   backgroundColor: "#14121B",
                   calendarBackground: "#14121B",
                   textSectionTitleColor: "#A7A3AE",
-                  selectedDayBackgroundColor: "#D783D8",
+                  selectedDayBackgroundColor: "#DE57DF",
                   selectedDayTextColor: "#FFFFFF",
                   todayTextColor: "#FF6B9D",
                   dayTextColor: "#FFFFFF",
                   textDisabledColor: "#6B6677",
                   monthTextColor: "#FFFFFF",
-                  arrowColor: "#D783D8",
+                  arrowColor: "#DE57DF",
                   textDayFontWeight: "500",
                   textMonthFontWeight: "bold",
                   textDayHeaderFontWeight: "600",
@@ -263,7 +263,7 @@ const ExpenseSheet: React.FC<ExpenseSheetProps> = ({ visible, onClose, onSaved }
           <Text style={styles.label}>Categoria</Text>
           {isLoadingCategories ? (
             <View style={styles.categoriesLoading}>
-              <ActivityIndicator color="#D783D8" />
+              <ActivityIndicator color="#DE57DF" />
             </View>
           ) : categories.length === 0 ? (
             <Text style={styles.helperText}>

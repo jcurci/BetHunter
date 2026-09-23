@@ -120,7 +120,7 @@ const RANKING_DATA: RankingItem[] = [
     name: "Lucas Oliveira",
     xp: 120,
     initials: "LO",
-    avatarGradient: ["#D783D8", "#9B6FB8"],
+    avatarGradient: ["#DE57DF", "#9B6FB8"],
   },
   {
     position: 13,
@@ -190,7 +190,7 @@ const RANKING_DATA: RankingItem[] = [
     name: "Nakahara Misaki",
     xp: 40,
     initials: "NM",
-    avatarGradient: ["#D783D8", "#9B6FB8"],
+    avatarGradient: ["#DE57DF", "#9B6FB8"],
   },
   {
     position: 23,

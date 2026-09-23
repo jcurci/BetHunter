@@ -9,12 +9,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { useNavigation } from "@react-navigation/native";
-import { Footer, Avatar, BackIconButton, RadialGradientBackground } from "../../components";
+import { Avatar, BackIconButton, RadialGradientBackground, useFooterHeight } from "../../components";
 
 import { NavigationProp } from "../../types/navigation";
 import { useAuthStore } from "../../storage/authStore";
 import { HORIZONTAL_GRADIENT_COLORS } from "../../config/colors";
-const HEATMAP_COLORS = ["#1A1825", "#3D2B5A", "#6B4D8A", "#9B6FB8", "#D783D8"];
+const HEATMAP_COLORS = ["#1A1825", "#3D2B5A", "#6B4D8A", "#9B6FB8", "#DE57DF"];
 const MONTHS_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -52,6 +52,8 @@ const generateHeatmapData = () => {
 };
 
 const MinhaJornada: React.FC = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((s) => s.user);
   const [heatmapData] = useState(generateHeatmapData());
@@ -149,7 +151,7 @@ const MinhaJornada: React.FC = () => {
 
           <ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: footerHeight + 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {/* Profile Section */}
@@ -276,7 +278,6 @@ const MinhaJornada: React.FC = () => {
           </ScrollView>
         </View>
       </RadialGradientBackground>
-      <Footer />
     </SafeAreaView>
   );
 };

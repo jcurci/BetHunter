@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#3A3650",
   },
   reqDotMet: {
-    backgroundColor: "#7456C8",
+    backgroundColor: "#5026C7",
   },
   reqText: {
     fontSize: 12,

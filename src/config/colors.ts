@@ -8,16 +8,16 @@
  * Usado em textos, botões e elementos de destaque
  * Direção: da esquerda (roxo) para direita (laranja-avermelhado)
  */
-export const HORIZONTAL_GRADIENT_COLORS = ["#7456C8", "#D783D8", "#FF90A5", "#FF6A56"] as const;
+export const HORIZONTAL_GRADIENT_COLORS = ["#5026C7", "#DE57DF", "#E07085", "#FF4C33"] as const;
 
 /**
  * Localizações das cores no gradiente horizontal (em percentual)
- * 0% - Roxo (#7456C8)
- * 34% - Rosa-roxo claro (#D783D8)
- * 69% - Rosa (#FF90A5)
- * 100% - Laranja-avermelhado (#FF6A56)
+ * 0% - Roxo (#5026C7)
+ * 33% - Magenta (#DE57DF)
+ * 66% - Rosa-salmão (#E07085)
+ * 100% - Laranja-avermelhado (#FF4C33)
  */
-export const HORIZONTAL_GRADIENT_LOCATIONS = [0, 0.34, 0.69, 1] as const;
+export const HORIZONTAL_GRADIENT_LOCATIONS = [0, 0.33, 0.66, 1] as const;
 
 /**
  * Configuração padrão do gradiente horizontal
@@ -108,3 +108,43 @@ export const BUTTON_GLASS_SHADOW = {
 
 
 
+/**
+ * Gradiente da marca — versão saturada usada na Home refatorada.
+ * Textos de destaque, barra de progresso, anéis iluminados e glow.
+ * 0% #5026C7 · 33% #DE57DF · 66% #E07085 · 100% #FF4C33
+ */
+export const BRAND_GRADIENT_COLORS = HORIZONTAL_GRADIENT_COLORS;
+export const BRAND_GRADIENT_LOCATIONS = HORIZONTAL_GRADIENT_LOCATIONS;
+
+/**
+ * Fundo da Home: luz roxa no topo caindo para quase preto.
+ * Cobre a tela inteira (inclusive atrás da taskbar).
+ */
+export const HOME_BACKGROUND_COLORS = ["#4A3A7A", "#3E2C52", "#2B1F2C", "#16121A", "#0B0A0E"] as const;
+export const HOME_BACKGROUND_LOCATIONS = [0, 0.16, 0.36, 0.62, 1] as const;
+/** Vinheta lateral — escurece as bordas para o topo parecer um spotlight. */
+export const HOME_VIGNETTE_COLORS = ["rgba(8,6,12,0.55)", "rgba(8,6,12,0)", "rgba(8,6,12,0)", "rgba(8,6,12,0.55)"] as const;
+export const HOME_VIGNETTE_LOCATIONS = [0, 0.3, 0.7, 1] as const;
+
+/**
+ * Liquid glass — superfícies escuras translúcidas com borda iluminada por cima.
+ * Sem blur real (instável no Android): o efeito vem das camadas.
+ */
+export const GLASS_FILL_COLORS = ["rgba(34,31,44,0.92)", "rgba(20,18,27,0.94)"] as const;
+/** Borda: luz entrando pelo topo e sumindo embaixo. */
+export const GLASS_BORDER_COLORS = [
+  "rgba(255,255,255,0.20)",
+  "rgba(255,255,255,0.06)",
+  "rgba(255,255,255,0.03)",
+  "rgba(255,255,255,0.10)",
+] as const;
+export const GLASS_BORDER_LOCATIONS = [0, 0.35, 0.7, 1] as const;
+/** Reflexo difuso no topo da superfície. */
+export const GLASS_HIGHLIGHT_COLORS = ["rgba(255,255,255,0.07)", "rgba(255,255,255,0)"] as const;
+export const GLASS_SHADOW = {
+  shadowColor: "#000000",
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.35,
+  shadowRadius: 12,
+  elevation: 6,
+} as const;

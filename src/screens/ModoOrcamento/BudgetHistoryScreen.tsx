@@ -73,7 +73,7 @@ const BudgetHistoryScreen: React.FC = () => {
 
         {isLoading ? (
           <View style={styles.centerState}>
-            <ActivityIndicator color="#D783D8" />
+            <ActivityIndicator color="#DE57DF" />
           </View>
         ) : history.length === 0 ? (
           <View style={styles.centerState}>

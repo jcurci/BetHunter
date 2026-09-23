@@ -189,7 +189,7 @@ const HistoryList: React.FC = () => {
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#D783D8" />
+            <ActivityIndicator size="large" color="#DE57DF" />
             <Text style={styles.loadingText}>Carregando histórico...</Text>
           </View>
         ) : filteredEntries.length === 0 ? (
@@ -243,7 +243,7 @@ const HistoryList: React.FC = () => {
                       <Icon
                         name={entry.categoria?.icone || "wallet"}
                         size={26}
-                        color="#D783D8"
+                        color="#DE57DF"
                       />
                     </View>
                     <View style={styles.cardInfo}>
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#D783D8",
+    backgroundColor: "#DE57DF",
     borderWidth: 2,
     borderColor: "#000",
   },

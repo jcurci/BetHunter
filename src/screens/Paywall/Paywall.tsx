@@ -150,7 +150,7 @@ const Paywall: React.FC = () => {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {confirmPending !== null ? (
         <View style={styles.centered}>
-          <Icon name="clock" size={40} color="#D783D8" style={{ marginBottom: 16 }} />
+          <Icon name="clock" size={40} color="#DE57DF" style={{ marginBottom: 16 }} />
           <Text style={styles.blockerTitle}>
             {confirmPending === 'purchase' ? 'Confirmando sua assinatura' : 'Assinatura não encontrada'}
           </Text>
@@ -175,11 +175,11 @@ const Paywall: React.FC = () => {
         </View>
       ) : loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#D783D8" />
+          <ActivityIndicator size="large" color="#DE57DF" />
         </View>
       ) : cancelled ? (
         <View style={styles.centered}>
-          <Icon name="lock" size={40} color="#D783D8" style={{ marginBottom: 16 }} />
+          <Icon name="lock" size={40} color="#DE57DF" style={{ marginBottom: 16 }} />
           <Text style={styles.blockerTitle}>Acesso exclusivo para assinantes</Text>
           <Text style={styles.blockerSubtitle}>
             Assine o BetHunter Premium para ter acesso completo ao app.

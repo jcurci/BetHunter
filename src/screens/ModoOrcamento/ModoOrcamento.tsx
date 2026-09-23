@@ -14,7 +14,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import Feather from "react-native-vector-icons/Feather";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
-import { Footer } from "../../components";
+import { useFooterHeight } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 import {
   BACKGROUND_GRADIENT_COLORS,
@@ -133,6 +133,8 @@ function getProgressColor(remainingRatio: number): string {
 }
 
 const ModoOrcamento: React.FC = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const navigation = useNavigation<NavigationProp>();
 
   const container = useMemo(() => Container.getInstance(), []);
@@ -339,9 +341,8 @@ const ModoOrcamento: React.FC = () => {
     return (
       <SafeAreaView edges={["top"]} style={styles.safeArea}>
         <View style={styles.fullScreenLoader}>
-          <ActivityIndicator size="large" color="#D783D8" />
+          <ActivityIndicator size="large" color="#DE57DF" />
         </View>
-        <Footer />
       </SafeAreaView>
     );
   }
@@ -350,7 +351,8 @@ const ModoOrcamento: React.FC = () => {
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        // Com orçamento, a fabBar abaixo do scroll já reserva a taskbar.
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: hasBudget ? 16 : footerHeight + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
@@ -498,7 +500,7 @@ const ModoOrcamento: React.FC = () => {
                   <Icon
                     name={item.categoryIcon || "wallet"}
                     size={20}
-                    color="#D783D8"
+                    color="#DE57DF"
                   />
                 </View>
                 <View style={styles.expenseInfo}>
@@ -540,7 +542,8 @@ const ModoOrcamento: React.FC = () => {
       </ScrollView>
 
       {hasBudget && (
-        <View style={styles.fabBar}>
+        // A taskbar global flutua por cima: o botão fica logo acima dela.
+        <View style={[styles.fabBar, { paddingBottom: footerHeight + 4 }]}>
           <LinearGradient
             colors={[...HORIZONTAL_GRADIENT_COLORS]}
             locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
@@ -572,11 +575,10 @@ const ModoOrcamento: React.FC = () => {
         </Animated.View>
       )}
 
-      <Footer />
 
       {isLoading && hasLoaded && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#D783D8" />
+          <ActivityIndicator size="large" color="#DE57DF" />
         </View>
       )}
 

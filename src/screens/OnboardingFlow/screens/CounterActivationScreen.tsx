@@ -242,7 +242,7 @@ export const CounterActivationScreen: React.FC<Props> = ({
           {[
             { iconName: 'sun', color: '#FFD866', text: 'Clareza mental' },
             { iconName: 'dollar-sign', color: '#34C759', text: 'Economia real' },
-            { iconName: 'heart', color: '#FF6A56', text: 'Saúde emocional' },
+            { iconName: 'heart', color: '#FF4C33', text: 'Saúde emocional' },
           ].map((item, i) => (
             <React.Fragment key={i}>
               {i > 0 && <View style={styles.motivationDivider} />}

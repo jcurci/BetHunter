@@ -14,7 +14,7 @@ import { BlurView } from "expo-blur";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Footer, StatsDisplay, Avatar, BackIconButton, Modal, GradientBorderButton } from "../../components";
+import { StatsDisplay, Avatar, BackIconButton, Modal, GradientBorderButton, useFooterHeight } from "../../components";
 import { NavigationProp } from "../../types/navigation";
 import {
   BUTTON_BORDER_GRADIENT_COLORS,
@@ -35,7 +35,7 @@ import { AuthenticationError, ServerError } from "../../domain/errors/CustomErro
 // Assets
 const IconBook = require("../../assets/icon-book.png");
 
-const DEFAULT_MODULE_GRADIENT = ["#7456C8", "#D783D8", "#FF90A5", "#FF8071"];
+const DEFAULT_MODULE_GRADIENT = ["#5026C7", "#DE57DF", "#E07085", "#FF8071"];
 
 /** Alinhado a `scrollContent.paddingHorizontal` */
 const SCROLL_HORIZONTAL_PADDING = 20;
@@ -75,6 +75,8 @@ function formatCourseModalTitle(raw: string): string {
 }
 
 const Cursos = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const { width: windowWidth } = useWindowDimensions();
   const { top: topInset } = useSafeAreaInsets();
   const cardWidth = Math.floor(
@@ -224,7 +226,7 @@ const Cursos = () => {
     <SafeAreaView edges={["top"]} style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: scrollPaddingTop }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: scrollPaddingTop, paddingBottom: footerHeight + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {error && (
@@ -321,8 +323,6 @@ const Cursos = () => {
         </View>
       </View>
 
-      {/* Footer */}
-      <Footer />
 
       {/* Course Preview Modal */}
       <Modal

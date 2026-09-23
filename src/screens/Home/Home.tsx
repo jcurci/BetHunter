@@ -15,38 +15,41 @@ import {
   Animated,
   Easing,
   Linking,
-  useWindowDimensions,
   AppState,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
+import { CommonActions, useNavigation, useFocusEffect, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/Entypo";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import MaskedView from "@react-native-masked-view/masked-view";
 
 // Components
-import { Footer, StatsDisplay, IconCard, GradientBorderButton } from "../../components";
+import { GradientBorderButton, useFooterHeight } from "../../components";
 import Modal from "../../components/common/Modal/Modal";
 import ShareCardModal from "./ShareCardModal";
 import { AppLoadingScreen } from "../../components/AppLoadingScreen";
 
 // Config
 import {
-  BACKGROUND_GRADIENT_COLORS,
-  BACKGROUND_GRADIENT_LOCATIONS,
-  SHADOW_OVERLAY_COLORS,
-  HORIZONTAL_GRADIENT_COLORS,
-  HORIZONTAL_GRADIENT_LOCATIONS,
-  BUTTON_INNER_BACKGROUND,
+  HOME_BACKGROUND_COLORS,
+  HOME_BACKGROUND_LOCATIONS,
+  HOME_VIGNETTE_COLORS,
+  HOME_VIGNETTE_LOCATIONS,
 } from "../../config/colors";
 
-// Assets
-import BetHunterIcon from "../../assets/home/bethunter.svg";
-import AssessorIcon from "../../assets/home/assessor.svg";
-import CursosIcon from "../../assets/home/cursos.svg";
+// Home — composição refatorada
+import BettyIdle from "./components/Betty/BettyIdle";
+import HomeHeader from "./components/HomeHeader";
+import HomeCounter from "./components/HomeCounter";
+import QuickActions from "./components/QuickActions";
+import HomeCarousel from "./components/HomeCarousel";
+import StudyCard from "./components/StudyCard";
+import { CAROUSEL_PAGES, CarouselCard } from "./components/carouselPages";
+import { useHomeLayout } from "./components/homeLayout";
+import { useHomeSavings } from "./components/useHomeSavings";
+import { getFirstName } from "./components/firstName";
 
 // Domain & Infrastructure
 
@@ -57,6 +60,7 @@ import type {
 } from "../../infrastructure/native/blockerModule";
 import { ValidationError } from "../../domain/errors/CustomErrors";
 import { useAuthStore } from "../../storage/authStore";
+import { useTabBarStore } from "../../storage/tabBarStore";
 import { useBetStreakDays, useDashboardStore } from "../../storage/dashboardStore";
 import { useCoursesStore, selectCurrentCourse } from "../../storage/coursesStore";
 import { NavigationProp, RootStackParamList } from "../../types/navigation";
@@ -71,11 +75,9 @@ import {
   markShareSeen,
   setCelebratedMilestone,
 } from "../../services/shareDiscovery";
-import BetStreakCounter from "./BetStreakCounter";
 import { useBetStreakCounter } from "./useBetStreakCounter";
 
 // Constants
-const GRADIENT_HEIGHT_EXPANDED = 450;
 /** Só corre com o app em primeiro plano — ver armBlockingTimeout. */
 const VPN_REQUEST_TIMEOUT_MS = 20000;
 /** Atraso antes de reexibir os banners depois que a jornada fecha (evita flash). */
@@ -89,9 +91,6 @@ const blockerPromoSeenKey = (userId: string): string =>
  * é o tipo de aviso que ensina o usuário a ignorar as notificações do app.
  */
 const SHARE_INVITE_MIN_STREAK = 3;
-/** Geometria do CTA de compartilhar — o raio interno deriva dos dois. */
-const SHARE_BUTTON_RADIUS = 22;
-const SHARE_BUTTON_BORDER = 1.5;
 
 type BlockFlowStep = "choices" | "report";
 
@@ -161,9 +160,6 @@ let sessionBooted = false;
 let lastBlocklistRefreshAt = 0;
 const BLOCKLIST_REFRESH_THROTTLE_MS = 6 * 60 * 60 * 1000;
 
-const CARD_GAP = 10;
-const SCROLL_HORIZONTAL_PADDING = 40; // 20px each side (scrollContent style)
-
 /** Número oficial de suporte (DDI 55 + DDD 11). Formato wa.me evita depender de scheme no iOS. */
 const SUPPORT_WHATSAPP_URL =
   "https://wa.me/5511997274798?text=" +
@@ -173,8 +169,10 @@ const Home: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, "Home">>();
   const user = useAuthStore((s) => s.user);
-  const { width: screenWidth } = useWindowDimensions();
-  const cardSize = Math.floor((screenWidth - SCROLL_HORIZONTAL_PADDING - CARD_GAP * 2) / 3);
+  const homeLayout = useHomeLayout();
+  const savings = useHomeSavings();
+  const footerHeight = useFooterHeight();
+  const safeInsets = useSafeAreaInsets();
   
   // Dashboard store
   const {
@@ -190,6 +188,13 @@ const Home: React.FC = () => {
   const betStreakDuracao = useDashboardStore((s) => s.betStreak);
 
   const [hasBooted, setHasBooted] = useState<boolean>(sessionBooted);
+
+  // A taskbar global não flutua por cima do loader do boot.
+  const setTabBarSuppressed = useTabBarStore((s) => s.setSuppressed);
+  useEffect(() => {
+    setTabBarSuppressed(!hasBooted);
+    return () => setTabBarSuppressed(false);
+  }, [hasBooted, setTabBarSuppressed]);
 
   // Blocker state
   const [isBlockerEnabled, setIsBlockerEnabled] = useState<boolean>(false);
@@ -1209,154 +1214,140 @@ const Home: React.FC = () => {
 
 
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.greetingContainer}>
-        <Text style={styles.greetingText}>{greetingLine}</Text>
-        <MaskedView
-          maskElement={
-            <Text style={[styles.greetingText, { backgroundColor: 'transparent' }]}>
-              {user?.name || "Usuário"}
-            </Text>
-          }
-        >
-          <LinearGradient
-            colors={HORIZONTAL_GRADIENT_COLORS}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{ flex: 1 }}
-          >
-            <Text style={[styles.greetingText, { opacity: 0 }]}>
-              {user?.name || "Usuário"}
-            </Text>
-          </LinearGradient>
-        </MaskedView>
-      </View>
-      
-      <StatsDisplay 
-        loading={!statsReady}
-        energy={statsReady && dashboard ? dashboard.energy : undefined}
-        streak={contadorPronto ? `${betStreakDays}d` : undefined}
-      />
-    </View>
+  const openBlockFlow = useCallback((): void => {
+    blockFlowFade.setValue(1);
+    setBlockFlowStep("choices");
+    setShowBlockFlowModal(true);
+  }, [blockFlowFade]);
+
+  const handleCarouselCardPress = useCallback(
+    // CommonActions: o navigate tipado não aceita uma união de rotas (todas sem params).
+    (card: CarouselCard) => navigation.dispatch(CommonActions.navigate(card.route)),
+    [navigation],
   );
 
-  const renderFreeOfBetDaysDisplay = () => (
-    <View style={styles.freeOfBetDaysContainer}>
-      <BetStreakCounter
-        days={betStreakDays}
-        statsReady={contadorPronto}
-        onPress={handleDaysPress}
-      />
-      {/* Só com o contador carregado: sem isso o card sairia com o 0 do loading. */}
-      {contadorPronto && (
-        <Animated.View
-          style={{
-            transform: [
-              {
-                scale: sharePulse.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.04],
-                }),
-              },
-            ],
-          }}
-        >
+  /** "Estude" leva ao curso em andamento; sem curso, ao menu educacional. */
+  const handleStudyPress = useCallback(() => {
+    if (currentCourse) {
+      navigation.navigate("CourseModules", {
+        courseId: currentCourse.id,
+        courseTitle: currentCourse.title,
+        modulesCompleted: currentCourse.modulesCompleted,
+      });
+      return;
+    }
+    navigation.navigate("MenuEducacional");
+  }, [currentCourse, navigation]);
+
+  /** Banners de pendência do bloqueador — ações necessárias, fora do design base. */
+  const renderProtectionBanners = () => (
+    <>
+      {/* Reforço: proteção contra remoção (Device Admin) */}
+      {Platform.OS === "android" &&
+        isBlockerEnabled &&
+        canShowReinforcementBanners &&
+        !isDeviceAdminActive && (
           <TouchableOpacity
-            onPress={() => void openShareCardModal()}
+            style={styles.removalProtectionBanner}
+            onPress={handleRequestDeviceAdmin}
             activeOpacity={0.85}
-            style={styles.shareButton}
-            accessibilityRole="button"
-            accessibilityLabel={
-              shareIsNew
-                ? "Novidade: compartilhar seus dias sem apostar"
-                : "Compartilhar seus dias sem apostar"
-            }
+            disabled={isRequestingDeviceAdmin}
           >
-            {/*
-              Borda gradiente: o LinearGradient pinta a peça inteira e o miolo
-              opaco por cima deixa só a moldura à vista. O interno PRECISA ser
-              opaco — com `transparent` o gradiente vaza pelo meio e o botão
-              vira o preenchimento que ele não deve ser.
-            */}
-            <LinearGradient
-              colors={HORIZONTAL_GRADIENT_COLORS}
-              locations={HORIZONTAL_GRADIENT_LOCATIONS}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.shareButtonBorder}
-            >
-              <View style={styles.shareButtonInner}>
-                <MaterialCommunityIcons name="share-variant" size={16} color="#B8A8E8" />
-                <Text style={styles.shareButtonText}>Compartilhar</Text>
-              </View>
-            </LinearGradient>
-            {/* Some no primeiro toque — ver openShareCardModal. */}
-            {shareIsNew && (
-              <View style={styles.shareBadge} pointerEvents="none">
-                <Text style={styles.shareBadgeText}>NOVO</Text>
-              </View>
-            )}
+            <MaterialCommunityIcons
+              name="shield-lock-outline"
+              size={22}
+              color="#C9A7E8"
+            />
+            <View style={styles.batteryWarningTextBox}>
+              <Text style={styles.removalProtectionTitle}>
+                Reforce: ative a proteção contra remoção
+              </Text>
+              <Text style={styles.batteryWarningDesc}>
+                Impede desinstalar o BetHunter enquanto o bloqueio estiver ativo.
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={22} color="#C9A7E8" />
           </TouchableOpacity>
-        </Animated.View>
-      )}
-    </View>
-  );
+        )}
 
-  const renderFreeOfBetBox = () => (
-    <View style={styles.freeOfBetContainer}>
-      <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate("SOSMenu")}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="SOS: ferramentas de socorro imediato contra a fissura"
-        >
-          <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="shield-alert" size={26} color="#A09CAB" />
-          </View>
-          <Text style={styles.actionText}>SOS</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => setShowResetModal(true)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="timer-sand" size={26} color="#A09CAB" />
-          </View>
-          <Text style={styles.actionText}>Resetar</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => {
-            blockFlowFade.setValue(1);
-            setBlockFlowStep("choices");
-            setShowBlockFlowModal(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="cancel" size={26} color="#A09CAB" />
-          </View>
-          <Text style={styles.actionText}>Bloquear</Text>
-        </TouchableOpacity>
+      {/* Pendência obrigatória: VPN sempre ativa.
+          NÃO passa por canShowReinforcementBanners de propósito — aquele gate
+          é recuperação de um "Agora não", e este passo não tem "Agora não".
+          Vale também para usuário legado, que nunca viu a jornada. */}
+      {Platform.OS === "android" &&
+        isBlockerEnabled &&
+        !bannersHeld &&
+        alwaysOnPending && (
+          <TouchableOpacity
+            style={styles.alwaysOnBanner}
+            onPress={handleAlwaysOnBannerPress}
+            activeOpacity={0.85}
+          >
+            <MaterialCommunityIcons
+              name="shield-sync-outline"
+              size={22}
+              color="#7AC7E8"
+            />
+            <View style={styles.batteryWarningTextBox}>
+              <Text style={styles.alwaysOnBannerTitle}>
+                Falta 1 passo: VPN sempre ativa
+              </Text>
+              <Text style={styles.batteryWarningDesc}>
+                Sem ela, o Android pode desligar o bloqueio e não religar. Toque para
+                concluir.
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={22} color="#7AC7E8" />
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleSupport}
-          activeOpacity={0.85}
-        >
-          <View style={styles.actionIconCircle}>
-            <MaterialCommunityIcons name="headset" size={26} color="#A09CAB" />
-          </View>
-          <Text style={styles.actionText}>Suporte</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      {/* Aviso: otimização de bateria pode matar a VPN de bloqueio.
+          Só aparece para quem adiou o passo na jornada (ou é legado): lá a
+          permissão é pedida de forma explícita e explicada. */}
+      {Platform.OS === "android" &&
+        isBlockerEnabled &&
+        !isBatteryExempt &&
+        !isBatteryWarningSuppressed &&
+        canShowReinforcementBanners && (
+          <>
+            <TouchableOpacity
+              style={styles.batteryWarningBanner}
+              onPress={handleBatteryBannerPress}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons
+                name="battery-alert-variant-outline"
+                size={22}
+                color="#E8B07A"
+              />
+              <View style={styles.batteryWarningTextBox}>
+                <Text style={styles.batteryWarningTitle}>
+                  {hasRequestedBatteryExemptionBefore
+                    ? "Ainda não protegido"
+                    : "Proteja o bloqueio contra a economia de bateria"}
+                </Text>
+                <Text style={styles.batteryWarningDesc}>
+                  {hasRequestedBatteryExemptionBefore
+                    ? "Na tela de bateria do seu aparelho, escolha 'Sem restrições' para o BetHunter."
+                    : "O Android pode desligar o bloqueio em segundo plano. Toque para permitir que o BetHunter continue ativo."}
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={22} color="#E8B07A" />
+            </TouchableOpacity>
+            {hasRequestedBatteryExemptionBefore && (
+              <TouchableOpacity
+                style={styles.batteryWarningManualLink}
+                onPress={handleConfirmBatteryExceptionManually}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.batteryWarningManualLinkText}>
+                  Já configurei, mas o aviso continua aparecendo
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+    </>
   );
 
 
@@ -1364,287 +1355,113 @@ const Home: React.FC = () => {
     return <AppLoadingScreen />;
   }
 
+  const { v, gutter } = homeLayout;
+  /**
+   * Os selos verdes de "VPN sempre ativa" / "proteção contra remoção ativa"
+   * viraram o ponto verde do Bloqueador. Mesma regra de antes: no Android só
+   * acende com confirmação do sistema, não com autoatestado.
+   */
+  const protectionActive =
+    isBlockerEnabled &&
+    (Platform.OS !== "android" ||
+      isDeviceAdminActive ||
+      !!alwaysOnStatus?.detectedBySetting ||
+      !!alwaysOnStatus?.detectedBySystemStart);
+
   return (
+    <View style={styles.root}>
+      {/* Fundo da tela inteira: luz roxa no topo + vinheta lateral. */}
+      <LinearGradient
+        colors={HOME_BACKGROUND_COLORS}
+        locations={HOME_BACKGROUND_LOCATIONS}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={HOME_VIGNETTE_COLORS}
+        locations={HOME_VIGNETTE_LOCATIONS}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFill}
+      />
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.mainContainer}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, {
+            // O design põe o header a ~66 dp do topo da tela. Com a status bar
+            // escondida (Android) o inset é 0 e o respiro vem todo daqui.
+            paddingTop: Math.max(v(6), v(66) - safeInsets.top),
+            paddingBottom: footerHeight + v(14),
+          }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Background Gradient - Radial Effect */}
-          <View
-            style={[
-              styles.backgroundGradient,
-              {
-                height: GRADIENT_HEIGHT_EXPANDED,
-                backgroundColor: '#000000',
-              },
-            ]}
-          >
-            {/* Vertical gradient from top center */}
-            <LinearGradient
-              colors={BACKGROUND_GRADIENT_COLORS}
-              locations={BACKGROUND_GRADIENT_LOCATIONS}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            
-            {/* Left shadow overlay */}
-            <LinearGradient
-              colors={SHADOW_OVERLAY_COLORS}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-            
-            {/* Right shadow overlay */}
-            <LinearGradient
-              colors={SHADOW_OVERLAY_COLORS}
-              start={{ x: 1, y: 0 }}
-              end={{ x: 0.5, y: 0 }}
-              style={StyleSheet.absoluteFill}
+          <View style={{ paddingHorizontal: gutter }}>
+            <HomeHeader
+              layout={homeLayout}
+              greeting={greetingLine}
+              firstName={getFirstName(user?.name)}
+              statsLoading={!statsReady}
+              energy={statsReady && dashboard ? dashboard.energy : undefined}
+              streak={contadorPronto ? `${betStreakDays}d` : undefined}
             />
           </View>
 
-          {renderHeader()}
+          <View style={[styles.betty, { marginTop: v(4) }]}>
+            <BettyIdle height={homeLayout.bettyHeight} />
+          </View>
 
-          {renderFreeOfBetDaysDisplay()}
-          
-          {renderFreeOfBetBox()}
-
-          {/* Reforço: proteção contra remoção (Device Admin) */}
-          {Platform.OS === "android" &&
-            isBlockerEnabled &&
-            canShowReinforcementBanners &&
-            !isDeviceAdminActive && (
-              <TouchableOpacity
-                style={styles.removalProtectionBanner}
-                onPress={handleRequestDeviceAdmin}
-                activeOpacity={0.85}
-                disabled={isRequestingDeviceAdmin}
-              >
-                <MaterialCommunityIcons
-                  name="shield-lock-outline"
-                  size={22}
-                  color="#C9A7E8"
-                />
-                <View style={styles.batteryWarningTextBox}>
-                  <Text style={styles.removalProtectionTitle}>
-                    Reforce: ative a proteção contra remoção
-                  </Text>
-                  <Text style={styles.batteryWarningDesc}>
-                    Impede desinstalar o BetHunter enquanto o bloqueio estiver ativo.
-                  </Text>
-                </View>
-                <Icon name="chevron-right" size={22} color="#C9A7E8" />
-              </TouchableOpacity>
-            )}
-
-          {/* Pendência obrigatória: VPN sempre ativa.
-              NÃO passa por canShowReinforcementBanners de propósito — aquele gate
-              é recuperação de um "Agora não", e este passo não tem "Agora não".
-              Vale também para usuário legado, que nunca viu a jornada. */}
-          {Platform.OS === "android" &&
-            isBlockerEnabled &&
-            !bannersHeld &&
-            alwaysOnPending && (
-              <TouchableOpacity
-                style={styles.alwaysOnBanner}
-                onPress={handleAlwaysOnBannerPress}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons
-                  name="shield-sync-outline"
-                  size={22}
-                  color="#7AC7E8"
-                />
-                <View style={styles.batteryWarningTextBox}>
-                  <Text style={styles.alwaysOnBannerTitle}>
-                    Falta 1 passo: VPN sempre ativa
-                  </Text>
-                  <Text style={styles.batteryWarningDesc}>
-                    Sem ela, o Android pode desligar o bloqueio e não religar. Toque para
-                    concluir.
-                  </Text>
-                </View>
-                <Icon name="chevron-right" size={22} color="#7AC7E8" />
-              </TouchableOpacity>
-            )}
-
-          {/* Selo: VPN sempre ativa confirmada pelo SISTEMA. Autoatestado não
-              entra aqui — não pintamos de verde algo que só o usuário afirmou. */}
-          {Platform.OS === "android" &&
-            isBlockerEnabled &&
-            (alwaysOnStatus?.detectedBySetting ||
-              alwaysOnStatus?.detectedBySystemStart) && (
-              <View style={styles.removalProtectionActiveBadge}>
-                <MaterialCommunityIcons name="shield-sync" size={20} color="#7BE8A7" />
-                <Text style={styles.removalProtectionActiveText}>
-                  VPN sempre ativa
-                </Text>
-              </View>
-            )}
-
-          {/* Selo: proteção contra remoção ativa */}
-          {Platform.OS === "android" &&
-            isBlockerEnabled &&
-            isDeviceAdminActive && (
-              <View style={styles.removalProtectionActiveBadge}>
-                <MaterialCommunityIcons
-                  name="shield-check"
-                  size={20}
-                  color="#7BE8A7"
-                />
-                <Text style={styles.removalProtectionActiveText}>
-                  Proteção contra remoção ativa
-                </Text>
-              </View>
-            )}
-
-          {/* Aviso: otimização de bateria pode matar a VPN de bloqueio.
-              Só aparece para quem adiou o passo na jornada (ou é legado): lá a
-              permissão é pedida de forma explícita e explicada. */}
-          {Platform.OS === "android" &&
-            isBlockerEnabled &&
-            !isBatteryExempt &&
-            !isBatteryWarningSuppressed &&
-            canShowReinforcementBanners && (
-              <>
-                <TouchableOpacity
-                  style={styles.batteryWarningBanner}
-                  onPress={handleBatteryBannerPress}
-                  activeOpacity={0.85}
-                >
-                  <MaterialCommunityIcons
-                    name="battery-alert-variant-outline"
-                    size={22}
-                    color="#E8B07A"
-                  />
-                  <View style={styles.batteryWarningTextBox}>
-                    <Text style={styles.batteryWarningTitle}>
-                      {hasRequestedBatteryExemptionBefore
-                        ? "Ainda não protegido"
-                        : "Proteja o bloqueio contra a economia de bateria"}
-                    </Text>
-                    <Text style={styles.batteryWarningDesc}>
-                      {hasRequestedBatteryExemptionBefore
-                        ? "Na tela de bateria do seu aparelho, escolha 'Sem restrições' para o BetHunter."
-                        : "O Android pode desligar o bloqueio em segundo plano. Toque para permitir que o BetHunter continue ativo."}
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size={22} color="#E8B07A" />
-                </TouchableOpacity>
-                {hasRequestedBatteryExemptionBefore && (
-                  <TouchableOpacity
-                    style={styles.batteryWarningManualLink}
-                    onPress={handleConfirmBatteryExceptionManually}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.batteryWarningManualLinkText}>
-                      Já configurei, mas o aviso continua aparecendo
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-
-          {/* Divider */}
-          <View style={styles.dividerTouchable}>
-            <LinearGradient
-              colors={HORIZONTAL_GRADIENT_COLORS}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.divider}
+          <View>
+            <HomeCounter
+              layout={homeLayout}
+              days={betStreakDays}
+              daysReady={contadorPronto}
+              onDaysPress={handleDaysPress}
+              savingsAmount={savings.amount}
+              // Só com o contador carregado: sem isso o card sairia com o 0 do loading.
+              onSharePress={contadorPronto ? () => void openShareCardModal() : null}
+              shareIsNew={shareIsNew}
+              sharePulse={sharePulse}
             />
           </View>
 
-          {/* Continue de onde parou */}
-          <View style={styles.continueBoxOuter}>
-            <View style={styles.rouletteBox}>
-              <LinearGradient
-                colors={BACKGROUND_GRADIENT_COLORS}
-                locations={BACKGROUND_GRADIENT_LOCATIONS}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <LinearGradient
-                colors={SHADOW_OVERLAY_COLORS}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0.5, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <LinearGradient
-                colors={SHADOW_OVERLAY_COLORS}
-                start={{ x: 1, y: 0 }}
-                end={{ x: 0.5, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.continueBoxTitle}>Continue de onde parou</Text>
-              {currentCourseLoading && !currentCourse ? (
-                <View style={styles.continueSkeletonCard}>
-                  <View style={styles.continueSkeletonLine} />
-                  <View style={styles.continueSkeletonChevron} />
-                </View>
-              ) : currentCourse ? (
-                <LinearGradient
-                  colors={[...HORIZONTAL_GRADIENT_COLORS]}
-                  locations={[...HORIZONTAL_GRADIENT_LOCATIONS]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.continueCardBorder}
-                >
-                  <TouchableOpacity
-                    style={styles.continueCardInner}
-                    activeOpacity={0.85}
-                    onPress={() =>
-                      navigation.navigate("CourseModules", {
-                        courseId: currentCourse.id,
-                        courseTitle: currentCourse.title,
-                        modulesCompleted: currentCourse.modulesCompleted,
-                      })
-                    }
-                  >
-                    <Text style={styles.continueText} numberOfLines={1}>
-                      {currentCourse.title}: {currentCourse.modulesCompleted}/{currentCourse.modulesQuantity}
-                    </Text>
-                    <Icon name="chevron-right" size={22} color="#B8B3BF" />
-                  </TouchableOpacity>
-                </LinearGradient>
-              ) : null}
-            </View>
+          <View style={{ marginTop: v(8) }}>
+            <QuickActions
+              layout={homeLayout}
+              isBlockerEnabled={protectionActive}
+              onBlocker={openBlockFlow}
+              onReset={() => setShowResetModal(true)}
+              onMeditate={() => navigation.navigate("Meditacao")}
+              onSupport={handleSupport}
+            />
           </View>
 
-          {/* Minha conta, Meu assessor, Menu Educacional */}
-          <View style={styles.cardsContainer}>
-            <IconCard
-              icon={<BetHunterIcon width={20} height={20} />}
-              title={"Minha\nConta"}
-              cardBackgroundColor="#14121B"
-              size={cardSize}
-              onPress={() => navigation.navigate("MinhaConta")}
+          <View style={{ paddingHorizontal: gutter }}>{renderProtectionBanners()}</View>
+
+          {/* Espaçador flexível: em telas mais altas que a referência, o bloco de
+              cima fica preso ao topo e o de baixo (carrossel + Estude) ancorado
+              na taskbar, com a sobra entre os dois em vez de um vazio no fim. */}
+          <View style={styles.flexSpacer} />
+          <View style={{ marginTop: v(10) }}>
+            <HomeCarousel
+              pages={CAROUSEL_PAGES}
+              layout={homeLayout}
+              onCardPress={handleCarouselCardPress}
             />
-            <IconCard
-              icon={<AssessorIcon width={20} height={20} />}
-              title={"Meu\nAssessor"}
-              cardBackgroundColor="#14121B"
-              size={cardSize}
-              onPress={() => navigation.navigate("Assessor")}
-            />
-            <IconCard
-              icon={<CursosIcon width={20} height={20} />}
-              title={"Menu\nEducacional"}
-              cardBackgroundColor="#14121B"
-              size={cardSize}
-              onPress={() => navigation.navigate("MenuEducacional")}
+          </View>
+
+          <View style={{ paddingHorizontal: gutter, marginTop: v(6) }}>
+            <StudyCard
+              layout={homeLayout}
+              course={currentCourse}
+              loading={currentCourseLoading}
+              onPress={handleStudyPress}
             />
           </View>
         </ScrollView>
       </View>
-      
-      <Footer />
+
 
       <Modal
         visible={showBlockFlowModal}
@@ -2157,14 +1974,19 @@ Dica: na tela de apps recentes, toque e segure o card do BetHunter e escolha o c
         onShared={handleShared}
       />
     </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   // Container Styles
+  root: {
+    flex: 1,
+    backgroundColor: "#0B0A0E",
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "transparent",
   },
   mainContainer: {
     flex: 1,
@@ -2173,212 +1995,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
+    flexGrow: 1,
+  },
+  betty: {
+    alignItems: "center",
+  },
+  flexSpacer: {
     flexGrow: 1,
   },
 
-  // Background
-  backgroundGradient: {
-    position: "absolute",
-    top: -20,
-    left: -20,
-    right: -20,
-    borderBottomLeftRadius: 38,
-    borderBottomRightRadius: 38,
-    zIndex: -1,
-  },
-
-  // Header Styles
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  greetingContainer: {
-    flex: 1,
-  },
-  greetingText: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-
-  // Free of Bet Days Display (substitui o calendário de círculos 1–8)
-  freeOfBetDaysContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: 12,
-  },
-  // O CTA precisa competir com o contador logo acima dele, que é o maior
-  // elemento da tela. O que resolve isso é a moldura em gradiente: o pill
-  // anterior tinha borda #373344 chapada e sumia contra o fundo da Home.
-  shareButton: {
-    marginTop: 14,
-    borderRadius: SHARE_BUTTON_RADIUS,
-    // O selo "Novo" sai da caixa; sem isto o Android o corta.
-    overflow: "visible",
-  },
-  // O padding é a espessura da borda — é ele que vira a moldura visível.
-  shareButtonBorder: {
-    borderRadius: SHARE_BUTTON_RADIUS,
-    padding: SHARE_BUTTON_BORDER,
-  },
-  shareButtonInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 9,
-    paddingHorizontal: 20,
-    // Raio interno acompanha o externo menos a borda, senão a moldura
-    // engrossa nos cantos.
-    borderRadius: SHARE_BUTTON_RADIUS - SHARE_BUTTON_BORDER,
-    backgroundColor: BUTTON_INNER_BACKGROUND,
-  },
-  shareButtonText: {
-    color: "#B8A8E8",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  shareBadge: {
-    position: "absolute",
-    top: -7,
-    right: -8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 9,
-    backgroundColor: "#FFFFFF",
-  },
-  shareBadgeText: {
-    color: "#14091B",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-
-  // Free of Bet Box Styles
-  freeOfBetContainer: {
-    width: "96%",
-    height: 140,
-    alignSelf: "center",
-    marginBottom: 0,
-    marginTop: 10,
-    padding: 12,
-    justifyContent: "flex-start",
-    alignItems: "center",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginTop: 0,
-  },
-  actionButton: {
-    flex: 1,
-    alignItems: "center",
-  },
-  actionIconCircle: {
-    backgroundColor: "#201F2A",
-    borderRadius: 999,
-    width: 65,
-    height: 65,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  actionText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-
-  // Divider
-  dividerTouchable: {
-    alignSelf: "center",
-    width: "50%",
-    paddingVertical: 10,
-    marginTop: 10,
-  },
-  divider: {
-    width: "100%",
-    height: 5,
-    borderRadius: 20,
-  },
-
-  // Cards Container
-  cardsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: CARD_GAP,
-    marginTop: 0,
-  },
-
-
-
-
-  continueBoxTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 12,
-  },
-  continueCardBorder: {
-    borderRadius: 16,
-    padding: 1,
-    overflow: "hidden",
-  },
-  continueCardInner: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: BUTTON_INNER_BACKGROUND,
-    borderRadius: 15,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  continueText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#FFFFFF",
-    letterSpacing: 0.2,
-  },
-  continueSkeletonCard: {
-    borderRadius: 15,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  continueSkeletonLine: {
-    height: 16,
-    width: "62%",
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.10)",
-  },
-  continueSkeletonChevron: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.07)",
-  },
-
-  // Continue Box (reuses roulette visual)
-  continueBoxOuter: {
-    marginVertical: 20,
-    marginBottom: 24,
-  },
-  rouletteBox: {
-    borderRadius: 24,
-    padding: 20,
-    paddingBottom: 20,
-    overflow: "hidden",
-    backgroundColor: "#000000",
-  },
   // Reset Modal Styles
   resetModalContent: {
     flex: 1,
@@ -2474,7 +2099,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginHorizontal: 20,
     marginTop: 14,
     padding: 14,
     borderRadius: 14,
@@ -2486,7 +2110,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginHorizontal: 20,
     marginTop: 14,
     padding: 14,
     borderRadius: 14,
@@ -2504,7 +2127,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginHorizontal: 20,
     marginTop: 14,
     padding: 14,
     borderRadius: 14,
@@ -2517,24 +2139,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 18,
-  },
-  removalProtectionActiveBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    alignSelf: "center",
-    marginTop: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(123, 232, 167, 0.35)",
-    backgroundColor: "rgba(123, 232, 167, 0.1)",
-  },
-  removalProtectionActiveText: {
-    color: "#7BE8A7",
-    fontSize: 12,
-    fontWeight: "700",
   },
   blockChoiceAdminBadge: {
     flexDirection: "row",

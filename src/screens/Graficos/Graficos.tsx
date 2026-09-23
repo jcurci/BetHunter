@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import { useNavigation } from "@react-navigation/native";
-import { Footer } from "../../components";
+import { useFooterHeight } from "../../components";
 import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import Svg, { Polyline } from "react-native-svg";
@@ -43,6 +43,8 @@ interface Investment {
 }
 
 const Graficos = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -229,7 +231,7 @@ const Graficos = () => {
     return (
       <SafeAreaView edges={["top"]} style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7456C8" />
+          <ActivityIndicator size="large" color="#5026C7" />
           <Text style={styles.loadingText}>Carregando dados...</Text>
         </View>
       </SafeAreaView>
@@ -240,12 +242,13 @@ const Graficos = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: footerHeight + 16 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#7456C8"
-            colors={["#7456C8"]}
+            tintColor="#5026C7"
+            colors={["#5026C7"]}
           />
         }
       >
@@ -263,7 +266,7 @@ const Graficos = () => {
             <Text style={styles.accountTitle}>Conta</Text>
             <TouchableOpacity style={styles.periodSelector}>
               <Text style={styles.periodText}>{selectedPeriod}</Text>
-              <Icon name="chevron-down" size={16} color="#7456C8" />
+              <Icon name="chevron-down" size={16} color="#5026C7" />
             </TouchableOpacity>
           </View>
           <View style={styles.balanceContainer}>
@@ -288,9 +291,9 @@ const Graficos = () => {
                 propsForDots: {
                   r: "4",
                   strokeWidth: "2",
-                  stroke: "#7456C8",
+                  stroke: "#5026C7",
                 },
-                fillShadowGradient: "#7456C8",
+                fillShadowGradient: "#5026C7",
                 fillShadowGradientOpacity: 0.3,
               }}
               bezier
@@ -308,7 +311,7 @@ const Graficos = () => {
           <View style={styles.investmentsHeader}>
             <Text style={styles.investmentsTitle}>Visualizador de Ativos</Text>
             <TouchableOpacity style={styles.seeAllButton}>
-              <Icon name="chevron-right" size={20} color="#7456C8" />
+              <Icon name="chevron-right" size={20} color="#5026C7" />
             </TouchableOpacity>
           </View>
 
@@ -318,8 +321,6 @@ const Graficos = () => {
         </View>
       </ScrollView>
 
-      {/* Footer */}
-      <Footer />
     </SafeAreaView>
   );
 };
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#7456C8",
+    color: "#5026C7",
   },
   accountCard: {
     backgroundColor: "#1A1A1A",
@@ -383,7 +384,7 @@ const styles = StyleSheet.create({
   },
   periodText: {
     fontSize: 14,
-    color: "#7456C8",
+    color: "#5026C7",
     marginRight: 5,
   },
   balanceContainer: {

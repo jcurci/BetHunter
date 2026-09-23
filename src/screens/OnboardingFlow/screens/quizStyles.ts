@@ -32,7 +32,7 @@ export const quizStyles = StyleSheet.create({
   },
   optionSelected: {
     backgroundColor: 'rgba(215,131,216,0.12)',
-    borderColor: '#D783D8',
+    borderColor: '#DE57DF',
   },
   radio: {
     width: 20,
@@ -45,8 +45,8 @@ export const quizStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: '#D783D8',
-    backgroundColor: '#D783D8',
+    borderColor: '#DE57DF',
+    backgroundColor: '#DE57DF',
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -104,7 +104,7 @@ export const quizStyles = StyleSheet.create({
     borderColor: '#2B2737',
   },
   chipSelected: {
-    borderColor: '#D783D8',
+    borderColor: '#DE57DF',
     backgroundColor: 'rgba(215,131,216,0.12)',
   },
   chipText: {
@@ -160,7 +160,7 @@ export const quizStyles = StyleSheet.create({
     backgroundColor: '#1E1B2A',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#D783D8',
+    borderColor: '#DE57DF',
     paddingVertical: 12,
     paddingHorizontal: 14,
     color: '#FFFFFF',

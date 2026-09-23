@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   forgotText: {
-    color: "#7456C8",
+    color: "#5026C7",
     fontSize: 13,
     fontWeight: "600",
   },

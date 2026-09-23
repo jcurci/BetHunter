@@ -91,7 +91,7 @@ const AnimatedOption: React.FC<AnimatedOptionProps> = ({
 
   const borderColor = selectedBg.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#2B2737', '#D783D8'],
+    outputRange: ['#2B2737', '#DE57DF'],
   });
 
   const backgroundColor = selectedBg.interpolate({

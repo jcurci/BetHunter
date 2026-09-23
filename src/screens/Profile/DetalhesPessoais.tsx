@@ -285,7 +285,7 @@ const DetalhesPessoais: React.FC = () => {
                   @{getUserHandle(user?.name)}
                 </Text>
                 <TouchableOpacity style={styles.usernameEditButton}>
-                  <Icon name="edit-2" size={14} color="#FF6A56" />
+                  <Icon name="edit-2" size={14} color="#FF4C33" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -405,7 +405,7 @@ const DetalhesPessoais: React.FC = () => {
                   }
                 }}
               >
-                <Icon name="edit-2" size={14} color="#FF6A56" />
+                <Icon name="edit-2" size={14} color="#FF4C33" />
               </TouchableOpacity>
             </View>
             <Text style={styles.confirmationQuestion}>
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 16,
     fontWeight: "400",
-    color: "#FF6A56",
+    color: "#FF4C33",
   },
   usernameEditButton: {
     padding: 4,

@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 1.5,
-    borderColor: '#D783D8',
+    borderColor: '#DE57DF',
   },
   optionCorrect: {
     flexDirection: 'row',
@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#D783D8',
-    backgroundColor: '#D783D8',
+    borderColor: '#DE57DF',
+    backgroundColor: '#DE57DF',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -562,12 +562,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2B2737',
   },
   dotActive: {
-    backgroundColor: '#D783D8',
+    backgroundColor: '#DE57DF',
     width: 22,
     borderRadius: 4,
   },
   dotDone: {
-    backgroundColor: '#7456C8',
+    backgroundColor: '#5026C7',
   },
   coinBadge: {
     backgroundColor: 'rgba(255,216,102,0.15)',

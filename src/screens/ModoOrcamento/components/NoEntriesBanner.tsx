@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   cta: {
-    color: "#D783D8",
+    color: "#DE57DF",
     fontSize: 13,
     fontWeight: "600",
     marginTop: 2,

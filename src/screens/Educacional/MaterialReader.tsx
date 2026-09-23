@@ -251,7 +251,7 @@ const MaterialReader: React.FC = () => {
         <SafeAreaView style={styles.flex}>
           <StatusBar hidden />
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#D783D8" />
+            <ActivityIndicator size="large" color="#DE57DF" />
           </View>
         </SafeAreaView>
       </RadialGradientBackground>

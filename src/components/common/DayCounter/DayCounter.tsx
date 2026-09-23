@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   checkedIndicator: {
     width: 20,
     height: 2,
-    backgroundColor: "#D783D8",
+    backgroundColor: "#DE57DF",
     borderRadius: 1,
   },
   dayUnchecked: {

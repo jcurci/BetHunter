@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
-import { Footer, StatsDisplay, Avatar, DayCounter, IconCard, GradientBorderButton } from "../../components";
+import { StatsDisplay, Avatar, DayCounter, IconCard, GradientBorderButton, useFooterHeight } from "../../components";
 import Modal from "../../components/common/Modal/Modal";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
@@ -32,6 +32,8 @@ import {
 } from "../../config/colors";
 
 const MenuEducacional: React.FC = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const navigation = useNavigation<NavigationProp>();
   const user = useAuthStore((state) => state.user);
 
@@ -144,7 +146,7 @@ const MenuEducacional: React.FC = () => {
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: footerHeight + 16 }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Streak / DayCounter */}
@@ -297,7 +299,6 @@ const MenuEducacional: React.FC = () => {
           </View>
         </ScrollView>
       </View>
-      <Footer />
 
       <Modal
         visible={showErrorModal}

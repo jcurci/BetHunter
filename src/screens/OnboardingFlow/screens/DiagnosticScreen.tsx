@@ -199,7 +199,7 @@ export const DiagnosticScreen: React.FC<Props> = ({
             {/* Inner gradient arc */}
             <Animated.View style={[styles.spinnerInner, { transform: [{ rotate: spinDeg }] }]}>
               <LinearGradient
-                colors={['transparent', '#7456C8', '#D783D8']}
+                colors={['transparent', '#5026C7', '#DE57DF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.gradientArc}
@@ -208,7 +208,7 @@ export const DiagnosticScreen: React.FC<Props> = ({
 
             {/* Center */}
             <View style={styles.spinnerCenter}>
-              <Icon name="cpu" size={22} color="#D783D8" />
+              <Icon name="cpu" size={22} color="#DE57DF" />
             </View>
           </View>
 
@@ -285,7 +285,7 @@ export const DiagnosticScreen: React.FC<Props> = ({
             style={styles.avatarGradientBorder}
           >
             <View style={styles.avatarInner}>
-              <Icon name="user" size={30} color="#D783D8" />
+              <Icon name="user" size={30} color="#DE57DF" />
             </View>
           </LinearGradient>
         </Animated.View>
@@ -325,7 +325,7 @@ export const DiagnosticScreen: React.FC<Props> = ({
             style={[styles.miniCard, { transform: [{ scale: miniCard1Scale }] }]}
           >
             <View style={[styles.miniCardIcon, { backgroundColor: 'rgba(116,86,200,0.2)' }]}>
-              <Icon name="shield" size={18} color="#7456C8" />
+              <Icon name="shield" size={18} color="#5026C7" />
             </View>
             <Text style={styles.miniCardLabel}>Trilha</Text>
             <Text style={styles.miniCardValue}>{result.track}</Text>
@@ -396,8 +396,8 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#FF90A5',
-    shadowColor: '#FF90A5',
+    backgroundColor: '#E07085',
+    shadowColor: '#E07085',
     shadowRadius: 6,
     shadowOpacity: 0.8,
   },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#7456C8',
+    backgroundColor: '#5026C7',
   },
   scrollArea: {
     flex: 1,

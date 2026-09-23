@@ -287,7 +287,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
                   markedDates={dataInicial ? {
                     [dataInicial.toISOString().split('T')[0]]: {
                       selected: true,
-                      selectedColor: '#D783D8',
+                      selectedColor: '#DE57DF',
                     },
                   } : {}}
                   maxDate={dataFinal?.toISOString().split('T')[0]}
@@ -295,13 +295,13 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
                     backgroundColor: '#14121B',
                     calendarBackground: '#14121B',
                     textSectionTitleColor: '#A7A3AE',
-                    selectedDayBackgroundColor: '#D783D8',
+                    selectedDayBackgroundColor: '#DE57DF',
                     selectedDayTextColor: '#FFFFFF',
                     todayTextColor: '#FF6B9D',
                     dayTextColor: '#FFFFFF',
                     textDisabledColor: '#6B6677',
                     monthTextColor: '#FFFFFF',
-                    arrowColor: '#D783D8',
+                    arrowColor: '#DE57DF',
                     textDayFontWeight: '500',
                     textMonthFontWeight: 'bold',
                     textDayHeaderFontWeight: '600',
@@ -325,7 +325,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
                   markedDates={dataFinal ? {
                     [dataFinal.toISOString().split('T')[0]]: {
                       selected: true,
-                      selectedColor: '#D783D8',
+                      selectedColor: '#DE57DF',
                     },
                   } : {}}
                   minDate={dataInicial?.toISOString().split('T')[0]}
@@ -333,13 +333,13 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
                     backgroundColor: '#14121B',
                     calendarBackground: '#14121B',
                     textSectionTitleColor: '#A7A3AE',
-                    selectedDayBackgroundColor: '#D783D8',
+                    selectedDayBackgroundColor: '#DE57DF',
                     selectedDayTextColor: '#FFFFFF',
                     todayTextColor: '#FF6B9D',
                     dayTextColor: '#FFFFFF',
                     textDisabledColor: '#6B6677',
                     monthTextColor: '#FFFFFF',
-                    arrowColor: '#D783D8',
+                    arrowColor: '#DE57DF',
                     textDayFontWeight: '500',
                     textMonthFontWeight: 'bold',
                     textDayHeaderFontWeight: '600',
@@ -391,7 +391,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
                       <Icon
                         name="close-circle-outline"
                         size={22}
-                        color={!categoriaId ? "#D783D8" : "#A7A3AE"}
+                        color={!categoriaId ? "#DE57DF" : "#A7A3AE"}
                         style={styles.categoryDropdownIcon}
                       />
                       <Text
@@ -420,7 +420,7 @@ const HistoryFilters: React.FC<HistoryFiltersProps> = ({
                         <Icon
                           name={category.icone}
                           size={22}
-                          color={categoriaId === category.id ? "#D783D8" : "#A7A3AE"}
+                          color={categoriaId === category.id ? "#DE57DF" : "#A7A3AE"}
                           style={styles.categoryDropdownIcon}
                         />
                         <Text
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   },
   tipoButtonActive: {
     backgroundColor: "#26233A",
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   tipoButtonText: {
     fontSize: 15,
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.10)",
   },
   dateButtonActive: {
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   dateButtonText: {
     fontSize: 14,
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.10)",
   },
   categoryButtonActive: {
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   categoryButtonText: {
     fontSize: 15,

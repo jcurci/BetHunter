@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     borderColor: "#E74C3C",
   },
   atSymbol: {
-    color: "#7456C8",
+    color: "#5026C7",
     fontSize: 16,
     fontWeight: "700",
   },

@@ -4,13 +4,17 @@ import * as NavigationBar from "expo-navigation-bar";
 import { AppLoadingScreen } from "./src/components/AppLoadingScreen";
 import {
   useFonts,
+  InterTight_400Regular,
+  InterTight_500Medium,
   InterTight_700Bold,
+  InterTight_800ExtraBold,
   InterTight_700Bold_Italic,
 } from "@expo-google-fonts/inter-tight";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import Footer from "./src/components/common/Footer/Footer";
 import { initRevenueCat, identifyUser } from "./src/services/revenueCat";
 import type { CustomerInfo } from "react-native-purchases";
 import {
@@ -90,17 +94,24 @@ const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  /** Rota visível — a taskbar global decide por ela se aparece e qual aba acende. */
+  const [currentRoute, setCurrentRoute] = useState<string | undefined>(undefined);
+  const syncCurrentRoute = () =>
+    setCurrentRoute(navigationRef.current?.getCurrentRoute()?.name);
   const isPremium = useSubscriptionStore((s) => s.isPremium);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const prevIsPremiumRef = useRef<boolean | null>(null);
   const expirationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Inter Tight é a fonte da marca, usada hoje só pelo número do card de
-  // compartilhamento. Carregar antes do primeiro render evita o clássico
+  // Inter Tight é a fonte da marca: card de compartilhamento e Home.
+  // Carregar antes do primeiro render evita o clássico
   // "primeira imagem sai com a fonte errada" — o asset é local, não vem da
   // rede, então o custo no boot é desprezível.
   const [fontsLoaded, fontError] = useFonts({
+    InterTight_400Regular,
+    InterTight_500Medium,
     InterTight_700Bold,
+    InterTight_800ExtraBold,
     InterTight_700Bold_Italic,
   });
 
@@ -390,7 +401,11 @@ const App: React.FC = () => {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={syncCurrentRoute}
+        onStateChange={syncCurrentRoute}
+      >
         <StatusBar hidden={true} translucent={true} />
         <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen
@@ -717,6 +732,8 @@ const App: React.FC = () => {
           }}
         />
       </Stack.Navigator>
+        {/* Fora do Stack: persiste entre as telas, que deslizam por baixo dela. */}
+        <Footer currentRoute={currentRoute} navigationRef={navigationRef} />
       </NavigationContainer>
     </SafeAreaProvider>
   );

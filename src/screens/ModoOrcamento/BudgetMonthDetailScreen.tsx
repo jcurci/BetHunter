@@ -82,7 +82,7 @@ const BudgetMonthDetailScreen: React.FC = () => {
 
         {isLoading ? (
           <View style={styles.centerState}>
-            <ActivityIndicator color="#D783D8" />
+            <ActivityIndicator color="#DE57DF" />
           </View>
         ) : (
           <ScrollView
@@ -133,7 +133,7 @@ const BudgetMonthDetailScreen: React.FC = () => {
                       <Icon
                         name={item.categoryIcon || "wallet"}
                         size={18}
-                        color="#D783D8"
+                        color="#DE57DF"
                       />
                     </View>
                     <View style={styles.expenseInfo}>

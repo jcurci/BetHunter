@@ -41,7 +41,7 @@ LocaleConfig.locales['pt-br'] = {
   today: 'Hoje'
 };
 LocaleConfig.defaultLocale = 'pt-br';
-import { Footer, IconCard, Modal, GradientButton } from "../../components";
+import { IconCard, Modal, GradientButton, useFooterHeight } from "../../components";
 import { useNavigation } from "@react-navigation/native";
 import { NavigationProp } from "../../types/navigation";
 import NovaEntradaIcon from "../../assets/meu-assessor/nova-entrada.svg";
@@ -119,6 +119,8 @@ const getMonthDateRange = () => {
 
 
 const Assessor: React.FC = () => {
+  // A taskbar é global e flutua por cima: o fim do scroll reserva a altura dela.
+  const footerHeight = useFooterHeight();
   const [selectedPeriod, setSelectedPeriod] = useState<"mensal">("mensal");
 
   const navigation = useNavigation<NavigationProp>();
@@ -466,7 +468,7 @@ const Assessor: React.FC = () => {
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: footerHeight + 16 }]}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -508,7 +510,7 @@ const Assessor: React.FC = () => {
         {/* Loading indicator para dados */}
         {(isLoadingCategories || isLoadingEntries) && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#D783D8" />
+            <ActivityIndicator size="small" color="#DE57DF" />
             <Text style={styles.loadingText}>Carregando dados...</Text>
           </View>
         )}
@@ -554,7 +556,7 @@ const Assessor: React.FC = () => {
               propsForDots: {
                 r: "5",
                 strokeWidth: "0",
-                fill: "#FF90A5",
+                fill: "#E07085",
               },
               propsForBackgroundLines: {
                 strokeDasharray: "",
@@ -683,7 +685,7 @@ const Assessor: React.FC = () => {
                       <Icon
                         name={latestEntry.categoria?.icone || "wallet"}
                         size={22}
-                        color="#D783D8"
+                        color="#DE57DF"
                       />
                     </View>
                     <View style={styles.recentInfo}>
@@ -774,17 +776,17 @@ const Assessor: React.FC = () => {
 
           <View style={styles.categoriesCards}>
             <IconCard
-              icon={<Icon name="plus" size={28} color="#D783D8" />}
+              icon={<Icon name="plus" size={28} color="#DE57DF" />}
               title="Nova categoria"
               onPress={() => setShowCategoryModal(true)}
             />
             <IconCard
-              icon={<Icon name="credit-card" size={28} color="#D783D8" />}
+              icon={<Icon name="credit-card" size={28} color="#DE57DF" />}
               title="Cartão de Crédito"
               onPress={() => navigation.navigate("EmConstrucao")}
             />
             <IconCard
-              icon={<Icon name="school" size={28} color="#D783D8" />}
+              icon={<Icon name="school" size={28} color="#DE57DF" />}
               title="Educação"
               onPress={() => navigation.navigate("EmConstrucao")}
             />
@@ -863,20 +865,20 @@ const Assessor: React.FC = () => {
                 markedDates={{
                   [entryDate.toISOString().split('T')[0]]: {
                     selected: true,
-                    selectedColor: '#D783D8',
+                    selectedColor: '#DE57DF',
                   },
                 }}
                 theme={{
                   backgroundColor: '#14121B',
                   calendarBackground: '#14121B',
                   textSectionTitleColor: '#A7A3AE',
-                  selectedDayBackgroundColor: '#D783D8',
+                  selectedDayBackgroundColor: '#DE57DF',
                   selectedDayTextColor: '#FFFFFF',
                   todayTextColor: '#FF6B9D',
                   dayTextColor: '#FFFFFF',
                   textDisabledColor: '#6B6677',
                   monthTextColor: '#FFFFFF',
-                  arrowColor: '#D783D8',
+                  arrowColor: '#DE57DF',
                   textDayFontWeight: '500',
                   textMonthFontWeight: 'bold',
                   textDayHeaderFontWeight: '600',
@@ -935,7 +937,7 @@ const Assessor: React.FC = () => {
                         <Icon
                           name={category.icone}
                           size={22}
-                          color={selectedCategoryId === category.id ? "#D783D8" : "#A7A3AE"}
+                          color={selectedCategoryId === category.id ? "#DE57DF" : "#A7A3AE"}
                           style={styles.categoryDropdownIcon}
                         />
                         <Text
@@ -1060,20 +1062,20 @@ const Assessor: React.FC = () => {
                 markedDates={{
                   [saidaDate.toISOString().split('T')[0]]: {
                     selected: true,
-                    selectedColor: '#D783D8',
+                    selectedColor: '#DE57DF',
                   },
                 }}
                 theme={{
                   backgroundColor: '#14121B',
                   calendarBackground: '#14121B',
                   textSectionTitleColor: '#A7A3AE',
-                  selectedDayBackgroundColor: '#D783D8',
+                  selectedDayBackgroundColor: '#DE57DF',
                   selectedDayTextColor: '#FFFFFF',
                   todayTextColor: '#FF6B9D',
                   dayTextColor: '#FFFFFF',
                   textDisabledColor: '#6B6677',
                   monthTextColor: '#FFFFFF',
-                  arrowColor: '#D783D8',
+                  arrowColor: '#DE57DF',
                   textDayFontWeight: '500',
                   textMonthFontWeight: 'bold',
                   textDayHeaderFontWeight: '600',
@@ -1132,7 +1134,7 @@ const Assessor: React.FC = () => {
                         <Icon
                           name={category.icone}
                           size={22}
-                          color={selectedCategoryIdSaida === category.id ? "#D783D8" : "#A7A3AE"}
+                          color={selectedCategoryIdSaida === category.id ? "#DE57DF" : "#A7A3AE"}
                           style={styles.categoryDropdownIcon}
                         />
                         <Text
@@ -1295,7 +1297,7 @@ const Assessor: React.FC = () => {
                   <Icon
                     name={iconName}
                     size={28}
-                    color={selectedIcon === iconName ? '#D783D8' : '#6B6677'}
+                    color={selectedIcon === iconName ? '#DE57DF' : '#6B6677'}
                   />
                 </TouchableOpacity>
               ))}
@@ -1370,7 +1372,6 @@ const Assessor: React.FC = () => {
         </View>
       </Modal>
 
-      <Footer />
     </SafeAreaView>
   );
 };
@@ -1733,7 +1734,7 @@ const styles = StyleSheet.create({
   },
   typeButtonActive: {
     backgroundColor: "#26233A",
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   typeButtonText: {
     fontSize: 15,
@@ -1787,7 +1788,7 @@ const styles = StyleSheet.create({
   },
   dateButtonActive: {
     borderWidth: 1.5,
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   calendarContainer: {
     marginTop: 16,
@@ -1813,7 +1814,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   categorySelectButtonActive: {
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   categorySelectText: {
     color: "#FFFFFF",
@@ -1902,7 +1903,7 @@ const styles = StyleSheet.create({
   iconButtonSelected: {
     backgroundColor: "#26233A",
     borderWidth: 2,
-    borderColor: "#D783D8",
+    borderColor: "#DE57DF",
   },
   successModalContent: {
     alignItems: "center",

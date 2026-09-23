@@ -16,7 +16,7 @@ import {
 } from "../config/colors";
 
 const LOGO_ASPECT = 53 / 211;
-const LOADER_COLOR = "#D783D8";
+const LOADER_COLOR = "#DE57DF";
 
 /**
  * Splash de inicialização: vetor (leve/nítido), gradiente do DS, animações com native driver.

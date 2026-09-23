@@ -152,7 +152,7 @@ const ChoqueFisiologico: React.FC = () => {
             accessibilityRole="button"
           >
             <LinearGradient
-              colors={["#7456C8", "#D783D8"]}
+              colors={["#5026C7", "#DE57DF"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.primaryGradient}
